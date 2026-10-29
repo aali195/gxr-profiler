@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GXR Profiler</title>
+  <script>
+    try {
+      const key = "gxr-profiler.sidebarOpen";
+      const value = localStorage.getItem(key);
+      const old = localStorage.getItem("xrbench.sidebarOpen");
+      if ((value != null ? value : old) === "0") document.documentElement.classList.add("sidebar-hidden");
+    } catch (e) {}
+  </script>
+  <!-- gxr-profiler:styles:start -->
+  <link rel="stylesheet" href="/static/styles.css?v=__GXR_ASSET_VERSION__" />
+  <!-- gxr-profiler:styles:end -->
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <h1>GXR Profiler</h1>
+      <button id="btn-record">New recording</button>
+      <div class="runcontrols">
+        <input id="run-search" type="search" placeholder="Search runs..." autocomplete="off" />
+        <select id="run-sort" title="Sort runs">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name-asc">Name A-Z</option>
+          <option value="name-desc">Name Z-A</option>
+          <option value="duration">Longest</option>
+        </select>
+      </div>
+      <div id="runlist"></div>
+    </aside>
+    <main>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="live">Record</button>
+        <button class="tab" data-tab="run">Run</button>
+        <button class="tab" data-tab="compare">Compare</button>
+        <button class="toolbtn sidebartoggle" id="btn-sidebar" type="button" aria-controls="sidebar" aria-expanded="true" title="Hide run list">Hide runs</button>
+        <div class="toolgroup">
+          <button class="toolbtn" id="btn-find" title="Find in page (Ctrl+F)">Find</button>
+          <button class="toolbtn" id="btn-collapse" title="Collapse all sections">Collapse all</button>
+          <button class="toolbtn" id="btn-expand" title="Expand all sections">Expand all</button>
+          <button class="toolbtn" id="btn-yaxis" title="Y-axis origin: 0 or fit to data">Y: 0-based</button>
+        </div>
+      </div>
+      <div id="findbar" class="findbar" hidden>
+        <input id="find-input" type="search" placeholder="Find in page..." autocomplete="off" />
+        <span id="find-count" class="muted findcount"></span>
+        <button class="toolbtn findbtn" id="find-prev" type="button" title="Previous match (Shift+Enter)">↑</button>
+        <button class="toolbtn findbtn" id="find-next" type="button" title="Next match (Enter)">↓</button>
+        <button class="toolbtn findbtn" id="find-close" type="button" title="Close (Esc)">✕</button>
+      </div>
+      <div id="view"></div>
+    </main>
+  </div>
+  <div class="floatnav" aria-label="Page navigation">
+    <button class="toolbtn floatbtn" id="btn-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+    <button class="toolbtn floatbtn" id="btn-bottom" title="Scroll to bottom" aria-label="Scroll to bottom">↓</button>
+  </div>
+  <!-- gxr-profiler:echarts:start -->
+  <script src="/static/vendor/echarts.min.js"></script>
+  <!-- gxr-profiler:echarts:end -->
+  <!-- gxr-profiler:app:start -->
+  <script src="/static/app.js?v=__GXR_ASSET_VERSION__"></script>
+  <!-- gxr-profiler:app:end -->
+</body>
+</html>

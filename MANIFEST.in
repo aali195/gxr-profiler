@@ -1,0 +1,5 @@
+include README.md
+include pyproject.toml
+recursive-include packaging *.py *.spec
+recursive-include gxr_profiler/server/web *
+recursive-include tests *.py
