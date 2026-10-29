@@ -4,10 +4,10 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
-build/
-dist/
-runs/
-reports/
+/build/
+/dist/
+/runs/
+/reports/
 docs/raw/
 docs/dumps/
 docs/**/*.7z
