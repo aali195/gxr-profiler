@@ -7,7 +7,7 @@ Temperature, thermal-status and fan findings from the 1 Hz poll plus event-drive
 
 ## Tests & results
 
-Probed 2026-10-20 to 2026-10-24 during idle, OS, controllers, VRChat and HDR runs.
+Probed 2026-10-20 to 2026-11-01 during idle, OS, controllers, VRChat and HDR runs.
 
 | Probe | Observed result |
 |---|---|
@@ -17,6 +17,7 @@ Probed 2026-10-20 to 2026-10-24 during idle, OS, controllers, VRChat and HDR run
 | `scaling_max_freq` policy0/policy2 | 1.92/1.92 GHz idle; caps only under heaviest load |
 | AP vs skin vs `sec_ap` | identical to 0.1 C - same physical sensor |
 | GPU clock, 72 Hz vs 90 Hz | 421 MHz common at 72 Hz; 492-640 MHz in 90 Hz HDR; 545 MHz idle after HDR |
+| kernel `ddr` thermal zone | `thermal_zone15` readable by shell (~43.9 C), absent from the HAL named set |
 | idle -> OS -> controllers -> VRChat | thermal status 0/1/2; fan step 1/3/6/7 |
 
 ## Findings
@@ -27,6 +28,8 @@ Probed 2026-10-20 to 2026-10-24 during idle, OS, controllers, VRChat and HDR run
 - GPU load usually shows as `g_busy` at 72 Hz, but the clock is not globally fixed: 90 Hz HDR
   and post-HDR idle can raise it. See [cross-run analysis](cross-run.md).
 - AP, skin and `sec_ap` are the same sensor.
+- DDR/RAM temperature exists as a separate kernel thermal zone (`ddr`), but is not in the HAL
+  named-temperature set.
 - Throttling escalates through status and fan step before CPU caps.
 
 ## Details
@@ -53,3 +56,7 @@ Probed 2026-10-20 to 2026-10-24 during idle, OS, controllers, VRChat and HDR run
 - `t_AP`, `t_skin` and `sec_ap` are **the same physical sensor** (the HAL reads
   `/sys/class/sec/sec-ap-thermistor/temperature` for both AP and skin) - they track identically
   to 0.1 C.
+- `/sys/class/thermal/thermal_zone15/temp` is the kernel `ddr` zone (millidegrees C). If that path
+  is absent or is no longer type `ddr`, gxr-profiler falls back to the thermal zone whose type is
+  `ddr`. It is shell-readable but does not appear in `dumpsys thermalservice`, so it is polled
+  separately as `ddr_temp`. `LRP` is the power path, not RAM.

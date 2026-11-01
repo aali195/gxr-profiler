@@ -140,3 +140,7 @@ history.
    bitrate; exclude `adbd`/`logcat` overhead.
 4. For HDR, test 8K versus 4K and 90 Hz versus 72 Hz separately; YouTube HDR combines all three.
 5. For leak questions, run 10-30 minutes, not 30-120 seconds.
+6. If you do not use the headset controllers, turn them off; the vendor controller HAL is the
+   biggest reducible CPU item (~27-35% vs 0% when idle). See
+   [background processes & debloat](debloat.md) for the Chronolink breakdown, hand-tracking cost and
+   reversible package cleanup commands.

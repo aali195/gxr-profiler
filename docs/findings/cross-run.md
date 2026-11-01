@@ -93,6 +93,13 @@ and began progressively warmer.
 Network context from the `wifi-4` sequence: 6.295 GHz, Wi-Fi 7 (`std=8`), link rate ~3.8-4.2
 Gbps, RSSI -34 to -31 dBm, retry 2.3-3.3%, no lost packets.
 
+A later **2026-10-31 standby follow-up** kept ~1.27 Gbps Rx across two 60 s post-standby
+VRChat runs plus a 5 min immediate-wake run, with no loss/drops/errors and normal link-rate
+adaptation. The immediate-wake run's apparent 42.5% retry was a low-TX denominator artifact (3 TX
+pps); once TX ramped it was ~5%. A max-throughput run on that date sustained **~2.17 Gbps** on a
+2.5 GbE host path, so the earlier 900 Mbps test was not link-limited. See
+[Wi-Fi & standby](wifi.md).
+
 Passthrough also activated depth streams:
 
 | Run | Passthrough | DepthInput | DepthTOF |
@@ -131,6 +138,13 @@ Four 60 s ASTC runs, `psm=0`, 72 Hz, status 2:
 | `44-bat-plugged-astc` | 45% | on | 70.7 C | 5 | 40.3% | 1.92 GHz |
 
 `crit-batt-youtube` at 7% battery also stayed at `psm=0`, 72 Hz and 2.36 GHz cap.
+
+A later **2026-10-31 follow-up** (seven VRChat ASTC runs, 3-20% battery) also found no
+battery-specific throttle: CPU caps, GPU clock, `psm`, display rate and fan either stayed at the
+thermal status-3 values or changed only with AC state. The other 21 plugged runs in the local
+library stayed at 70.1-73.4 XR fps. Full table and caveats:
+[Power modes & battery](modes.md#low--critical-battery-follow-up-2026-10-31); standby pair:
+[standby & wake](standby.md).
 
 ## Findings
 
@@ -174,7 +188,8 @@ Four 60 s ASTC runs, `psm=0`, 72 Hz, status 2:
   led by the Chronolink client.
 - **Battery/AC state still shows no performance profile change.** Low battery, high battery,
   plugged and unplugged ASTC runs all held the same caps, clock, display mode, fan and GPU load.
-  Charging added ~0.75-1 C to pack temperature only.
+  Charging added ~0.75-1 C to pack temperature only. The later 3-20% follow-up also found no
+  battery-specific cap ([modes](modes.md#low--critical-battery-follow-up-2026-10-31)).
 - **Stale media records can mislead.** Several idle runs still carry an 8K AV1 record while
   `media_active=0`; use `media_active` and record age, not the presence of a codec record.
 

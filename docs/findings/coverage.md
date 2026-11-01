@@ -21,6 +21,7 @@ Coverage status as of the current schema/build.
 ## Findings
 
 - Core 1 Hz telemetry and one-time device metadata are always captured.
+- DDR/RAM temperature is a sysfs-only extra; it is not part of the thermal HAL named set.
 - Fan, per-process I/O, calibration dates and first setup are root opt-ins.
 - Process snapshots and sensor-service summaries are separate opt-ins.
 - Power, NPU/DSP and physical camera routing remain unavailable.
@@ -30,7 +31,7 @@ Coverage status as of the current schema/build.
 
 **Captured** (1 Hz poll + event stream):
 - Temps: HAL named set (CPU0-5, GPU0-7, nsp0-2, AP, skin, WIFI, LRP, BAT, CHG, USB) +
-  `sec-*-thermistor`.
+  `sec-*-thermistor` + kernel `ddr` zone (`ddr_temp`).
 - Throttle/caps: global thermal status, per-sensor severity, CPU `scaling_max_freq` caps, GPU
   throttling, thermal thresholds; fan step.
 - Clocks: CPU per-core, GPU clock (`kgsl`) + residency (`gpu_clock_stats`).

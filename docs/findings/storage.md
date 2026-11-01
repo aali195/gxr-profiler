@@ -6,7 +6,7 @@ Disk capacity, whole-device counters, pressure and per-process I/O.
 
 ## Tests & results
 
-Probed 2026-10-20.
+Probed 2026-10-20; UFS sysfs probed 2026-11-01.
 
 | Probe | Observed result |
 |---|---|
@@ -14,6 +14,7 @@ Probed 2026-10-20.
 | `/proc/diskstats` | readable; whole-device counters; rates derived from deltas |
 | `/proc/pressure/io` | readable; avg10 recorded |
 | root `/proc/<pid>/io` | counters returned; nonzero rates over 2 s samples |
+| UFS sysfs (root) | health/lifetime descriptors readable; no temperature attribute or thermal zone |
 
 ## Findings
 
@@ -21,6 +22,7 @@ Probed 2026-10-20.
 - The mount point string is unusual but maps to shared userdata.
 - Per-process disk I/O requires root.
 - `storaged`/per-UID I/O was not used.
+- UFS exposes health/lifetime, not temperature; there is no storage-temperature metric.
 
 ## Details
 
@@ -37,5 +39,9 @@ Probed 2026-10-20.
 - `df -k /data` is captured once in `device_info.storage` and polled at 1 Hz for total, free and
   used percentage. On this build the mount point is reported as
   `/storage/emulated/0/Android/obb`, but it is the shared userdata filesystem.
+- The UFS stack (`/sys/devices/platform/soc/1d84000.ufshc`) exposes
+  `health_descriptor/eol_info` and `life_time_estimation_a/b`, plus Samsung UFS attributes under
+  `/sys/devices/virtual/sec/ufs` (readable with root). No temperature attribute or UFS thermal zone
+  was found, so storage temperature cannot be captured.
 - Live probe on 2026-10-20: 217.8 GB total, 211.6 GB free (3% used); diskstats/PSI parsed
   successfully.

@@ -39,7 +39,7 @@ collapsing duplicate TCP and mDNS transports of the same headset. Pass `--serial
 |---|---|
 | `--interval` | Core poll interval in seconds (default `1`) |
 | `--cooldown <C>` | Wait until the selected sensor is at or below this temperature before starting |
-| `--sensor <id>` | Cooldown sensor: `AP`, `CPU0..5`, `GPU0..7`, `nsp0..2`, `skin`, `WIFI`, `LRP`, `BAT`, `CHG`, `USB` (default `AP`) |
+| `--sensor <id>` | Cooldown sensor: `AP`, `CPU0..5`, `GPU0..7`, `nsp0..2`, `skin`, `WIFI`, `LRP`, `BAT`, `CHG`, `USB`, `DDR` (default `AP`) |
 | `--cooldown-max-wait <s>` | Maximum cooldown wait; `0` waits indefinitely |
 | `--notes <text>` | Attach notes to the run |
 | `--root` | Read fan RPM/PWM and active panel via read-only `su -c` |

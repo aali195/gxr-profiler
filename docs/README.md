@@ -94,10 +94,10 @@ Recording refuses to overwrite an existing run name.
 **Why wide CSV.** One row per second loads trivially in pandas and plots directly; event-derived
 values are forward-filled into the row (last known). Raw parsed events stay in `.events.csv`.
 
-**Columns (218).** Groups:
+**Columns (219).** Groups:
 
 - `meta`: `ts_host` (epoch), `ts_dev`, `elapsed_s`, `poll_ok` (0/1 - did the poll succeed).
-- `thermal`: `t_*` temps (C), `thermal_status`, `thermal_max_sev`, `sec_*` (C).
+- `thermal`: `t_*` temps (C), `thermal_status`, `thermal_max_sev`, `sec_*` (C), `ddr_temp` (C).
 - `cpu`: `f_cpu0..5`, `cpu_util0..5` (%), `cpu_max0/2` (kHz), `dcvsh_*` (kHz).
 - `gpu`: `g_clock` (MHz), `g_devfreq` (Hz), `g_busy` (%), `g_busy_num/den`, `g_temp` (C), `g_throttling`.
 - `fan`: `fan_step`, `fan_rpm`, `fan_rpm2` (rpm), `fan_pwm` (`--root`).
@@ -180,7 +180,9 @@ adds total, free and used percentage.
 **Memory & CPU (1 Hz).** `/proc/meminfo` supplies total, used (`total - available`), cached,
 available and swap totals with percentages. `/proc/pressure/memory` adds PSI `some`/`full`, and
 `/sys/block/zram0/mm_stat` adds the zram memory footprint. `/proc/stat` provides per-core CPU
-utilisation from idle/total deltas and the runnable-task count.
+utilisation from idle/total deltas and the runnable-task count. DDR temperature comes from the
+kernel `ddr` thermal zone (`/sys/class/thermal/thermal_zone15/temp`, with a fallback lookup by
+zone type); it is shell-readable and not part of the thermal HAL named set.
 
 **Display units.** The CSV keeps base units for analysis (kHz, kB, fractions, 0-1), while the web UI
 and static report convert for readability: CPU frequencies in **MHz**, memory in **GB**, utilisation
@@ -229,7 +231,7 @@ features {logcat, root_fan, sensors, sensors_interval_s,
           processes, processes_interval_s, processes_top, processes_kernel, process_io,
           media_interval_s, state_interval_s, radio_interval_s, profile},
 start_state / end_state {low_power, hand_tracking_active, batt_ac, batt_level,
-                          batt_temp, thermal_status; psm/disp_hz when available},
+                          batt_temp, ddr_temp, thermal_status; psm/disp_hz when available},
 device_model, android, platform, wifi_ssid, cooldown_sensor, cooldown_below, cooldown_max_wait,
 notes, columns_meta,
 device_info   # one-time device/build/region/manufacture/setup/panel/display/audio/Wi-Fi/root/calibration/boundary snapshot
@@ -283,6 +285,7 @@ Read-only sources: a **logcat stream** + a **1 Hz poll**. Full command and caden
 | Passthrough mode / running | logcat `PassthroughStateManager`, `dumpsys cpm` (`XrPassthroughController`) |
 | CPU per-core freq + policy max, GPU clock/busy/temp/throttle | sysfs `/sys/.../cpufreq`, `/sys/class/kgsl/kgsl-3d0` |
 | AP/LRP/WiFi thermistor, load, battery temp/level/AC | `sec-*-thermistor`, `/proc`, `dumpsys battery` |
+| DDR (RAM) temperature | sysfs `/sys/class/thermal/thermal_zone15/temp` (`type=ddr`, fallback by zone type, 1 Hz) |
 | RAM total/used/cached/available, swap, zram, memory pressure | `/proc/meminfo`, `/proc/pressure/memory`, `/sys/block/zram0/mm_stat` |
 | CPU utilisation per core, runnable tasks | `/proc/stat` |
 | Storage capacity, free space, used % | `df -k /data` |
@@ -313,13 +316,16 @@ Each topic links to tests/results first, then the digestible findings and full d
 | [Display, media & passthrough](findings/display-media.md) | decoders, HDR/color/bit depth, panel, passthrough |
 | [Audio](findings/audio.md) | speaker/mic paths, latency, spatializer, codecs |
 | [Bluetooth & location](findings/radios.md) | BLE-on quirk, A2DP, location modes |
+| [Wi-Fi & standby](findings/wifi.md) | throughput, link rate, RSSI and retries after standby |
 | [Storage I/O](findings/storage.md) | diskstats, pressure, per-process I/O |
 | [CPU & memory](findings/cpu-memory.md) | meminfo, zram/swap, per-core utilisation |
 | [Power modes & battery](findings/modes.md) | Battery Saver, hand tracking, battery/AC A/B |
+| [Standby & wake](findings/standby.md) | rest/standby recovery, short vs long gap, status-3 re-entry |
 | [Root](findings/root.md) | KernelSU reads, fan, calibration, limits |
 | [Measurement coverage](findings/coverage.md) | captured, opt-in, available, unavailable |
 | [Cross-run analysis](findings/cross-run.md) | 35-run correlations: thermal stages, fan curve, HDR, Wi-Fi, passthrough, process load |
 | [Process offenders](findings/processes.md) | idle/active CPU, camera/perception cost, WiFi test client, YouTube/Chronolink, profiler overhead |
+| [Background processes & debloat](findings/debloat.md) | controller HAL, hand tracking, profiler overhead, package cleanup |
 
 ### Key findings
 
@@ -341,5 +347,28 @@ Each topic links to tests/results first, then the digestible findings and full d
 - **Power saving does not reduce CPU frequency caps**; it mainly reduces display/XR to 60 Hz and
   halves the head/hand camera pipeline. See [Power modes & battery](findings/modes.md). Thermal
   status 3 can produce a similar camera halving without `psm`.
+- **Low/critical battery did not add a battery-specific throttle.** Down to 3%, VRChat ran at the
+  same thermal status-3 caps, `psm=0`, 72 Hz and 421 MHz GPU, with no shutdown. See
+  [the battery follow-up](findings/modes.md#low--critical-battery-follow-up-2026-10-31).
+- **An immediate standby wake is genuinely cold.** Straight from desk to head after ~18 min, the
+  device started at status 0, AP 45 C, fan 1 and the 2.36 GHz CPU cap, with CPU utilisation starting
+  low (core0 53%) and ramping as the workload loaded. It reached status 3 only after 277 s. Earlier
+  after-standby recordings had already warmed during 1-2 min of use; a 3.7 min gap plus use
+  re-entered status 3 within 35 s. See [standby & wake](findings/standby.md).
+- **Wi-Fi throughput did not collapse after standby.** Two 60 s standby runs and a 5 min
+  immediate-wake run sustained ~1.27 Gbps Rx with zero drops/errors and normal link-rate adaptation.
+  The early "42.5% retry" in the immediate-wake run is a low-TX denominator artifact (3 pps TX),
+  settling to ~5% once TX ramped. Latency/jitter was not measured. See
+  [Wi-Fi & standby](findings/wifi.md).
+- **Max Wi-Fi throughput reached ~2.17 Gbps** on a 2.5 GbE speedtest, about 87% of line rate,
+  with the camera already thermally halved. The earlier 900 Mbps test was not link-limited: link
+  rate was slightly higher there, so the old client/server path was the ceiling. 1.6 Gbps is a
+  plausible upper cap at good orientation; 1.3-1.4 Gbps is safer with movement/body blocking. See
+  [Wi-Fi & standby](findings/wifi.md).
+- **The controller HAL is the biggest reducible background CPU cost.** With controllers active,
+  `vendor.samsung.hardware.secxrcontroller@1.0-service` averaged ~27-35% CPU in Chronolink runs and
+  dropped to 0 in controller-idle runs. Hand tracking costs ~5-10 CPU points in perception/camera
+  and ~2 GPU points; most Samsung/Google app bloat was not actually running. See
+  [background processes & debloat](findings/debloat.md).
 - **Disabling hand tracking is a suspend, not a teardown** - small thermal benefit. See
   [Power modes & battery](findings/modes.md).

@@ -7,7 +7,7 @@ unless noted; the battery tests used ASTC.
 
 ## Tests & results
 
-Probed 2026-10-20 to 2026-10-23.
+Probed 2026-10-20 to 2026-10-31.
 
 | Test | Observed result |
 |---|---|
@@ -15,6 +15,7 @@ Probed 2026-10-20 to 2026-10-23.
 | idle, hand on vs hand off | hand CIB/ingest absent; head/eye/IR unchanged; GPU 35% -> 33%; 1-2 C cooler |
 | 4x ASTC 14-45%, AC on/off | same caps 1.92 GHz, 72 Hz, 421 MHz, fan 5, status 2, ~40% GPU |
 | charging | pack +0.75-1 C; no SoC profile change |
+| 7x VRChat ASTC, 20% -> 3% | no battery-triggered throttle; thermal status 3 caps CPU 1.92 GHz, head camera 30 fps, fan 6; plugged runs raised fan to 7 without an extra SoC/display cap |
 
 ## Findings
 
@@ -23,8 +24,12 @@ Probed 2026-10-20 to 2026-10-23.
   [cross-run analysis](cross-run.md).
 - Hand tracking is suspended, not torn down; residual context thread and registration remain.
 - Low battery (14-16%) did not enable Battery Saver or add a lower cap.
-- AC did not raise caps/clocks/fps in these thermally saturated runs.
-- Battery/AC conclusion is limited by every run starting at thermal status 2.
+- Critical battery (3-4%) also did not add a battery-specific cap, enable Battery Saver, or shut
+  down during the 60 s runs. The observed CPU/camera/fan limits were thermal status 3.
+- Plugged low-battery runs used fan step 7, but did not add an extra CPU, GPU or display limit.
+- AC did not raise caps/clocks in these thermally saturated runs.
+- Battery/AC conclusions are limited by every run starting thermally saturated (status 2 in the
+  first test, status 3 in the low/critical follow-up).
 
 ## Details
 
@@ -200,3 +205,44 @@ when the device is not thermally limited.
 **Better experiment for the boost/headroom question:** cool to the same starting temperature,
 same workload for >=5-10 min, matched battery levels, then compare unplugged vs plugged at ~50%
 and again at <10% (critical).
+
+### Low / critical battery follow-up (2026-10-31)
+
+Seven 60 s VRChat-on-SteamVR ASTC runs at night, hand tracking off, no active media, 72 Hz target.
+Battery fell from 20% to 3% across the session; the 3% and 16% points were repeated while charging.
+All runs were hot-started: the 20% run began at thermal status 2 and crossed to 3 at 16 s; the rest
+were already at status 3.
+
+| run | battery | AC | thermal status | AP mean | GPU max | fan | head cam | batt temp |
+|---|---:|---:|---|---:|---:|---|---:|---:|
+| run-20 | 20 -> 19% | off | 2 -> 3 | 72.8 C | 75.8 C | 6 | 38.6* | 29 C |
+| run-17 | 16 -> 16% | off | 3 | 72.1 C | 75.8 C | 6 | 30 | 30-31 C |
+| run-13 | 13 -> 12% | off | 3 | 72.4 C | 76.1 C | 6 | 30 | 32 C |
+| run-8 | 8 -> 7% | off | 3 | 72.9 C | 76.8 C | 6-7 | 30 | 33-34 C |
+| run-4 | 4 -> 3% | off | 3 | 72.8 C | 76.5 C | 6 | 30 | 34 C |
+| run-4 plugged | 3 -> 3% | on | 3 | 71.9 C | 74.8 C | 7 | 30 | 34-35 C |
+| run-16 plugged | 16 -> 17% | on | 3 | 73.0 C | 76.5 C | 6-7 | 30 | 32 C |
+
+\* run-20 camera was 60 fps until 8 s, 44.7 fps at 18 s, then 30 fps from 28 s.
+
+Across all seven runs:
+
+- CPU caps were **1.92 / 1.92 GHz**, GPU clock **421 MHz**, `g_throttling=0`, `psm=0` and display
+  **72 Hz**. None of those changed at 3-4% battery.
+- The head camera was **30 fps** in every status-3 run. run-20 shows the thermal transition:
+  status 3 at 16 s, camera 44.7 fps at 18 s, 30 fps from 28 s. This is the same thermal camera
+  throttle already seen at status 3, not a battery threshold.
+- Fan step was **6** unplugged, but **7** in the 3% plugged run and **6 -> 7** in the 16% plugged
+  run.
+- At 4 -> 3% the headset kept running for the full 60 s with no shutdown, Battery Saver, lower
+  CPU cap or display drop. Battery fell about **1%/min** under this workload.
+- Pack temperature rose from **29 C at 20%** to **34 C at 3%** unplugged, and **34-35 C** when
+  charging at 3%. That tracks session heat and charging, not the battery threshold itself.
+
+The earlier 14-45% test remains a useful baseline: at thermal status 2, low battery alone kept
+72 fps, 60 fps cameras, `psm=0` and the normal thermal cap. The new low/critical runs are
+dominated by status 3, so they do not show a separate battery throttle.
+
+**Caveats.** Sequential hot-start runs, no cooldown or ambient control, and only two low-battery
+plugged runs. Hand tracking was off and the Chronolink workload was effectively identical. The
+standby follow-up pair is in [standby & wake](standby.md).

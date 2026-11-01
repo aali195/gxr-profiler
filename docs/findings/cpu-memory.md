@@ -22,6 +22,8 @@ Probed 2026-10-21.
 - Swap is zram-backed.
 - CPU utilisation is delta-based, not a direct counter.
 - Per-process RSS/GPU memory lives in `procs.csv`; total GPU memory is not summed.
+- DDR/RAM temperature is captured separately from the kernel `ddr` thermal zone
+  (`ddr_temp`); see [thermal](thermal.md).
 
 ## Details
 

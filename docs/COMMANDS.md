@@ -56,6 +56,13 @@ echo '###SEC'
 cat /sys/class/sec/sec-ap-thermistor/temperature 2>/dev/null
 cat /sys/class/sec/sec-lp-thermistor/temperature 2>/dev/null
 cat /sys/class/sec/sec-wf-thermistor/temperature 2>/dev/null
+echo '###DDR'
+if [ "$(cat /sys/class/thermal/thermal_zone15/type 2>/dev/null)" = ddr ]; then
+  cat /sys/class/thermal/thermal_zone15/temp 2>/dev/null
+else
+  p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
+  [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
+fi
 echo '###LOAD'
 cat /proc/loadavg 2>/dev/null
 echo '###MEM'
@@ -106,6 +113,7 @@ su -c 'cat /sys/class/sec_fan/fan/curr_rpm; cat /sys/class/sec_fan/fan/curr_rpm2
 | `GBUSY`, `GBUSYN` | `g_busy` (%), `g_busy_num`/`g_busy_den` |
 | `GTMP`, `GTHR` | `g_temp` (°C), `g_throttling` |
 | `SEC` | `sec_ap`, `sec_lp`, `sec_wf` (°C) |
+| `DDR` | `ddr_temp` (°C, kernel `ddr` thermal zone) |
 | `LOAD` | `load1/5/15`, `procs_running`, `procs_total` |
 | `MEM` | `mem_total`, `mem_used`, `mem_cached`, `mem_available`, `mem_free`, `mem_used_pct`, `swap_total`, `swap_used`, `swap_free`, `swap_used_pct` |
 | `STAT` | `cpu_util0..5` (delta), `procs_running` |
@@ -129,7 +137,9 @@ su -c 'cat /sys/class/sec_fan/fan/curr_rpm; cat /sys/class/sec_fan/fan/curr_rpm2
 - `/proc/stat` and `/proc/diskstats` counters are cumulative. gxr-profiler records
   deltas between polls for utilisation/throughput/IOPS/busy/latency.
 - `dumpsys thermalservice` is the primary named-temperature source; logcat is
-  supplementary/event-driven.
+  supplementary/event-driven. DDR/RAM temperature is read separately from the
+  kernel `ddr` thermal zone (`thermal_zone15` on this build, with a fallback
+  lookup by zone type) because it is not in the HAL named set.
 - Poll timeout is 8 s (the normal poll should complete well under 1 s).
 - `wifi_rx_mbps`/`wifi_tx_mbps` are **actual interface throughput** from `/proc/net/dev`,
   not the negotiated link speed. This is the best proxy for streamed PCVR bitrate; it
