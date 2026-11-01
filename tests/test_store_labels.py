@@ -9,6 +9,7 @@ from gxr_profiler.runs.store import RunStore
 
 def test_labels_friendly_names():
     assert labels.label("t_LRP").name == "Power path"
+    assert labels.label("ddr_temp").name == "DDR (RAM) temperature"
     assert labels.label("g_busy").name == "GPU utilisation"
     assert labels.label("fan_rpm").unit == "rpm"
     assert labels.friendly("mem_available") == "Available memory"
@@ -17,6 +18,13 @@ def test_labels_friendly_names():
 def test_bands_defined():
     bands = {b["id"] for b in labels.BANDS}
     assert {"cpu", "gpu", "npu"} <= bands
+
+
+def test_ddr_is_a_cooldown_sensor():
+    from gxr_profiler.core.columns import temp_sensor_options
+
+    options = {option["id"]: option["label"] for option in temp_sensor_options()}
+    assert options["DDR"] == "DDR (RAM) temperature"
 
 
 def test_display_units():
@@ -31,6 +39,7 @@ def test_display_units():
     assert series["xr_cpu"]["scale"] == 100.0
     assert series["disp_brightness"]["unit"] == "%"
     assert series["disp_brightness"]["scale"] == 100.0
+    assert series["ddr_temp"]["unit"] == "°C"
     assert series["xr_fps"]["unit"] == "fps"
     assert groups["cpu"]["unit"] == "MHz"
     bands = {b["id"]: b for b in spec["bands"]}

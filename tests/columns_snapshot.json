@@ -154,6 +154,7 @@
   "sec_ap",
   "sec_lp",
   "sec_wf",
+  "ddr_temp",
   "load1",
   "load5",
   "load15",

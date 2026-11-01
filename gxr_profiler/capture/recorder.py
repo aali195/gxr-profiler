@@ -15,6 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 from ..core import parsers as P
 from ..core.adb import AdbClient
+from ..core.columns import POLL_TEMP_SENSORS, cooldown_column
 from ..core.device import collect_device_info
 from ..core.models import RunConfig, SampleEvent
 from .logcat import DEV_BASE, LogcatStream
@@ -165,7 +166,8 @@ class Recorder:
     # -- cooldown --------------------------------------------------------
     def _cooldown(self) -> None:
         sensor = self.cfg.cooldown_sensor
-        col = f"t_{sensor}"
+        col = cooldown_column(sensor)
+        poll_backed = sensor in POLL_TEMP_SENSORS
         self.on_status(f"Cooling down: waiting for {sensor} <= {self.cfg.cooldown_below} C...")
         start = time.time()
         last_val = None
@@ -175,15 +177,18 @@ class Recorder:
             if self.cfg.cooldown_max_wait and (time.time() - start) >= self.cfg.cooldown_max_wait:
                 self.on_status("Cooldown time limit reached; starting anyway.")
                 return
-            thermal = {}
-            try:
-                thermal = self.poller.poll_thermal()
-                self.state.update(thermal)
-            except Exception:
-                log.debug("thermal poll failed during cooldown", exc_info=True)
-            val = thermal.get(col)
-            if val is None and fallback_col:
-                val = self._safe_poll().get(fallback_col)
+            if poll_backed:
+                val = self._safe_poll().get(col)
+            else:
+                thermal = {}
+                try:
+                    thermal = self.poller.poll_thermal()
+                    self.state.update(thermal)
+                except Exception:
+                    log.debug("thermal poll failed during cooldown", exc_info=True)
+                val = thermal.get(col)
+                if val is None and fallback_col:
+                    val = self._safe_poll().get(fallback_col)
             now = time.time()
             if isinstance(val, (int, float)):
                 if val <= self.cfg.cooldown_below:

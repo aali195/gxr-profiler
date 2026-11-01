@@ -3374,6 +3374,7 @@ function renderPreviewMetrics(host, metrics) {
     ["CPU hottest", fmt(_rowMax(metrics, "t_CPU", 6), "°C", 1)],
     ["GPU hottest", fmt(_rowMax(metrics, "t_GPU", 8), "°C", 1)],
     ["Surface", fmt(metrics.t_skin ?? metrics.t_AP, "°C", 1)],
+    ["DDR/RAM", fmt(metrics.ddr_temp, "°C", 1)],
     ["WiFi", fmt(metrics.t_WIFI, "°C", 1)],
     ["Hottest sensor", hottest ? hottest.key + " · " + fmt(hottest.value, "°C", 1) : "--"],
     ["Battery", metrics.batt_level == null ? "--" : Math.round(metrics.batt_level) + "%"],

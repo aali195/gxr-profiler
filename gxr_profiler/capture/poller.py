@@ -27,6 +27,13 @@ echo '###SEC'
 cat /sys/class/sec/sec-ap-thermistor/temperature 2>/dev/null
 cat /sys/class/sec/sec-lp-thermistor/temperature 2>/dev/null
 cat /sys/class/sec/sec-wf-thermistor/temperature 2>/dev/null
+echo '###DDR'
+if [ "$(cat /sys/class/thermal/thermal_zone15/type 2>/dev/null)" = ddr ]; then
+  cat /sys/class/thermal/thermal_zone15/temp 2>/dev/null
+else
+  p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
+  [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
+fi
 echo '###LOAD'
 cat /proc/loadavg 2>/dev/null
 echo '###MEM'
@@ -114,6 +121,10 @@ def parse_poll(text: str) -> dict[str, float | str]:
         if i < len(sec_t):
             out[key] = sec_t[i] / 10.0
 
+    ddr_t = first("DDR")
+    if ddr_t is not None:
+        out["ddr_temp"] = ddr_t / 1000.0
+
     out.update(P.parse_loadavg(" ".join(sec.get("LOAD", []))))
     out.update(P.parse_meminfo("\n".join(sec.get("MEM", []))))
     out.update(P.parse_proc_stat(sec.get("STAT", [])))
@@ -154,6 +165,13 @@ echo '###SEC'
 cat /sys/class/sec/sec-ap-thermistor/temperature 2>/dev/null
 cat /sys/class/sec/sec-lp-thermistor/temperature 2>/dev/null
 cat /sys/class/sec/sec-wf-thermistor/temperature 2>/dev/null
+echo '###DDR'
+if [ "$(cat /sys/class/thermal/thermal_zone15/type 2>/dev/null)" = ddr ]; then
+  cat /sys/class/thermal/thermal_zone15/temp 2>/dev/null
+else
+  p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
+  [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
+fi
 echo '###LOAD'
 cat /proc/loadavg 2>/dev/null
 echo '###MEM'
@@ -185,6 +203,13 @@ echo '###END'
 PREVIEW_SCRIPT = r"""
 echo '###BATT'
 dumpsys battery 2>/dev/null
+echo '###DDR'
+if [ "$(cat /sys/class/thermal/thermal_zone15/type 2>/dev/null)" = ddr ]; then
+  cat /sys/class/thermal/thermal_zone15/temp 2>/dev/null
+else
+  p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
+  [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
+fi
 echo '###THERM'
 dumpsys thermalservice 2>/dev/null
 echo '###END'

@@ -70,7 +70,7 @@ GROUPS: list[ChartGroup] = [
     _group(
         "thermal_surfaces",
         "Surface & component temperatures",
-        _series(["t_AP", "t_skin", "t_WIFI", "t_LRP", "t_CHG", "t_BAT", "t_USB"]),
+        _series(["t_AP", "t_skin", "t_WIFI", "t_LRP", "t_CHG", "t_BAT", "t_USB", "ddr_temp"]),
         section="Thermal",
     ),
     _group("cpu", "CPU frequency", _series(["cpu_max0", "cpu_max2"]), ["cpu_freq"], "CPU"),

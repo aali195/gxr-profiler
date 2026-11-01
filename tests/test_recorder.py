@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import pytest
@@ -64,6 +65,28 @@ def test_cooldown_uses_selected_sensor(tmp_path, monkeypatch):
     assert any("Baseline reached (34.0 C)" in message for message in messages)
 
 
+def test_cooldown_uses_ddr_sensor(tmp_path, monkeypatch):
+    adb = FakeAdb()
+    cfg = RunConfig(
+        name="cooldown-ddr",
+        out_dir=str(tmp_path),
+        cooldown_below=40.0,
+        cooldown_sensor="DDR",
+        logcat=False,
+    )
+    rec = Recorder(adb, cfg)
+    values = iter([45.0, 39.0])
+    monkeypatch.setattr(rec.poller, "poll_fast", lambda: {"ddr_temp": next(values)})
+    monkeypatch.setattr("gxr_profiler.capture.recorder.time.sleep", lambda _seconds: None)
+    messages = []
+    rec.on_status = messages.append
+
+    rec._cooldown()
+
+    assert any("DDR: 45.0" in message for message in messages)
+    assert any("Baseline reached (39.0 C)" in message for message in messages)
+
+
 def test_invalid_cooldown_sensor_is_rejected(tmp_path):
     with pytest.raises(ValueError, match="unknown cooldown sensor"):
         RunConfig(name="bad-sensor", out_dir=str(tmp_path), cooldown_sensor="BOGUS")
@@ -75,6 +98,28 @@ def test_writer_ignores_flat_files(tmp_path):
     writer.open()
     writer.close()
     assert (tmp_path / "orphan" / "data.csv").exists()
+
+
+def test_writer_does_not_warn_for_internal_state_columns(tmp_path, caplog):
+    writer = RunWriter(str(tmp_path), "internal")
+    writer.open()
+    try:
+        with caplog.at_level(logging.WARNING, logger="gxr_profiler.capture.writer"):
+            writer.write_row({"ts_host": "1.0", "low_power": 1, "sev_AP": 2, "t_SUBBAT": 0})
+    finally:
+        writer.close()
+    assert not any("unknown columns" in record.getMessage() for record in caplog.records)
+
+
+def test_writer_warns_for_truly_unknown_columns(tmp_path, caplog):
+    writer = RunWriter(str(tmp_path), "unknown")
+    writer.open()
+    try:
+        with caplog.at_level(logging.WARNING, logger="gxr_profiler.capture.writer"):
+            writer.write_row({"ts_host": "1.0", "bogus": 1})
+    finally:
+        writer.close()
+    assert any("bogus" in record.getMessage() for record in caplog.records)
 
 
 def test_auxiliary_intervals_must_be_positive(tmp_path):

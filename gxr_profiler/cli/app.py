@@ -5,7 +5,7 @@ from __future__ import annotations
 import typer
 
 from ..core.adb import AdbError, RealAdb, RunNotFound, list_devices, resolve_serial
-from ..core.columns import TEMP_SENSORS
+from ..core.columns import COOLDOWN_SENSORS
 from ..core.models import RunConfig
 from ..core.paths import default_runs_dir
 
@@ -62,8 +62,8 @@ def record(
     except AdbError as exc:
         _fail(str(exc))
 
-    if sensor not in TEMP_SENSORS:
-        _fail(f"unknown cooldown sensor '{sensor}'; choose {', '.join(TEMP_SENSORS)}")
+    if sensor not in COOLDOWN_SENSORS:
+        _fail(f"unknown cooldown sensor '{sensor}'; choose {', '.join(COOLDOWN_SENSORS)}")
     if cooldown_max_wait < 0:
         _fail("--cooldown-max-wait cannot be negative")
     if interval <= 0:

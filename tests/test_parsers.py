@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from gxr_profiler.capture.poller import POLL_SCRIPT, parse_poll
+from gxr_profiler.capture.poller import FAST_SCRIPT, POLL_SCRIPT, PREVIEW_SCRIPT, parse_poll
 from gxr_profiler.core import parsers as P
 from tests.fake_adb import POLL_RESPONSE
 
@@ -185,10 +185,14 @@ def test_parse_poll_sections():
     assert out["cpu_max2"] == 2361600.0
     assert out["g_clock"] == 421.0
     assert out["sec_ap"] == 30.0
+    assert out["ddr_temp"] == 43.6
     assert out["batt_level"] == 80.0
     assert out["t_CPU5"] == 37.8  # from thermalservice HAL block
     assert out["wifi_rssi"] == -44.0
     assert POLL_SCRIPT.count("###FREQ") == 1
+    assert POLL_SCRIPT.count("###DDR") == 1
+    assert FAST_SCRIPT.count("###DDR") == 1
+    assert PREVIEW_SCRIPT.count("###DDR") == 1
 
 
 MEMINFO = """MemTotal:       16066684 kB

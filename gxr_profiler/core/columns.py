@@ -82,6 +82,10 @@ TEMP_SENSORS = [
     "USB",
 ]
 
+POLL_TEMP_SENSORS = {"DDR": "ddr_temp"}
+COOLDOWN_SENSORS = [*TEMP_SENSORS, *POLL_TEMP_SENSORS]
+NON_REPORT_STATE_KEYS = frozenset({"low_power", "t_SUBBAT"})
+
 _TEMP_LABELS = {
     "AP": "Application processor",
     "skin": "Front surface",
@@ -498,6 +502,7 @@ _POLL_SPECS += [
     _c("sec_ap", "AP thermistor", "thermal", "sysfs sec-*-thermistor", "°C", decimals=1),
     _c("sec_lp", "LP thermistor", "thermal", "sysfs sec-*-thermistor", "°C", decimals=1),
     _c("sec_wf", "Wi-Fi thermistor", "thermal", "sysfs sec-*-thermistor", "°C", decimals=1),
+    _c("ddr_temp", "DDR (RAM) temperature", "thermal", "sysfs thermal_zone ddr", "°C", decimals=1),
     _c("load1", "CPU load (1 min)", "system", "/proc/loadavg", decimals=2),
     _c("load5", "CPU load (5 min)", "system", "/proc/loadavg", decimals=2),
     _c("load15", "CPU load (15 min)", "system", "/proc/loadavg", decimals=2),
@@ -752,6 +757,10 @@ PROC_COLUMNS = [
 ]
 
 
+def cooldown_column(sensor: str) -> str:
+    return POLL_TEMP_SENSORS.get(sensor, f"t_{sensor}")
+
+
 def temp_sensor_options() -> list[dict[str, str]]:
     """Selectable cooldown sensors with their human-readable labels."""
-    return [{"id": sensor, "label": COLUMN_BY_NAME[f"t_{sensor}"].label} for sensor in TEMP_SENSORS]
+    return [{"id": sensor, "label": COLUMN_BY_NAME[cooldown_column(sensor)].label} for sensor in COOLDOWN_SENSORS]

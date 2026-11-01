@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .columns import TEMP_SENSORS
+from .columns import COOLDOWN_SENSORS
 from .paths import default_runs_dir
 
 
@@ -39,7 +39,7 @@ class RunConfig:
     profile: str = "standard"
 
     def __post_init__(self) -> None:
-        if self.cooldown_sensor not in TEMP_SENSORS:
+        if self.cooldown_sensor not in COOLDOWN_SENSORS:
             raise ValueError(f"unknown cooldown sensor: {self.cooldown_sensor}")
         if self.cooldown_max_wait < 0:
             raise ValueError("cooldown max wait cannot be negative")

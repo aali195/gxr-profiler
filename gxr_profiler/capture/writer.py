@@ -17,7 +17,7 @@ from ..core.paths import (
     RUN_PROCS_FILE,
     ensure_writable_dir,
 )
-from .columns import EVENT_COLUMNS, PROC_COLUMNS, REPORT_COLUMNS
+from .columns import EVENT_COLUMNS, NON_REPORT_STATE_KEYS, PROC_COLUMNS, REPORT_COLUMNS
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +81,12 @@ class RunWriter:
                 return
             if self._csv_w:
                 if not self._keys_checked:
-                    unknown = set(row) - set(self._csv_w.fieldnames or [])
+                    fieldnames = set(self._csv_w.fieldnames or [])
+                    unknown = {
+                        k
+                        for k in row
+                        if k not in fieldnames and k not in NON_REPORT_STATE_KEYS and not k.startswith("sev_")
+                    }
                     if unknown:
                         log.warning("ignoring unknown columns: %s", ", ".join(sorted(unknown)))
                     self._keys_checked = True

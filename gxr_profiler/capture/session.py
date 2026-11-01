@@ -77,7 +77,7 @@ def capture_state(adb: AdbClient, poller: Poller) -> dict:
     st.update(_passthrough_state(adb))
     try:
         poll = poller.poll()
-        for k in ("psm", "disp_hz", "batt_ac", "batt_level", "batt_temp", "thermal_status"):
+        for k in ("psm", "disp_hz", "batt_ac", "batt_level", "batt_temp", "ddr_temp", "thermal_status"):
             if k in poll:
                 st[k] = poll[k]
     except Exception:
