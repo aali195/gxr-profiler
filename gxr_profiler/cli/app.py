@@ -36,7 +36,7 @@ def record(
     root: bool = typer.Option(
         False,
         "--root",
-        help="also read fan RPM/PWM + active panel (read-only su)",
+        help="also read fan RPM/PWM, active panel and calibration metadata (read-only su)",
     ),
     sensors: bool = typer.Option(False, "--sensors", help="also sample dumpsys sensorservice summary"),
     processes: bool = typer.Option(
@@ -74,6 +74,8 @@ def record(
         _fail("--cooldown cannot be negative")
     if process_io and not root:
         _fail("--process-io requires --root")
+    if process_io and not processes:
+        _fail("--process-io requires process sampling")
     if processes_top < 0:
         _fail("--processes-top cannot be negative")
 

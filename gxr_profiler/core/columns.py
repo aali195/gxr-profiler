@@ -86,6 +86,34 @@ POLL_TEMP_SENSORS = {"DDR": "ddr_temp"}
 COOLDOWN_SENSORS = [*TEMP_SENSORS, *POLL_TEMP_SENSORS]
 NON_REPORT_STATE_KEYS = frozenset({"low_power", "t_SUBBAT"})
 
+THERMAL_ZONE_SPECS = [
+    ("video", "video_temp", "Video decoder temperature", False),
+    ("camera-0", "camera0_temp", "Camera 0 temperature", False),
+    ("camera-1", "camera1_temp", "Camera 1 temperature", False),
+    ("aoss-0", "aoss0_temp", "AOSS 0 temperature", True),
+    ("aoss-1", "aoss1_temp", "AOSS 1 temperature", True),
+    ("cpuss-0", "cpuss0_temp", "CPUSS 0 temperature", True),
+    ("cpuss-1", "cpuss1_temp", "CPUSS 1 temperature", True),
+]
+for _cluster, _cores in ((0, 2), (1, 4)):
+    for _core in range(_cores):
+        for _thread in range(2):
+            _zone = f"cpu-{_cluster}-{_core}-{_thread}"
+            THERMAL_ZONE_SPECS.append(
+                (
+                    _zone,
+                    f"rawcpu_{_cluster}_{_core}_{_thread}_temp",
+                    f"Raw CPU {_cluster}-{_core}-{_thread}",
+                    True,
+                )
+            )
+
+THERMAL_ZONE_KEYS = {zone: col for zone, col, _, _ in THERMAL_ZONE_SPECS}
+THERMAL_ZONE_MAIN_COLS = [col for _, col, _, extra in THERMAL_ZONE_SPECS if not extra]
+THERMAL_ZONE_AUX_COLS = [col for zone, col, _, extra in THERMAL_ZONE_SPECS if extra and not zone.startswith("cpu-")]
+THERMAL_ZONE_RAW_CPU0_COLS = [col for zone, col, _, _ in THERMAL_ZONE_SPECS if zone.startswith("cpu-0-")]
+THERMAL_ZONE_RAW_CPU1_COLS = [col for zone, col, _, _ in THERMAL_ZONE_SPECS if zone.startswith("cpu-1-")]
+
 _TEMP_LABELS = {
     "AP": "Application processor",
     "skin": "Front surface",
@@ -290,7 +318,6 @@ _STATE_SPECS += [
 for _s in CIB_STREAMS:
     _STATE_SPECS += [
         _c(f"cib_{_s}_fps", _CIB_LABELS[_s], "camera", "logcat [CIB]", "fps", kind="event", decimals=0),
-        _c(f"cib_{_s}_hz", f"{_CIB_LABELS[_s]} rate", "camera", "logcat [CIB]", "Hz", kind="event", decimals=0),
     ]
 
 SENSOR_SPECS = [
@@ -481,16 +508,6 @@ _POLL_SPECS += [
         decimals=0,
     ),
     _c("g_clock", "GPU clock", "gpu", "sysfs kgsl clock_mhz", "MHz", decimals=0),
-    _c(
-        "g_devfreq",
-        "GPU frequency (derived)",
-        "gpu",
-        "derived from g_clock",
-        "Hz",
-        display="MHz",
-        scale=1e-6,
-        decimals=0,
-    ),
     _c("g_busy", "GPU utilisation", "gpu", "sysfs kgsl gpu_busy_percentage", "%", decimals=0),
     _c("g_busy_num", "GPU busy ticks", "gpu", "sysfs kgsl gpubuspy", "ticks", decimals=0),
     _c("g_busy_den", "GPU busy total", "gpu", "sysfs kgsl gpubuspy", "ticks", decimals=0),
@@ -498,16 +515,32 @@ _POLL_SPECS += [
     _c("g_throttling", "GPU throttled", "gpu", "sysfs kgsl throttling", "flag", decimals=0),
     _c("fan_rpm", "Fan speed (left)", "fan", "sysfs sec_fan (root)", "rpm", decimals=0),
     _c("fan_rpm2", "Fan speed (right)", "fan", "sysfs sec_fan (root)", "rpm", decimals=0),
-    _c("fan_pwm", "Fan PWM", "fan", "sysfs sec_fan (root)", decimals=0),
+    _c("fan_pwm", "Fan PWM", "fan", "sysfs sec_fan (root)", "PWM", decimals=0),
     _c("sec_ap", "AP thermistor", "thermal", "sysfs sec-*-thermistor", "°C", decimals=1),
     _c("sec_lp", "LP thermistor", "thermal", "sysfs sec-*-thermistor", "°C", decimals=1),
     _c("sec_wf", "Wi-Fi thermistor", "thermal", "sysfs sec-*-thermistor", "°C", decimals=1),
     _c("ddr_temp", "DDR (RAM) temperature", "thermal", "sysfs thermal_zone ddr", "°C", decimals=1),
+    *[
+        _c(col, label, "thermal", f"sysfs thermal_zone {zone}", "°C", decimals=1, extra=extra)
+        for zone, col, label, extra in THERMAL_ZONE_SPECS
+    ],
+    _c("max_ch1_voltage", "Power rail 1 voltage", "power", "sysfs power rail monitor", "V", decimals=3),
+    _c("max_ch1_current", "Power rail 1 current", "power", "sysfs power rail monitor", "A", decimals=3),
+    _c("max_ch1_power", "Power rail 1 power", "power", "sysfs power rail monitor", "W", decimals=3),
+    _c(
+        "max_ch1_energy_wh",
+        "Power rail 1 energy",
+        "power",
+        "derived from power rail 1",
+        "Wh",
+        decimals=4,
+        extra=True,
+    ),
     _c("load1", "CPU load (1 min)", "system", "/proc/loadavg", decimals=2),
     _c("load5", "CPU load (5 min)", "system", "/proc/loadavg", decimals=2),
     _c("load15", "CPU load (15 min)", "system", "/proc/loadavg", decimals=2),
-    _c("procs_running", "Runnable tasks", "system", "/proc/loadavg", "tasks", display="", decimals=0),
-    _c("procs_total", "Total tasks", "system", "/proc/loadavg", "tasks", display="", decimals=0),
+    _c("procs_running", "Runnable tasks", "system", "/proc/loadavg", "tasks", decimals=0),
+    _c("procs_total", "Total tasks", "system", "/proc/loadavg", "tasks", decimals=0),
     _c(
         "mem_total",
         "Total memory",
@@ -595,19 +628,19 @@ _POLL_SPECS += [
     _c("zram_used_mb", "Zram memory footprint", "system", "/sys/block/zram0/mm_stat", "MB", decimals=1),
     _c("batt_temp", "Battery temperature", "battery", "dumpsys battery", "°C", decimals=1),
     _c("batt_level", "Battery level", "battery", "dumpsys battery", "%", decimals=0),
+    _c("batt_drain_pct_h", "Battery drain rate", "battery", "derived from dumpsys battery", "%/h", decimals=2),
     _c("batt_status", "Battery status", "battery", "dumpsys battery", "enum", display="", decimals=0, extra=True),
-    _c("batt_ac", "On AC power", "battery", "dumpsys battery", "bool", display="", decimals=0, extra=True),
-    _c("batt_usb", "On USB power", "battery", "dumpsys battery", "bool", display="", decimals=0),
+    _c("batt_ac", "On AC power", "battery", "dumpsys battery", "bool", display="on/off", decimals=0, extra=True),
+    _c("batt_usb", "On USB power", "battery", "dumpsys battery", "bool", display="on/off", decimals=0),
     _c("wifi_rssi", "Wi-Fi signal", "network", "cmd wifi status", "dBm", decimals=0),
     _c("wifi_tx", "Wi-Fi Tx link speed", "network", "cmd wifi status", "Mbps", decimals=0),
     _c("wifi_rx", "Wi-Fi Rx link speed", "network", "cmd wifi status", "Mbps", decimals=0),
-    _c("wifi_link", "Wi-Fi link speed", "network", "cmd wifi status", "Mbps", decimals=0),
     _c("wifi_freq", "Wi-Fi frequency", "network", "cmd wifi status", "MHz", decimals=0),
     _c("wifi_std", "Wi-Fi standard", "network", "cmd wifi status", "code", display="", decimals=0),
     _c("wifi_max_tx", "Max Wi-Fi send rate", "network", "cmd wifi status", "Mbps", decimals=0),
     _c("wifi_max_rx", "Max Wi-Fi receive rate", "network", "cmd wifi status", "Mbps", decimals=0),
-    _c("wifi_tx_retries", "Wi-Fi retransmits", "network", "cmd wifi status", display="", decimals=0),
-    _c("wifi_lost", "Wi-Fi lost packets", "network", "cmd wifi status", display="", decimals=0),
+    _c("wifi_tx_retries", "Wi-Fi retransmits", "network", "cmd wifi status", "packets", decimals=0),
+    _c("wifi_lost", "Wi-Fi lost packets", "network", "cmd wifi status", "packets", decimals=0),
     _c("wifi_tx_pkts", "Wi-Fi sent packets", "network", "cmd wifi status", decimals=0),
     _c("wifi_rx_pkts", "Wi-Fi received packets", "network", "cmd wifi status", decimals=0),
     _c("wifi_rx_mbps", "Wi-Fi receive throughput", "network", "/proc/net/dev (wlan0)", "Mbps", decimals=1),
@@ -623,7 +656,6 @@ _POLL_SPECS += [
         "network",
         "/proc/net/dev (wlan0)",
         "packets",
-        display="",
         decimals=0,
     ),
     _c(
@@ -632,7 +664,6 @@ _POLL_SPECS += [
         "network",
         "/proc/net/dev (wlan0)",
         "packets",
-        display="",
         decimals=0,
     ),
     _c(
@@ -641,7 +672,6 @@ _POLL_SPECS += [
         "network",
         "/proc/net/dev (wlan0)",
         "packets",
-        display="",
         decimals=0,
     ),
     _c(
@@ -650,7 +680,6 @@ _POLL_SPECS += [
         "network",
         "/proc/net/dev (wlan0)",
         "packets",
-        display="",
         decimals=0,
     ),
     _c("bt_on", "Bluetooth", "radio", "settings / dumpsys bluetooth_manager", "bool", display="on/off", extra=True),
@@ -670,8 +699,8 @@ _POLL_SPECS += [
     _c("loc_providers", "Location providers", "radio", "settings secure location_mode", text=True),
     _c("disk_read_mbps", "Disk read", "storage", "/proc/diskstats", "MB/s", decimals=1),
     _c("disk_write_mbps", "Disk write", "storage", "/proc/diskstats", "MB/s", decimals=1),
-    _c("disk_read_iops", "Disk read IOPS", "storage", "/proc/diskstats", "IOPS", display="", decimals=0),
-    _c("disk_write_iops", "Disk write IOPS", "storage", "/proc/diskstats", "IOPS", display="", decimals=0),
+    _c("disk_read_iops", "Disk read IOPS", "storage", "/proc/diskstats", "IOPS", decimals=0),
+    _c("disk_write_iops", "Disk write IOPS", "storage", "/proc/diskstats", "IOPS", decimals=0),
     _c("disk_busy_pct", "Disk busy", "storage", "/proc/diskstats", "%", decimals=0),
     _c("disk_io_latency_ms", "Disk I/O latency", "storage", "/proc/diskstats", "ms", decimals=1),
     _c("disk_io_pressure_some", "I/O pressure (some)", "storage", "/proc/pressure/io", "%", decimals=1),
@@ -687,7 +716,7 @@ COLUMN_BY_NAME = {c.name: c for c in COLUMNS}
 REPORT_COLUMNS = [c.name for c in COLUMNS]
 STATE_COLUMNS = [c.name for c in STATE_SPECS]
 POLL_COLUMNS = [c.name for c in _POLL_SPECS]
-CIB_COLUMNS = [f"cib_{s}_{m}" for s in CIB_STREAMS for m in ("fps", "hz")]
+CIB_COLUMNS = [f"cib_{s}_fps" for s in CIB_STREAMS]
 SENSOR_COLUMNS = [c.name for c in SENSOR_SPECS]
 MEDIA_COLUMNS = [c.name for c in MEDIA_SPECS]
 AUDIO_COLUMNS = [c.name for c in AUDIO_SPECS]

@@ -88,8 +88,8 @@ let findSavedSections = null;
 let findSavedTables = null;
 let findTimer = null;
 const collapsedTableSections = new Set(["Extra"]);  // table group headers hidden by the user; Extra starts closed
-const EXTRA_SECTIONS = new Set(["Media & display", "Audio", "Cameras", "Controllers", "Passthrough", "Slow state"]);
-const EXTRA_ORDER = ["Cameras", "Media & display", "Audio", "Controllers", "Passthrough", "Slow state"];
+const EXTRA_SECTIONS = new Set(["Media & display", "Audio", "Cameras (raw)", "Controllers", "Passthrough", "Raw thermal"]);
+const EXTRA_ORDER = ["Cameras (raw)", "Media & display", "Audio", "Controllers", "Passthrough", "Raw thermal"];
 
 function extraRank(section) {
   const i = EXTRA_ORDER.indexOf(section);
@@ -979,12 +979,6 @@ function trackingCard(meta) {
   return card;
 }
 
-function timeToThrottle(elapsed, series) {
-  const st = series["thermal_status"] || [];
-  for (let i = 0; i < st.length && i < elapsed.length; i++) if (st[i] > 0) return fmt(elapsed[i]) + "s";
-  return "never";
-}
-
 // ---- views ----------------------------------------------------------------
 const PROC_COLS = [
   { key: "name", label: "Process", text: true },
@@ -1485,20 +1479,46 @@ function thermalStatusText(current, peak) {
   return "level " + c + " (peak " + p + ")";
 }
 
+function hottestRunSensor(series) {
+  let best = null;
+  const consider = (label, values) => {
+    const value = _pick(values, "max");
+    if (value != null && (!best || value > best.value)) best = { label, value };
+  };
+  Object.entries(series || {}).forEach(([key, values]) => {
+    if (key.startsWith("t_")) {
+      consider(key.slice(2), values);
+    } else if (key.startsWith("band::") && key.endsWith("::max")) {
+      const id = key.slice(6, -5);
+      if (id === "cpu" || id === "gpu" || id === "npu") {
+        consider({ cpu: "CPU", gpu: "GPU", npu: "NPU" }[id], values);
+      }
+    }
+  });
+  return best;
+}
+
 function keyStats(dataset) {
   const s = dataset.series || {};
+  const last = col => lastVal(s[col]);
+  const hottest = hottestRunSensor(s);
+  const battery = last("batt_level");
   const items = [
+    ["Thermal status", thermalStatusText(last("thermal_status"), _pick(s["thermal_status"], "max"))],
+    ["Hottest sensor", hottest ? hottest.label + " · " + fmt(hottest.value, "°C", 1) : "--"],
     ["CPU peak", fmt(_pick(s["band::cpu::max"], "max"), "°C", 1)],
     ["GPU peak", fmt(_pick(s["band::gpu::max"], "max"), "°C", 1)],
-    ["Surface peak", fmt(_pick(s["t_skin"], "max"), "°C", 1)],
+    ["Surface peak", fmt(_pick(s["t_skin"], "max") ?? _pick(s["t_AP"], "max"), "°C", 1)],
+    ["DDR/RAM peak", fmt(_pick(s["ddr_temp"], "max"), "°C", 1)],
+    ["Rail 1 peak", fmt(_pick(s["max_ch1_power"], "max"), "W", 2)],
     ["WiFi peak", fmt(_pick(s["t_WIFI"], "max"), "°C", 1)],
+    ["WiFi download", fmt(_pick(s["wifi_rx_mbps"], "avg"), "Mbps", 1)],
+    ["Battery", battery == null ? "--" : Math.round(battery) + "%"],
+    ["Battery temp", fmt(last("batt_temp"), "°C", 1)],
+    ["Fan step", fanProfileLabel(_pick(s["fan_step"], "max"))],
+    ["Fan max", fmt(_pick(s["fan_rpm"], "max"), "rpm", 0)],
     ["GPU busy", fmt(_pick(s["g_busy"], "avg"), "%")],
     ["XR fps", fmt(_pick(s["xr_fps"], "avg"), "fps", 0)],
-    ["Fan profile", fanProfileLabel(_pick(s["fan_step"], "max"))],
-    ["Fan max", fmt(_pick(s["fan_rpm"], "max"), "rpm", 0)],
-    ["Download", fmt(_pick(s["wifi_rx_mbps"], "avg"), "Mbps", 1)],
-    ["Thermal status", thermalStatusText(lastVal(s["thermal_status"]), _pick(s["thermal_status"], "max"))],
-    ["Throttle", timeToThrottle(dataset.elapsed, s)],
   ];
   return items;
 }
@@ -1516,7 +1536,7 @@ function _previewNew() {
   return {
     cpuPeak: null, gpuPeak: null, surfacePeak: null, wifiPeak: null, fanMax: null,
     fanProfile: null, gpuBusySum: 0, gpuBusyN: 0, xrSum: 0, xrN: 0, downloadSum: 0, downloadN: 0,
-    thermalStatus: null, thermalPeak: null, throttleAt: null,
+    thermalStatus: null, thermalPeak: null,
   };
 }
 
@@ -1526,7 +1546,7 @@ function _previewAdd(p, row, elapsed) {
   };
   raise("cpuPeak", _rowMax(row, "t_CPU", 6));
   raise("gpuPeak", _rowMax(row, "t_GPU", 8));
-  raise("surfacePeak", row.t_skin);
+  raise("surfacePeak", row.t_skin ?? row.t_AP);
   raise("wifiPeak", row.t_WIFI);
   raise("fanProfile", row.fan_step);
   raise("fanMax", row.fan_rpm);
@@ -1543,9 +1563,6 @@ function _previewAdd(p, row, elapsed) {
   add("gpuBusySum", "gpuBusyN", row.g_busy);
   add("xrSum", "xrN", row.xr_fps);
   add("downloadSum", "downloadN", row.wifi_rx_mbps);
-  if (p.throttleAt == null && typeof row.thermal_status === "number" && row.thermal_status > 0) {
-    p.throttleAt = elapsed;
-  }
 }
 
 function previewStats(session) {
@@ -1562,7 +1579,6 @@ function previewStats(session) {
     ["Fan max", fmt(p.fanMax, "rpm", 0)],
     ["Download", fmt(avg("downloadSum", "downloadN"), "Mbps", 1)],
     ["Thermal status", thermalStatusText(p.thermalStatus, p.thermalPeak)],
-    ["Throttle", p.throttleAt == null ? "never" : fmt(p.throttleAt) + "s"],
   ];
 }
 
@@ -2054,7 +2070,7 @@ function featureList(f) {
   if (!f) return "--";
   const on = [];
   if (f.logcat) on.push("logcat");
-  if (f.root_fan) on.push("fan/root");
+  if (f.root_fan) on.push("root extras");
   if (f.sensors) on.push("sensors");
   if (f.processes) on.push("processes");
   if (f.process_io) on.push("disk I/O");
@@ -3366,20 +3382,20 @@ function previewHottestSensor(metrics) {
 
 function renderPreviewMetrics(host, metrics) {
   host.innerHTML = "";
-  const charging = { 1: "unknown", 2: "charging", 3: "discharging", 4: "not charging", 5: "full" };
   const hottest = previewHottestSensor(metrics);
   const items = [
-    ["Thermal status", thermalStatusText(metrics.thermal_status, metrics.thermal_status)],
-    ["Worst severity", metrics.thermal_max_sev == null ? "--" : "level " + Math.round(metrics.thermal_max_sev)],
+    ["Thermal status", thermalStatusText(metrics.thermal_status, null)],
+    ["Hottest sensor", hottest ? hottest.key + " · " + fmt(hottest.value, "°C", 1) : "--"],
     ["CPU hottest", fmt(_rowMax(metrics, "t_CPU", 6), "°C", 1)],
     ["GPU hottest", fmt(_rowMax(metrics, "t_GPU", 8), "°C", 1)],
     ["Surface", fmt(metrics.t_skin ?? metrics.t_AP, "°C", 1)],
     ["DDR/RAM", fmt(metrics.ddr_temp, "°C", 1)],
+    ["Rail 1", fmt(metrics.max_ch1_power, "W", 2)],
     ["WiFi", fmt(metrics.t_WIFI, "°C", 1)],
-    ["Hottest sensor", hottest ? hottest.key + " · " + fmt(hottest.value, "°C", 1) : "--"],
+    ["WiFi download", fmt(metrics.wifi_rx_mbps, "Mbps", 1)],
     ["Battery", metrics.batt_level == null ? "--" : Math.round(metrics.batt_level) + "%"],
     ["Battery temp", fmt(metrics.batt_temp, "°C", 1)],
-    ["Battery state", charging[metrics.batt_status] || (metrics.batt_ac ? "on AC" : "--")],
+    ["Fan step", fanProfileLabel(metrics.fan_step)],
   ];
   const kpis = el("div", "livekpis previewkpis");
   items.forEach(([k, v]) => {
@@ -3465,7 +3481,7 @@ function startPreview() {
   actions.appendChild(stop);
   head.appendChild(actions);
   card.appendChild(head);
-  card.appendChild(el("p", "muted cardnote", "Lightweight preview: battery and thermal sensors only. Nothing is written to disk."));
+  card.appendChild(el("p", "muted cardnote", "Lightweight preview: thermal, power, fan and Wi-Fi samples. Nothing is written to disk."));
   const body = el("div", "preview-body");
   body.id = "preview-body";
   body.appendChild(el("div", "muted preview-loading", "Reading headset..."));
@@ -3540,7 +3556,7 @@ function renderLiveView() {
   const optGrid = el("div", "optgrid");
   optGrid.innerHTML = `
     <label class="optitem"><input class="optbox" id="r-root" type="checkbox" />
-      <span class="optbody"><span class="opttitle">Root extras</span><span class="optdesc">Fan RPM/PWM and active panel. Uses read-only su and may prompt.</span></span></label>
+      <span class="optbody"><span class="opttitle">Root extras</span><span class="optdesc">Fan RPM/PWM, active panel and calibration metadata. Uses read-only su and may prompt.</span></span></label>
     <label class="optitem"><input class="optbox" id="r-sensors" type="checkbox" />
       <span class="optbody"><span class="opttitle">Sensor service</span><span class="optdesc">Android SensorService summary: active clients, rates and counts.</span></span></label>
     <label class="optitem"><input class="optbox" id="r-processes" type="checkbox" />

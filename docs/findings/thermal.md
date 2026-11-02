@@ -18,6 +18,7 @@ Probed 2026-10-20 to 2026-11-01 during idle, OS, controllers, VRChat and HDR run
 | AP vs skin vs `sec_ap` | identical to 0.1 C - same physical sensor |
 | GPU clock, 72 Hz vs 90 Hz | 421 MHz common at 72 Hz; 492-640 MHz in 90 Hz HDR; 545 MHz idle after HDR |
 | kernel `ddr` thermal zone | `thermal_zone15` readable by shell (~43.9 C), absent from the HAL named set |
+| raw thermal zones (idle) | `video` ~35.7 C, `camera-0/1` ~35.0/35.3 C, `aoss-0/1` ~35.5/35.7 C, `cpuss-0/1` ~35.8 C, 12 `cpu-*` zones; none are in the HAL named set |
 | idle -> OS -> controllers -> VRChat | thermal status 0/1/2; fan step 1/3/6/7 |
 
 ## Findings
@@ -27,9 +28,12 @@ Probed 2026-10-20 to 2026-11-01 during idle, OS, controllers, VRChat and HDR run
 - CPU caps come from live `scaling_max_freq`; Dcvsh is event-only.
 - GPU load usually shows as `g_busy` at 72 Hz, but the clock is not globally fixed: 90 Hz HDR
   and post-HDR idle can raise it. See [cross-run analysis](cross-run.md).
-- AP, skin and `sec_ap` are the same sensor.
+- AP, skin and `sec_ap` are the same sensor. `skin` and `sec_ap` stay in the raw CSV for
+  fallback/diagnostics but are not charted separately.
 - DDR/RAM temperature exists as a separate kernel thermal zone (`ddr`), but is not in the HAL
   named-temperature set.
+- The raw thermal-zone set adds video, camera, AOSS/CPUSS and per-core CPU sensors that the HAL
+  does not expose. AOSS/CPUSS and raw CPU zones are kept under **Extra -> Raw thermal**.
 - Throttling escalates through status and fan step before CPU caps.
 
 ## Details
@@ -48,7 +52,7 @@ Probed 2026-10-20 to 2026-11-01 during idle, OS, controllers, VRChat and HDR run
 - Global thermal status appears in `DynamicPolicyManager` (~15 s JSON blob).
 - **Fan step is logcat-only** - `/sys/class/sec_fan/fan` is root-only.
 - `/sys/class/kgsl/kgsl-3d0/gpuclk` and `devfreq/cur_freq` are permission-denied to shell; GPU
-  clock comes from `clock_mhz` (`g_devfreq` is derived from it).
+  clock comes from `clock_mhz`.
 - Battery current/voltage are not exposed (`0`), even with root; `dumpsys battery` gives
   temp/level/AC.
 - Two CPU clusters: policy0 = cores 0-1, policy2 = cores 2-5 (2.3616 GHz max;
@@ -60,3 +64,9 @@ Probed 2026-10-20 to 2026-11-01 during idle, OS, controllers, VRChat and HDR run
   is absent or is no longer type `ddr`, gxr-profiler falls back to the thermal zone whose type is
   `ddr`. It is shell-readable but does not appear in `dumpsys thermalservice`, so it is polled
   separately as `ddr_temp`. `LRP` is the power path, not RAM.
+- The raw-zone poll matches zone `type` names rather than fixed indices: `video`, `camera-0/1`,
+  `aoss-0/1`, `cpuss-0/1`, and `cpu-0-*`/`cpu-1-*`. PMIC zones (`pmxr2230_tz`, `pm8550*`) return no
+  valid temperature, and `sys-therm-*` is not used because several entries are invalid or
+  implausible (for example `sys-therm-2` ~66.8 C at idle). The `ac`, `battery`, `pogo` and `usb`
+  zones duplicate HAL `BAT`/`CHG`/`USB` readings or return invalid values, so they are not recorded
+  separately.

@@ -65,6 +65,8 @@ class RecordRequest(BaseModel):
                 setattr(cfg, key, value)
         if cfg.process_io and not cfg.root:
             raise ValueError("--process-io requires root extras")
+        if cfg.process_io and not cfg.processes:
+            raise ValueError("--process-io requires process sampling")
         return cfg
 
 

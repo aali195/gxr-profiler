@@ -10,6 +10,11 @@ from gxr_profiler.runs.store import RunStore
 def test_labels_friendly_names():
     assert labels.label("t_LRP").name == "Power path"
     assert labels.label("ddr_temp").name == "DDR (RAM) temperature"
+    assert labels.label("video_temp").name == "Video decoder temperature"
+    assert labels.label("max_ch1_power").name == "Power rail 1 power"
+    assert labels.label("max_ch1_power").unit == "W"
+    assert labels.label("max_ch1_energy_wh").unit == "Wh"
+    assert labels.label("batt_drain_pct_h").unit == "%/h"
     assert labels.label("g_busy").name == "GPU utilisation"
     assert labels.label("fan_rpm").unit == "rpm"
     assert labels.friendly("mem_available") == "Available memory"
@@ -40,6 +45,30 @@ def test_display_units():
     assert series["disp_brightness"]["unit"] == "%"
     assert series["disp_brightness"]["scale"] == 100.0
     assert series["ddr_temp"]["unit"] == "°C"
+    assert series["video_temp"]["unit"] == "°C"
+    assert series["max_ch1_voltage"]["unit"] == "V"
+    assert groups["power_power"]["unit"] == "W"
+    assert groups["power_energy"]["unit"] == "Wh"
+    assert series["batt_drain_pct_h"]["unit"] == "%/h"
+    assert {
+        "thermal_media",
+        "thermal_aux",
+        "thermal_raw_cpu0",
+        "thermal_raw_cpu1",
+        "power_energy",
+        "battery_level",
+        "battery_drain",
+        "battery_temp",
+        "battery_source",
+        "battery_status",
+        "controller_tracking",
+        "controller_battery",
+        "camera_ingest",
+        "camera_raw",
+        "wifi_retry_rate",
+        "wifi_loss_rate",
+        "wifi_error_counters",
+    } <= set(groups)
     assert series["xr_fps"]["unit"] == "fps"
     assert groups["cpu"]["unit"] == "MHz"
     bands = {b["id"]: b for b in spec["bands"]}

@@ -8,7 +8,7 @@ XRB_HEAD_RE = re.compile(r"\[HeadTracking\].*?received from CIB\[[^\]]+\]=\d+\((
 XRB_HAND_RE = re.compile(r"\[HandTracking[^\]]*\].*?ImageBundlesReceived=\d+\(([\d.]+)fps\)")
 XRB_EYE_RE = re.compile(r"\[EyeTracking[^\]]*\].*?Frames enqueued for tracking=\d+\(([\d.]+)fps\)")
 IRLED_FPS_RE = re.compile(r"fps:\s*([\d.]+)")
-CIB_RE = re.compile(r"\[CIB\]\s*'([^']+)':\s*\(([\d.]+)\s*FPS\s*@\s*([\d.]+)Hz\)")
+CIB_RE = re.compile(r"\[CIB\]\s*'([^']+)':\s*\(([\d.]+)\s*FPS\s*@\s*[\d.]+Hz\)")
 
 
 def parse_xr_heartbeat(msg: str) -> dict[str, float]:
@@ -36,8 +36,7 @@ def cib_key(name: str) -> str:
 
 def parse_cib(msg: str) -> dict[str, float]:
     out: dict[str, float] = {}
-    for name, fps, hz in CIB_RE.findall(msg):
+    for name, fps in CIB_RE.findall(msg):
         key = cib_key(name)
         out[key + "_fps"] = float(fps)
-        out[key + "_hz"] = float(hz)
     return out

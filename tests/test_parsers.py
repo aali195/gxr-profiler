@@ -186,6 +186,16 @@ def test_parse_poll_sections():
     assert out["g_clock"] == 421.0
     assert out["sec_ap"] == 30.0
     assert out["ddr_temp"] == 43.6
+    assert out["video_temp"] == 35.7
+    assert out["camera0_temp"] == 35.0
+    assert out["camera1_temp"] == 35.3
+    assert out["aoss0_temp"] == 35.5
+    assert out["cpuss1_temp"] == 35.8
+    assert out["rawcpu_0_0_0_temp"] == 35.5
+    assert out["rawcpu_1_3_1_temp"] == 35.5
+    assert out["max_ch1_voltage"] == 15.125
+    assert out["max_ch1_current"] == 0.068
+    assert out["max_ch1_power"] == 1.028
     assert out["batt_level"] == 80.0
     assert out["t_CPU5"] == 37.8  # from thermalservice HAL block
     assert out["wifi_rssi"] == -44.0
@@ -193,6 +203,40 @@ def test_parse_poll_sections():
     assert POLL_SCRIPT.count("###DDR") == 1
     assert FAST_SCRIPT.count("###DDR") == 1
     assert PREVIEW_SCRIPT.count("###DDR") == 1
+    assert POLL_SCRIPT.count("###ZONES") == 1
+    assert FAST_SCRIPT.count("###ZONES") == 1
+    assert POLL_SCRIPT.count("###MAX") == 1
+    assert FAST_SCRIPT.count("###MAX") == 1
+    assert PREVIEW_SCRIPT.count("###MAX") == 1
+
+
+def test_parse_fanstep_section():
+    text = "###FANSTEP\n10-17 03:26:57.579 1 2 I SSRM:w: limitFanStrength step=6"
+    assert parse_poll(text)["fan_step"] == 6.0
+
+
+def test_parse_thermal_zones_ignores_unknown_and_invalid():
+    parsed = P.parse_thermal_zones(["video 35700", "unknown 123", "camera-0 nope", "cpu-0-0-0 -40960"])
+    assert parsed == {"video_temp": 35.7}
+
+
+def test_parse_max34427():
+    parsed = P.parse_max34427(
+        [
+            "ch1 0.068A, 1.028W, 15.125V",
+            "ch2 0.000A, 0.000W, 0.000V",
+            "ch3 1.000A, 2.000W, 3.000V",
+            "ch4 bad",
+        ]
+    )
+    assert parsed == {"max_ch1_current": 0.068, "max_ch1_power": 1.028, "max_ch1_voltage": 15.125}
+
+
+def test_battery_drain_rate():
+    assert P.battery_drain_rate([(0.0, 80.0)]) is None
+    assert P.battery_drain_rate([(0.0, 80.0), (10.0, 80.0)]) is None
+    assert P.battery_drain_rate([(0.0, 80.0), (60.0, 79.0)]) == 60.0
+    assert P.battery_drain_rate([(0.0, 80.0), (60.0, 81.0)]) == -60.0
 
 
 MEMINFO = """MemTotal:       16066684 kB

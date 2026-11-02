@@ -34,6 +34,21 @@ else
   p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
   [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
 fi
+echo '###ZONES'
+for z in /sys/class/thermal/thermal_zone*; do
+  t=
+  read -r t < "$z/type" 2>/dev/null
+  [ -n "$t" ] || continue
+  case "$t" in
+    video|camera-0|camera-1|aoss-0|aoss-1|cpuss-0|cpuss-1|cpu-0-*|cpu-1-*)
+      v=
+      read -r v < "$z/temp" 2>/dev/null
+      echo "$t $v"
+      ;;
+  esac
+done
+echo '###MAX'
+printf 'ch1 '; cat /sys/class/sec/max34427/all_ch1 2>/dev/null
 echo '###LOAD'
 cat /proc/loadavg 2>/dev/null
 echo '###MEM'
@@ -104,7 +119,6 @@ def parse_poll(text: str) -> dict[str, float | str]:
     gc = first("GCLK")
     if gc is not None:
         out["g_clock"] = gc
-        out["g_devfreq"] = gc * 1_000_000.0
     gb = first("GBUSY")
     if gb is not None:
         out["g_busy"] = gb
@@ -125,6 +139,9 @@ def parse_poll(text: str) -> dict[str, float | str]:
     if ddr_t is not None:
         out["ddr_temp"] = ddr_t / 1000.0
 
+    out.update(P.parse_thermal_zones(sec.get("ZONES", [])))
+    out.update(P.parse_max34427(sec.get("MAX", [])))
+
     out.update(P.parse_loadavg(" ".join(sec.get("LOAD", []))))
     out.update(P.parse_meminfo("\n".join(sec.get("MEM", []))))
     out.update(P.parse_proc_stat(sec.get("STAT", [])))
@@ -139,6 +156,11 @@ def parse_poll(text: str) -> dict[str, float | str]:
     out.update(P.parse_psi_io(sec.get("DISK", [])))
     out.update(P.parse_thermalservice("\n".join(sec.get("THERM", []))))
     out.update(P.parse_fan_root(sec.get("FAN", [])))
+    fanstep = sec.get("FANSTEP", [])
+    if fanstep:
+        step = P.parse_fan_step(fanstep[-1])
+        if step is not None:
+            out["fan_step"] = float(step)
     return out
 
 
@@ -172,6 +194,21 @@ else
   p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
   [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
 fi
+echo '###ZONES'
+for z in /sys/class/thermal/thermal_zone*; do
+  t=
+  read -r t < "$z/type" 2>/dev/null
+  [ -n "$t" ] || continue
+  case "$t" in
+    video|camera-0|camera-1|aoss-0|aoss-1|cpuss-0|cpuss-1|cpu-0-*|cpu-1-*)
+      v=
+      read -r v < "$z/temp" 2>/dev/null
+      echo "$t $v"
+      ;;
+  esac
+done
+echo '###MAX'
+printf 'ch1 '; cat /sys/class/sec/max34427/all_ch1 2>/dev/null
 echo '###LOAD'
 cat /proc/loadavg 2>/dev/null
 echo '###MEM'
@@ -210,6 +247,19 @@ else
   p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
   [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
 fi
+echo '###MAX'
+printf 'ch1 '; cat /sys/class/sec/max34427/all_ch1 2>/dev/null
+echo '###FANSTEP'
+logcat -d -t 2000 2>/dev/null | grep -F 'limitFanStrength' | tail -n 1
+echo '###NETDEV1'
+cat /proc/net/dev 2>/dev/null
+echo '###T1'
+cat /proc/uptime 2>/dev/null
+sleep 0.5
+echo '###NETDEV2'
+cat /proc/net/dev 2>/dev/null
+echo '###T2'
+cat /proc/uptime 2>/dev/null
 echo '###THERM'
 dumpsys thermalservice 2>/dev/null
 echo '###END'
@@ -238,14 +288,30 @@ class Poller:
         self._net_prev: dict[str, float] = {}
         self._net_t: float | None = None
         self._cpu_prev: dict[str, float] = {}
+        self._max_energy = 0.0
+        self._max_power: float | None = None
+        self._max_t: float | None = None
 
     def script(self) -> str:
         if self.use_root:
             return POLL_SCRIPT.replace("echo '###END'", FAN_SECTION + "echo '###END'")
         return POLL_SCRIPT
 
+    def reset_energy(self) -> None:
+        self._max_energy = 0.0
+        self._max_power = None
+        self._max_t = None
+
     def _apply_rates(self, out: dict[str, float | str]) -> dict[str, float | str]:
         now = time.monotonic()
+        power = out.get("max_ch1_power")
+        if isinstance(power, (int, float)):
+            dt = now - self._max_t if self._max_t is not None else 0.0
+            if self._max_power is not None:
+                self._max_energy += self._max_power * dt / 3600.0
+            out["max_ch1_energy_wh"] = self._max_energy
+            self._max_power = float(power)
+            self._max_t = now
         current = {k: float(out.pop(k)) for k in P.DISK_RAW_KEYS if k in out}
         if current and self._disk_prev and self._disk_t is not None:
             out.update(P.disk_rates(current, self._disk_prev, now - self._disk_t))
@@ -283,8 +349,26 @@ class Poller:
         return P.parse_thermalservice(self.adb.shell("dumpsys thermalservice 2>/dev/null", timeout=8.0))
 
     def poll_preview(self) -> dict[str, float | str]:
-        """Lightweight manual preview: battery + thermal service only."""
-        return parse_poll(self.adb.shell(PREVIEW_SCRIPT, timeout=10.0))
+        """Lightweight manual preview: battery, thermals, fan step and Wi-Fi rate."""
+        text = self.adb.shell(PREVIEW_SCRIPT, timeout=10.0)
+        out = parse_poll(text)
+        sec = P.split_sections(text)
+        net_first = P.parse_netdev(sec.get("NETDEV1", []))
+        net_last = P.parse_netdev(sec.get("NETDEV2", []))
+
+        def uptime(name: str) -> float | None:
+            for line in sec.get(name, []):
+                try:
+                    return float(line.split()[0])
+                except (IndexError, ValueError):
+                    pass
+            return None
+
+        t_first = uptime("T1")
+        t_last = uptime("T2")
+        if net_first and net_last and t_first is not None and t_last is not None and t_last > t_first:
+            out.update(P.netdev_rates(net_last, net_first, t_last - t_first))
+        return out
 
     def poll_radio(self) -> dict[str, float | str]:
         return parse_poll(self.adb.shell(RADIO_SCRIPT, timeout=10.0))

@@ -94,12 +94,17 @@ Recording refuses to overwrite an existing run name.
 **Why wide CSV.** One row per second loads trivially in pandas and plots directly; event-derived
 values are forward-filled into the row (last known). Raw parsed events stay in `.events.csv`.
 
-**Columns (219).** Groups:
+**Columns (231).** Groups:
 
 - `meta`: `ts_host` (epoch), `ts_dev`, `elapsed_s`, `poll_ok` (0/1 - did the poll succeed).
-- `thermal`: `t_*` temps (C), `thermal_status`, `thermal_max_sev`, `sec_*` (C), `ddr_temp` (C).
+- `thermal`: `t_*` temps (C), `thermal_status`, `thermal_max_sev`, `sec_*` (C), `ddr_temp` (C),
+  `video_temp`, `camera0/1_temp`, plus `aoss*`, `cpuss*` and `rawcpu_*` extras.
+- `power`: `max_ch1_voltage` (V), `max_ch1_current` (A), `max_ch1_power` (W); extra for
+  energy (`max_ch1_energy_wh`).
+- `battery`: `batt_temp` (C), `batt_level` (%), `batt_drain_pct_h` (%/h), `batt_status`, `batt_ac`,
+  `batt_usb`.
 - `cpu`: `f_cpu0..5`, `cpu_util0..5` (%), `cpu_max0/2` (kHz), `dcvsh_*` (kHz).
-- `gpu`: `g_clock` (MHz), `g_devfreq` (Hz), `g_busy` (%), `g_busy_num/den`, `g_temp` (C), `g_throttling`.
+- `gpu`: `g_clock` (MHz), `g_busy` (%), `g_busy_num/den`, `g_temp` (C), `g_throttling`.
 - `fan`: `fan_step`, `fan_rpm`, `fan_rpm2` (rpm), `fan_pwm` (`--root`).
 - `xr` / `display`: `xr_fps`, `xr_target` (Hz), `xr_drops`, `xr_cpu/gpu/ram` (fractions), `disp_hz`, `psm`,
   `disp_brightness`, `disp_sdr_brightness` (0-1), `hdr_active` (0/1), `disp_bit_depth` (8/10),
@@ -124,8 +129,8 @@ values are forward-filled into the row (last known). Raw parsed events stay in `
   `disk_read_iops`, `disk_write_iops`, `disk_busy_pct`, `disk_io_latency_ms`,
   `disk_io_pressure_some` / `_full`, `disk_total_gb`, `disk_free_gb`, `disk_used_pct`.
 - `sensors` (`--sensors`): `sensors_*`, `sensor_rate_*`, `sensor_max_hz`.
-- `system` / `battery` / `network`: `load*`, `procs_*`, `mem_*` (kB), `swap_*`, `mem_pressure_*`,
-  `zram_used_mb`, `batt_*`, `wifi_*` (link speeds, actual Rx/Tx Mbps, packet/retry/loss rates,
+- `system` / `network`: `load*`, `procs_*`, `mem_*` (kB), `swap_*`, `mem_pressure_*`,
+  `zram_used_mb`, `wifi_*` (link speeds, actual Rx/Tx Mbps, packet/retry/loss rates,
   drops/errors).
 
 **Calibration metadata.** With `--root`, a read-only `su -c` reads the OpenXR calibration files
@@ -158,8 +163,8 @@ and visually muted.
 from `settings secure location_mode` (0=off, 1=device only, 2=battery saving, 3=high accuracy),
 `settings secure location_providers_allowed`, and `cmd location is-location-enabled`. Bluetooth and
 location are shown in **Modes & input** and kept in the CSV, but are intentionally not plotted.
-Slow, near-binary or usually-zero metrics live under **Extra -> Slow state** so the main performance
-graphs stay focused.
+Slow, near-binary or usually-zero extras live under **Extra** (Cameras (raw), Media & display, Audio,
+Controllers, Passthrough, Raw thermal) so the main performance graphs stay focused.
 
 **Controllers (event-derived).** Samsung XR emits connection/battery state in `SXRC_TSVC`, pose
 status in `SXRC_POSE`, and `CpmInput` start/stop tracking events. gxr-profiler records per-side
@@ -183,6 +188,21 @@ available and swap totals with percentages. `/proc/pressure/memory` adds PSI `so
 utilisation from idle/total deltas and the runnable-task count. DDR temperature comes from the
 kernel `ddr` thermal zone (`/sys/class/thermal/thermal_zone15/temp`, with a fallback lookup by
 zone type); it is shell-readable and not part of the thermal HAL named set.
+
+**Extra raw thermals (1 Hz).** The poll also reads selected raw thermal zones by `type`:
+`video`, `camera-0/1`, `aoss-0/1`, `cpuss-0/1`, and the 12 `cpu-*` cluster/core zones. The raw CPU
+and AOSS/CPUSS zones are shown under **Extra -> Raw thermal**.
+
+**Power rail (1 Hz).** `/sys/class/sec/max34427/all_ch1` exposes current, power and voltage for an
+unlabeled rail; the UI calls it **Power rail 1**. gxr-profiler records those values under `power`.
+This is not battery or SoC power; the rail label is not exposed in sysfs. It also integrates rail
+power into cumulative `max_ch1_energy_wh` under **Power & battery**. Rail 2 was always zero on
+this unit and is not stored. The MAX34427 accumulator registers are not recorded because they
+reset/roll and are not reliable cumulative counters.
+
+**Battery (state cadence).** `dumpsys battery` supplies level, temperature, AC/USB state and status.
+`batt_drain_pct_h` is a rolling 5 min level slope (positive = discharging). The battery and rail
+charts and state table are under the normal **Power & battery** section.
 
 **Display units.** The CSV keeps base units for analysis (kHz, kB, fractions, 0-1), while the web UI
 and static report convert for readability: CPU frequencies in **MHz**, memory in **GB**, utilisation
@@ -280,12 +300,17 @@ Read-only sources: a **logcat stream** + a **1 Hz poll**. Full command and caden
 | XR FPS vs target, frame drops/s, CPU/GPU/RAM util | logcat `DynamicPolicyManager` |
 | Display refresh Hz + power-save state (`disp_hz`, `psm`) | logcat `DynamicPolicyManager` |
 | Camera/tracking service ingest rates (`cam_eye_fps`, `cam_head_fps`, `cam_hand_fps`, `irled_fps`) | logcat `XrHeartbeat` service heartbeats |
-| Raw CIB stream rates (`cib_ht/hat/eyet/depthinput/depthtof_fps` + `_hz`, and `P-` variants) | logcat `[CIB]` `client_state` |
+| Raw CIB stream rates (`cib_ht/hat/eyet/depthinput/depthtof_fps`, and `P-` variants) | logcat `[CIB]` `client_state` |
 | Controller connection/battery/tracking | logcat `SXRC_TSVC`, `SXRC_POSE`, `CpmInput` |
 | Passthrough mode / running | logcat `PassthroughStateManager`, `dumpsys cpm` (`XrPassthroughController`) |
 | CPU per-core freq + policy max, GPU clock/busy/temp/throttle | sysfs `/sys/.../cpufreq`, `/sys/class/kgsl/kgsl-3d0` |
-| AP/LRP/WiFi thermistor, load, battery temp/level/AC | `sec-*-thermistor`, `/proc`, `dumpsys battery` |
+| AP/LRP/WiFi thermistor, load | `sec-*-thermistor`, `/proc` |
+| Battery level/temp/AC/USB/status, derived drain rate | `dumpsys battery` (state cadence) |
 | DDR (RAM) temperature | sysfs `/sys/class/thermal/thermal_zone15/temp` (`type=ddr`, fallback by zone type, 1 Hz) |
+| Video, camera, AOSS/CPUSS and raw CPU temperatures | sysfs `/sys/class/thermal/thermal_zone*/type` + `temp` (1 Hz) |
+| Power rail voltage/current/power | sysfs power-rail monitor (`max34427`), `all_ch1` (1 Hz) |
+| Power rail energy | derived from rail power (1 Hz) |
+| Battery drain rate | derived from `dumpsys battery` level |
 | RAM total/used/cached/available, swap, zram, memory pressure | `/proc/meminfo`, `/proc/pressure/memory`, `/sys/block/zram0/mm_stat` |
 | CPU utilisation per core, runnable tasks | `/proc/stat` |
 | Storage capacity, free space, used % | `df -k /data` |
@@ -312,6 +337,7 @@ Each topic links to tests/results first, then the digestible findings and full d
 |---|---|
 | [Device identity & boundary](findings/device.md) | build, region/CSC, manufacture, first setup, IPD/calibration, guardian |
 | [Thermal, throttling & fan](findings/thermal.md) | temperature sources, CPU caps, GPU clock, fan, throttle ladder |
+| [Power rails & battery drain](findings/power.md) | rail voltage/current/power/energy, battery rate |
 | [Cameras, perception & controllers](findings/tracking.md) | CIB streams, service rates, hand tracking, controller state |
 | [Display, media & passthrough](findings/display-media.md) | decoders, HDR/color/bit depth, panel, passthrough |
 | [Audio](findings/audio.md) | speaker/mic paths, latency, spatializer, codecs |
@@ -365,6 +391,9 @@ Each topic links to tests/results first, then the digestible findings and full d
   rate was slightly higher there, so the old client/server path was the ceiling. 1.6 Gbps is a
   plausible upper cap at good orientation; 1.3-1.4 Gbps is safer with movement/body blocking. See
   [Wi-Fi & standby](findings/wifi.md).
+- **The power-rail monitor adds a shell-readable 15 V rail, not battery power.** Rail 1 read about
+  15 V and 0.6-1.0 W while idle/unplugged; rail 2 was zero. Battery voltage/current/power remain
+  `0`, and the rail labels are not exposed. See [power rails](findings/power.md).
 - **The controller HAL is the biggest reducible background CPU cost.** With controllers active,
   `vendor.samsung.hardware.secxrcontroller@1.0-service` averaged ~27-35% CPU in Chronolink runs and
   dropped to 0 in controller-idle runs. Hand tracking costs ~5-10 CPU points in perception/camera

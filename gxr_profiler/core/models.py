@@ -24,7 +24,7 @@ class RunConfig:
     notes: str = ""
 
     logcat: bool = True
-    root: bool = False  # fan RPM/PWM + active panel (read-only su -c)
+    root: bool = False  # fan RPM/PWM, active panel, calibration metadata (read-only su -c)
     sensors: bool = False
     sensors_interval: float = 10.0
     processes: bool = True
@@ -62,6 +62,8 @@ class RunConfig:
                 raise ValueError(f"{name} must be greater than zero")
         if self.process_io and not self.root:
             raise ValueError("process I/O requires root")
+        if self.process_io and not self.processes:
+            raise ValueError("process I/O requires process sampling")
 
     def features(self) -> dict:
         return {

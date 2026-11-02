@@ -42,8 +42,8 @@ collapsing duplicate TCP and mDNS transports of the same headset. Pass `--serial
 | `--sensor <id>` | Cooldown sensor: `AP`, `CPU0..5`, `GPU0..7`, `nsp0..2`, `skin`, `WIFI`, `LRP`, `BAT`, `CHG`, `USB`, `DDR` (default `AP`) |
 | `--cooldown-max-wait <s>` | Maximum cooldown wait; `0` waits indefinitely |
 | `--notes <text>` | Attach notes to the run |
-| `--root` | Read fan RPM/PWM and active panel via read-only `su -c` |
-| `--process-io` | Per-process disk I/O; requires `--root` |
+| `--root` | Read fan RPM/PWM, active panel and calibration metadata via read-only `su -c` |
+| `--process-io` | Per-process disk I/O; requires `--root` and process sampling |
 | `--sensors` / `--sensors-interval` | Enable the SensorService summary and set its cadence |
 | `--processes` / `--no-processes` | Capture all non-kernel processes (default on) |
 | `--processes-interval` | Process snapshot cadence |

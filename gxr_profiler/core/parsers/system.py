@@ -5,6 +5,27 @@ from __future__ import annotations
 import re
 
 
+def battery_drain_rate(
+    samples: list[tuple[float, float]],
+    *,
+    window_s: float = 300.0,
+    min_span_s: float = 30.0,
+) -> float | None:
+    """Return percent-per-hour drain (positive = discharging) for a sample window."""
+    if len(samples) < 2:
+        return None
+    last_t, last_level = samples[-1]
+    cutoff = last_t - window_s
+    window = [sample for sample in samples if sample[0] >= cutoff]
+    if len(window) < 2:
+        return None
+    first_t, first_level = window[0]
+    span = last_t - first_t
+    if span < min_span_s:
+        return None
+    return (first_level - last_level) / (span / 3600.0)
+
+
 def parse_battery(text: str) -> dict[str, float]:
     out: dict[str, float] = {}
     for line in text.splitlines():
@@ -38,7 +59,6 @@ def parse_wifi_status(text: str) -> dict[str, float]:
     grab("wifi_rssi", r"RSSI:\s*(-?\d+)")
     grab("wifi_tx", r"\bTx Link speed:\s*(\d+)")
     grab("wifi_rx", r"\bRx Link speed:\s*(\d+)")
-    grab("wifi_link", r"(?<!Tx )(?<!Rx )\bLink speed:\s*(\d+)")
     grab("wifi_freq", r"Frequency:\s*(\d+)")
     grab("wifi_std", r"Wi-Fi standard:\s*(\d+)")
     grab("wifi_max_tx", r"Max Supported Tx Link speed:\s*(\d+)")

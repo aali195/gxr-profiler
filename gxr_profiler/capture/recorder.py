@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
@@ -72,6 +73,7 @@ class Recorder:
         self._dev_info: dict = {}
         self._start_state: dict = {}
         self._end_state: dict = {}
+        self._batt_hist: deque[tuple[float, float]] = deque()
 
     # -- lifecycle -------------------------------------------------------
     def stop(self) -> None:
@@ -90,6 +92,8 @@ class Recorder:
 
             self._start_state = capture_state(self.adb, self.poller)
             self.state.update(self._start_state)
+            self.poller.reset_energy()
+            self._batt_hist.clear()
             self._dev_baseline = read_dev_baseline(self.adb)
             self.writer.open(with_procs=self.cfg.processes)
 
@@ -228,6 +232,14 @@ class Recorder:
             active = P.controller_active({k: float(row[k]) for k in ctrl_keys if k in row})
             if active is not None:
                 row["ctrl_active"] = active
+        level = row.get("batt_level")
+        if isinstance(level, (int, float)):
+            self._batt_hist.append((now, float(level)))
+            while self._batt_hist and now - self._batt_hist[0][0] > 300.0:
+                self._batt_hist.popleft()
+            rate = P.battery_drain_rate(list(self._batt_hist))
+            if rate is not None:
+                row["batt_drain_pct_h"] = rate
         row.update(poll)
         row["ts_host"] = f"{now:.3f}"
         if self._dev_baseline is not None and self._t0 is not None:

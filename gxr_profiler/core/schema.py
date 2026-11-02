@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .columns import COLUMN_BY_NAME
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 12
 
 
 def describe(col: str) -> dict:

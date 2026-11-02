@@ -12,7 +12,7 @@ Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd 
 ## Features
 
 - Read-only 1 Hz recording over wireless ADB.
-- Thermal, CPU/GPU/NPU, fan, XR, display, battery, memory, storage, network, media/audio and controller telemetry.
+- Thermal, CPU/GPU/NPU, fan, XR, display, battery, power rail, memory, storage, network, media/audio and controller telemetry.
 - Lightweight headset preview without saving a run.
 - Run and compare views with tables, overlaid graphs and per-process timelines.
 - Session-wide pinned metrics/processes plus lowest/highest-average highlighting.
@@ -70,7 +70,7 @@ Building from source or running the CLI from Python requires Python 3.11+; see
 3. Put the exe in a writable folder and double-click it. No `--serial` is needed once a single
    headset is paired.
 4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset**
-   button reads battery and thermal values without saving a run.
+   button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run.
 5. Open **Run** for the results, or select runs in **Compare** to overlay and compare them.
 6. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no
    internet or Python required.

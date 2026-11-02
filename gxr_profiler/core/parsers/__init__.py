@@ -103,6 +103,7 @@ from .system import (
     CPU_STAT_CORES,
     CPU_STAT_RAW_KEYS,
     NETDEV_RAW_KEYS,
+    battery_drain_rate,
     cpu_rates,
     netdev_rates,
     parse_battery,
@@ -116,7 +117,7 @@ from .system import (
     parse_wifi_status,
     parse_zram,
 )
-from .thermal import THERM_TEMP_RE, parse_thermalservice
+from .thermal import MAX34427_RE, THERM_TEMP_RE, parse_max34427, parse_thermal_zones, parse_thermalservice
 from .util import split_sections
 
 __all__ = [
@@ -141,6 +142,7 @@ __all__ = [
     "LOCATION_MODES",
     "LOG_RE",
     "MAPP",
+    "MAX34427_RE",
     "MCHANNELS",
     "MCODEC",
     "MH",
@@ -167,6 +169,7 @@ __all__ = [
     "XRB_HAND_RE",
     "XRB_HEAD_RE",
     "audio_format_bits",
+    "battery_drain_rate",
     "bit_depth_from_formats",
     "cib_key",
     "color_mode_from_lines",
@@ -203,6 +206,7 @@ __all__ = [
     "parse_kv_colon",
     "parse_kv_eq",
     "parse_loadavg",
+    "parse_max34427",
     "parse_media_audio",
     "parse_media_resources",
     "parse_media_video",
@@ -223,6 +227,7 @@ __all__ = [
     "parse_sensors",
     "parse_system_packages",
     "parse_thermal_changed",
+    "parse_thermal_zones",
     "parse_thermalservice",
     "parse_wifi_status",
     "parse_xr_heartbeat",

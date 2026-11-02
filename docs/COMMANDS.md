@@ -63,6 +63,21 @@ else
   p=$(grep -l "^ddr$" /sys/class/thermal/thermal_zone*/type 2>/dev/null | head -n1)
   [ -n "$p" ] && cat "${p%type}temp" 2>/dev/null
 fi
+echo '###ZONES'
+for z in /sys/class/thermal/thermal_zone*; do
+  t=
+  read -r t < "$z/type" 2>/dev/null
+  [ -n "$t" ] || continue
+  case "$t" in
+    video|camera-0|camera-1|aoss-0|aoss-1|cpuss-0|cpuss-1|cpu-0-*|cpu-1-*)
+      v=
+      read -r v < "$z/temp" 2>/dev/null
+      echo "$t $v"
+      ;;
+  esac
+done
+echo '###MAX'
+printf 'ch1 '; cat /sys/class/sec/max34427/all_ch1 2>/dev/null
 echo '###LOAD'
 cat /proc/loadavg 2>/dev/null
 echo '###MEM'
@@ -109,19 +124,21 @@ su -c 'cat /sys/class/sec_fan/fan/curr_rpm; cat /sys/class/sec_fan/fan/curr_rpm2
 |---|---|
 | `FREQ` | `f_cpu0..5` (kHz) |
 | `PMAX` | `cpu_max0`, `cpu_max2` (kHz) |
-| `GCLK` | `g_clock` (MHz), `g_devfreq` (Hz) |
+| `GCLK` | `g_clock` (MHz) |
 | `GBUSY`, `GBUSYN` | `g_busy` (%), `g_busy_num`/`g_busy_den` |
 | `GTMP`, `GTHR` | `g_temp` (°C), `g_throttling` |
 | `SEC` | `sec_ap`, `sec_lp`, `sec_wf` (°C) |
 | `DDR` | `ddr_temp` (°C, kernel `ddr` thermal zone) |
+| `ZONES` | `video_temp`, `camera0/1_temp`, `aoss0/1_temp`, `cpuss0/1_temp`, `rawcpu_*_temp` (°C) |
+| `MAX` | `max_ch1_voltage` (V), `max_ch1_current` (A), `max_ch1_power` (W), derived `max_ch1_energy_wh` |
 | `LOAD` | `load1/5/15`, `procs_running`, `procs_total` |
 | `MEM` | `mem_total`, `mem_used`, `mem_cached`, `mem_available`, `mem_free`, `mem_used_pct`, `swap_total`, `swap_used`, `swap_free`, `swap_used_pct` |
 | `STAT` | `cpu_util0..5` (delta), `procs_running` |
 | `PRESSURE_MEM` | `mem_pressure_some`, `mem_pressure_full` (PSI avg10) |
 | `ZRAM` | `zram_used_mb` |
 | `DF` | `disk_total_gb`, `disk_free_gb`, `disk_used_pct` |
-| `BATT` | `batt_level`, `batt_temp`, `batt_status`, `batt_ac`, `batt_usb` |
-| `WIFI` | `wifi_tx`, `wifi_rx` (link speeds), `wifi_rssi`, `wifi_link`, `wifi_freq`, `wifi_std`, `wifi_max_tx/rx`, cumulative counters, and per-second `wifi_tx_pps`, `wifi_rx_pps`, `wifi_retry_pps`, `wifi_retry_pct`, `wifi_lost_pps` |
+| `BATT` | `batt_level`, `batt_temp`, `batt_status`, `batt_ac`, `batt_usb`; derived `batt_drain_pct_h` |
+| `WIFI` | `wifi_tx`, `wifi_rx` (link speeds), `wifi_rssi`, `wifi_freq`, `wifi_std`, `wifi_max_tx/rx`, cumulative counters, and per-second `wifi_tx_pps`, `wifi_rx_pps`, `wifi_retry_pps`, `wifi_retry_pct`, `wifi_lost_pps` |
 | `NETDEV` | `wifi_rx_mbps`, `wifi_tx_mbps` (wlan0 byte deltas), and cumulative `wifi_rx/tx_drops`, `wifi_rx/tx_errors` |
 | `BT` | `bt_on`, `bt_state` |
 | `LOC` | `loc_enabled`, `loc_mode`, `loc_mode_name`, `loc_providers` |
@@ -140,6 +157,18 @@ su -c 'cat /sys/class/sec_fan/fan/curr_rpm; cat /sys/class/sec_fan/fan/curr_rpm2
   supplementary/event-driven. DDR/RAM temperature is read separately from the
   kernel `ddr` thermal zone (`thermal_zone15` on this build, with a fallback
   lookup by zone type) because it is not in the HAL named set.
+- `ZONES` scans the raw thermal-zone `type` files and records selected zones that
+  are absent from the HAL set: video, the two camera zones, AOSS/CPUSS, and the
+  raw CPU cluster/core zones. It uses shell `read`, not one process per zone.
+- `MAX` reads the power-rail monitor (`/sys/class/sec/max34427`, MAX34427 hardware). The measured
+  rail is not labeled in sysfs; the UI calls it **Power rail 1**, not battery or SoC power.
+  `max_ch1_energy_wh` is integrated from those power values. Rail 2 was always zero and is not
+  recorded; the MAX34427 `acc` registers are not recorded because they reset/roll and are not
+  reliable cumulative counters.
+- Ten PMIC/sub-PMIC regulator rails were probed and found to be constant setpoints; they are not
+  recorded as time series.
+- `batt_drain_pct_h` is derived from the battery level over a rolling 5 min window;
+  positive means discharging.
 - Poll timeout is 8 s (the normal poll should complete well under 1 s).
 - `wifi_rx_mbps`/`wifi_tx_mbps` are **actual interface throughput** from `/proc/net/dev`,
   not the negotiated link speed. This is the best proxy for streamed PCVR bitrate; it
@@ -207,13 +236,13 @@ dumpsys media.audio_flinger 2>/dev/null | grep -E '^(Output|Input) thread|^[[:sp
 
 Timeout: 25 s. No root.
 
-## Recording cadence (schema 6)
+## Recording cadence (schema 11)
 
 The recorder uses a **fast 1 Hz** shell containing only cheap sysfs and `/proc`
 reads. Slow sections run separately and are merged into every 1 Hz row:
 
-- **State**: battery, Wi-Fi status, thermal service (and fan with `--root`) — Standard 5 s
-- **Radio**: Bluetooth, location, disk-free — Standard 30 s
+- **State**: battery, Wi-Fi status, thermal service (and fan with `--root`) - Standard 5 s
+- **Radio**: Bluetooth, location, disk-free - Standard 30 s
 - **Media/audio/display**: 30 s Standard, 10 s Detailed/Everything
 - **Sensors**: off Standard, 10 s Detailed, 5 s Everything
 - **Processes**: 10 s Standard, 5 s Detailed/Everything; non-kernel by default
