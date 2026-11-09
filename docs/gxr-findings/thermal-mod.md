@@ -92,7 +92,7 @@ All temperatures are C. CPU mean is the average of the six HAL CPU sensors over 
 | 6 | Virtual Desktop H.264 | 76.9 -> 70.1 C (-6.9) | 65.0 -> 61.0 C (-4.0) | 7.0 -> 7.0 | 79.4 / 72 -> 85.3 / 90* |
 | 7 | Chronolink/SteamVR ASTC | 74.4 -> 69.9 C (-4.5) | 62.0 -> 59.2 C (-2.7) | 7.0 -> 5.0 | 87.6 / 90 -> 90.4 / 90 |
 
-\* Tests 4-6 ran at 90 Hz after the mod but 72 Hz before it, so the after run is doing more GPU work. Test 5 also changed media format between runs; see the per-test notes.
+\* Tests 4-6 recorded 90 Hz after the mod. Before the mod, tests 4 and 5 recorded 72 Hz. Test 6 was requested at 90 Hz in Virtual Desktop for both runs, but its before run recorded a 72 Hz target while status 4 was already active, so that 72 may be a status-4 clamp rather than a setting. Test 5 also changed media format; see the per-test notes.
 
 ### Wi-Fi and memory summary
 
@@ -240,7 +240,7 @@ The mod moved HDR from status 4 to status 3 and cut CPU mean by 9.7 C and GPU me
 
 ## Test 6 - Virtual Desktop H.264 -> VRChat, controllers, night
 
-The after column uses the final clean night run at a locked 500 Mbps. The before run was 72 Hz and unplugged; the after run was 90 Hz and plugged. The six Virtual Desktop variants are compared separately under [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
+The after column uses the final clean night run at a locked 500 Mbps. Virtual Desktop was set to **90 Hz for every VD run, including before**. The before recording still shows a **72 Hz XR/display target for the whole run while status 4 was already active**; the after run shows 90 Hz. That is consistent with status 4 clamping the target, but because status 4 was present from the first sample, causality is not proven. The before run was unplugged and the after run was plugged. The six VD variants are compared under [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
 
 | Metric | Before | After | Change |
 |---|---|---|---|
@@ -262,7 +262,7 @@ The after column uses the final clean night run at a locked 500 Mbps. The before
 
 [Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html)
 
-The head camera staying at 60 fps is the clearest functional win: the before run was already status 4 with the camera halved, while the after run stayed at status 2 and full camera rate. The CPU mean was 14.9 C lower and the GPU 10.1 C lower. The fan still reached step 7. The after run was plugged, so the battery/charging difference is not attributable to the mod. An unplugged after run at the default 600 Mbps also gave status 2 and AP 71.1 C, so the result is not a plugged-run artifact. Wi-Fi throughput and the labelled latency issue are covered in [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
+The head camera staying at 60 fps is the clearest functional win: the before run was already status 4 with the camera halved, while the after run stayed at status 2 and full camera rate. The CPU mean was 14.9 C lower and the GPU 10.1 C lower. The fan still reached step 7. The XR target row is the system-recorded target, not the Virtual Desktop setting: VD was set to 90 Hz in both runs, but the before run recorded 72 Hz under status 4. The after run was plugged, so the battery/charging difference is not attributable to the mod. An unplugged after run at the default 600 Mbps also gave status 2 and AP 71.1 C, so the result is not a plugged-run artifact. Wi-Fi throughput and the labelled latency issue are covered in [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
 
 ## Test 7 - Chronolink/SteamVR ASTC -> VRChat, controllers, night
 

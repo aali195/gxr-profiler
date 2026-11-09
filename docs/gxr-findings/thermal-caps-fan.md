@@ -64,10 +64,10 @@ The global stage tracked **LRP**, not the CPU/GPU sensors. Every status-4 sample
 | Head/hand camera | 60 fps | 60 -> 30 fps at status 3 | 30 fps |
 | Raw CIB head/hand | ~480 / ~360 fps | ~240 / ~180 fps at status 3 | ~240 / ~180 fps |
 | Eye camera | 30 fps | 30 fps | 30 fps |
-| Display refresh | 72/90 Hz as set | unchanged | unchanged |
+| Display refresh | 72/90 Hz as selected | unchanged at status 3 | 72 Hz target recorded in the status-4 VD/HDR runs; possible stage-4 clamp (unconfirmed) |
 | `psm` | 0 | 0 | 0 |
 
-The camera halving is a **status-3 policy effect**, not a battery or Wi-Fi effect. Display refresh and `psm` are not changed by the thermal stage in these runs.
+The camera halving is a **status-3 policy effect**, not a battery or Wi-Fi effect. Display refresh was unchanged at status 3. In test 6, Virtual Desktop was set to 90 Hz for both runs, but the status-4 before run recorded a 72 Hz target; that is consistent with a stage-4 target clamp but is not proven because status 4 was already active when recording started.
 
 ### Fan steps
 
