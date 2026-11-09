@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "thermal.md",
+                "file": "thermal-mod.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "thermal"
+              "title": "thermal-mod"
             }
           }
         ]
@@ -187,6 +187,21 @@
   },
   "active": "7fb1409cd875c335",
   "lastOpenFiles": [
+    "thermal.md",
+    "thermal-caps-fan.md",
+    "thermal-mod.md",
+    "reports/README.md",
+    "reports/thermal-mod/README.md",
+    "reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html",
+    "reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html",
+    "reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html",
+    "reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html",
+    "reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html",
+    "reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html",
+    "reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html",
+    "reports/thermal-mod/test-7.html",
+    "reports/thermal-mod/test-6.html",
+    "reports/thermal-mod/test-5.html",
     "root.md",
     "processes.md",
     "display-media.md",
@@ -194,10 +209,7 @@
     "cross-run.md",
     "cpu-memory.md",
     "power.md",
-    "thermal-caps-fan.md",
     "tracking.md",
-    "thermal-mod.md",
-    "thermal.md",
     "radios.md",
     "standby.md",
     "audio.md",
