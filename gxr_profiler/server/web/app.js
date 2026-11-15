@@ -1461,7 +1461,8 @@ async function processesCard(label) {
     });
     tbody.innerHTML = "";
     filtered.forEach(r => {
-      const tr = el("tr", "procrow" + (r.key === selectedProc ? " selected" : ""));
+      const procClass = "proc-kind-" + procCategory(r);
+      const tr = el("tr", "procrow " + procClass + (r.key === selectedProc ? " selected" : ""));
       tr.dataset.pinRowKind = "process";
       tr.dataset.pinRowKey = procStableKey(r);
       const nameTd = el("td", "procname-cell");
@@ -3140,7 +3141,8 @@ async function compareProcessesCard(labels) {
 
     tbody.innerHTML = "";
     rows.forEach(e => {
-      const tr = el("tr", "procrow" + (e.key === selectedCmpProc ? " selected" : ""));
+      const procClass = "proc-kind-" + procCategory(e);
+      const tr = el("tr", "procrow " + procClass + (e.key === selectedCmpProc ? " selected" : ""));
       tr.dataset.pinRowKind = "process";
       tr.dataset.pinRowKey = e.key;
       const td = el("td", "procname-cell");
