@@ -69,6 +69,8 @@ Building from source or running the CLI from Python requires Python 3.11+; see [
 
 `runs/` and `reports/` are created next to the exe. Keep the exe folder writable, and do not share the raw `runs/` folder unless you have checked its contents; exported HTML redacts common network/device identifiers.
 
+The local UI uses port **8765** by default and automatically moves to the next free port if it is already taken. This lets GXR Profiler and Desktop Profiler run side by side.
+
 CLI users: see [docs/CLI.md](docs/CLI.md).
 
 ### Supported device

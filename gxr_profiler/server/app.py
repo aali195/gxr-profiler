@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
+import socket
 import threading
 import time
 import urllib.request
@@ -87,9 +88,28 @@ def create_app(runs_dir: str | None = None, serial: str | None = None) -> FastAP
     return app
 
 
+def _resolve_port(preferred: int) -> int:
+    """Return a usable localhost port, moving forward if the requested one is taken."""
+    if preferred == 0:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("127.0.0.1", 0))
+            return int(sock.getsockname()[1])
+    for candidate in range(preferred, min(preferred + 32, 65536)):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                sock.bind(("127.0.0.1", candidate))
+            return candidate
+        except OSError:
+            continue
+    raise OSError(f"no free localhost port at or after {preferred}")
+
+
 def run_ui(port: int = 8765, browser: bool = False, runs_dir: str | None = None, serial: str | None = None) -> None:
     import uvicorn
 
+    port = _resolve_port(port)
     runs_dir = runs_dir or default_runs_dir()
     app = create_app(runs_dir, serial)
     url = f"http://127.0.0.1:{port}"
@@ -113,14 +133,18 @@ def run_ui(port: int = 8765, browser: bool = False, runs_dir: str | None = None,
         daemon=True,
     )
     thread.start()
+    ready = False
     for _ in range(100):
         if not thread.is_alive():
             break
         try:
             with urllib.request.urlopen(url + "/api/spec", timeout=0.25):
+                ready = True
                 break
         except Exception:
             time.sleep(0.05)
+    if not ready:
+        raise RuntimeError(f"local UI server did not start on {url}")
     service = ExportService(runs_dir)
     window_ref: dict = {}
     api = make_js_api(service, lambda: window_ref.get("window"), webview)
