@@ -539,3 +539,31 @@ button.pinned-proc-name:hover { text-decoration: underline; }
 .procname-line .procname-main { min-width: 0; }
 .procname-line .pinbtn { margin-top: 1px; }
 .pinned-card .table-scroll { margin-top: 4px; }
+
+
+/* Section sub-tabs for graph and table views */
+.sectiontabs { margin: 2px 0 10px; }
+.subtabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+.subtab {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.subtab:hover { background: #22303f; color: var(--fg); }
+.subtab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}

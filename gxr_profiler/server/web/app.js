@@ -728,7 +728,85 @@ function addGroupCard(parent, group, runsData) {
   return card;
 }
 
-function renderSections(parent, datasets) {
+let sectionFilter = "All";
+let sectionFilterKey = "";
+
+function sectionFilterName(section) {
+  return EXTRA_SECTIONS.has(section) ? "Extra" : section;
+}
+
+function sectionKeysFromRows(rows) {
+  const keys = [];
+  rows.forEach(r => {
+    const key = sectionFilterName(r.groupSection || "Other");
+    if (!keys.includes(key)) keys.push(key);
+  });
+  return keys.filter(k => k !== "Extra").concat(keys.includes("Extra") ? ["Extra"] : []);
+}
+
+function groupHasSeries(group, datasets) {
+  const hasValue = arr => Array.isArray(arr) && arr.some(v => v != null);
+  if ((group.series || []).some(s => datasets.some(d => d.series && hasValue(d.series[s.col])))) return true;
+  return (group.bands || []).some(bid =>
+    datasets.some(d => d.series && (
+      hasValue(d.series["band::" + bid + "::max"]) ||
+      hasValue(d.series["band::" + bid + "::avg"])
+    ))
+  );
+}
+
+function sectionKeysFromGroups(datasets) {
+  const keys = [];
+  (SPEC.groups || []).forEach(g => {
+    if (!groupHasSeries(g, datasets)) return;
+    const key = sectionFilterName(g.section || "Other");
+    if (!keys.includes(key)) keys.push(key);
+  });
+  return keys.filter(k => k !== "Extra").concat(keys.includes("Extra") ? ["Extra"] : []);
+}
+
+function prepareSectionFilter(viewKey, available) {
+  if (sectionFilterKey !== viewKey) {
+    sectionFilter = "All";
+    sectionFilterKey = viewKey;
+  }
+  if (sectionFilter !== "All" && !available.includes(sectionFilter)) sectionFilter = "All";
+}
+
+
+function disposeChartsIn(node) {
+  for (let i = chartRegistry.length - 1; i >= 0; i--) {
+    const ch = chartRegistry[i];
+    try {
+      const dom = ch.getDom && ch.getDom();
+      if (dom && node.contains(dom)) {
+        ch.dispose();
+        chartRegistry.splice(i, 1);
+      }
+    } catch (e) {}
+  }
+}
+
+function renderSectionTabs(host, available, onSelect) {
+  host.innerHTML = "";
+  const bar = el("div", "subtabs");
+  bar.setAttribute("role", "tablist");
+  ["All", ...available].forEach(key => {
+    const b = el("button", "subtab" + (sectionFilter === key ? " active" : ""), key);
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(sectionFilter === key));
+    b.onclick = () => {
+      if (sectionFilter === key) return;
+      sectionFilter = key;
+      onSelect();
+    };
+    bar.appendChild(b);
+  });
+  host.appendChild(bar);
+}
+
+function renderSectionBody(parent, datasets) {
   const graphControls = el("div", "proccontrols graphcontrols");
   const graphSearch = document.createElement("input");
   graphSearch.type = "search";
@@ -746,6 +824,9 @@ function renderSections(parent, datasets) {
   SPEC.groups.forEach(g => {
     const s = g.section || "Other";
     const extra = EXTRA_SECTIONS.has(s);
+    const section = extra ? "Extra" : s;
+    if (sectionFilter !== "All" && section !== sectionFilter) return;
+    if (!groupHasSeries(g, datasets)) return;
     const bucket = extra ? extraBySection : bySection;
     const seq = extra ? extraOrder : order;
     if (!bucket[s]) { bucket[s] = []; seq.push(s); }
@@ -755,7 +836,7 @@ function renderSections(parent, datasets) {
   const addSection = (title, groups, host) => {
     const sec = el("section", "group");
     const head = el("div", "grouphead");
-    const collapsed = collapsedSections.has(title);
+    const collapsed = sectionFilter === "All" && collapsedSections.has(title);
     head.appendChild(el("span", "chev", collapsed ? "\u25b8" : "\u25be"));
     head.appendChild(el("h2", null, title));
     const body = el("div", "groupbody");
@@ -838,6 +919,19 @@ function renderSections(parent, datasets) {
   graphSearch.oninput = () => { graphQuery = graphSearch.value; applyGraphFilter(); };
   applyGraphFilter();
 }
+function renderSections(parent, datasets) {
+  const available = sectionKeysFromGroups(datasets);
+  prepareSectionFilter("view:" + datasets.map(d => d.label).join("|"), available);
+  const tabs = el("div", "sectiontabs");
+  const body = el("div", "sectionbody");
+  parent.appendChild(tabs);
+  parent.appendChild(body);
+  const drawTabs = () => renderSectionTabs(tabs, available, () => { drawBody(); drawTabs(); });
+  const drawBody = () => { disposeChartsIn(body); body.innerHTML = ""; renderSectionBody(body, datasets); };
+  drawTabs();
+  drawBody();
+}
+
 
 function displaySummary(d) {
   if (!d) return "";
@@ -1978,6 +2072,11 @@ function quickSummaryCard(run) {
 function summaryTableCard(run) {
   const card = el("section", "card");
   card.appendChild(el("h3", null, "Full table  (min / average / max)"));
+  const rows = summaryRows(run);
+  const available = sectionKeysFromRows(rows);
+  prepareSectionFilter("view:" + run.label, available);
+  const tabsHost = el("div", "sectiontabs");
+  card.appendChild(tabsHost);
   const controls = el("div", "proccontrols tablecontrols");
   const search = document.createElement("input");
   search.type = "search";
@@ -1990,21 +2089,24 @@ function summaryTableCard(run) {
   const host = el("div");
   card.appendChild(host);
 
-  const rows = summaryRows(run);
   const main = rows.filter(r => !EXTRA_SECTIONS.has(r.groupSection));
   const extra = rows
     .filter(r => EXTRA_SECTIONS.has(r.groupSection))
     .sort((a, b) => extraRank(a.groupSection) - extraRank(b.groupSection));
 
   function render() {
+    renderSectionTabs(tabsHost, available, () => render());
     const q = summaryTableQuery.trim().toLowerCase();
+    const forceOpen = !!q || sectionFilter !== "All";
     const matches = r => !q || (r.label + " " + (r.unit || "") + " " + (r.section || "")).toLowerCase().includes(q);
-    const visibleMain = main.filter(matches);
-    const visibleExtra = extra.filter(matches);
+    const matchSection = r => sectionFilter === "All"
+      || (EXTRA_SECTIONS.has(r.groupSection) ? sectionFilter === "Extra" : r.groupSection === sectionFilter);
+    const visibleMain = main.filter(r => matchSection(r) && matches(r));
+    const visibleExtra = extra.filter(r => matchSection(r) && matches(r));
     host.innerHTML = "";
     count.textContent = (visibleMain.length + visibleExtra.length) + " metrics";
     if (!visibleMain.length && !visibleExtra.length) {
-      host.appendChild(textEl("div", "muted", "No metrics match this search."));
+      host.appendChild(textEl("div", "muted", "No metrics match this filter/search."));
       return;
     }
     const t = el("table", "sticky-table");
@@ -2034,23 +2136,23 @@ function summaryTableCard(run) {
     let last = null;
     visibleMain.forEach(r => {
       if (r.section !== last) {
-        t.appendChild(tableSectionHeader(r.section, 4, !!q));
+        t.appendChild(tableSectionHeader(r.section, 4, forceOpen));
         last = r.section;
       }
-      addRow(r, !!q);
+      addRow(r, forceOpen);
     });
     if (visibleExtra.length) {
-      const h = extraTableHeader("Extra", 4, !!q);
+      const h = extraTableHeader("Extra", 4, forceOpen);
       t.appendChild(h);
       last = null;
       visibleExtra.forEach(r => {
         if (r.section !== last) {
-          t.appendChild(tableSectionHeader(r.section, 4, !!q));
+          t.appendChild(tableSectionHeader(r.section, 4, forceOpen));
           last = r.section;
         }
-        addRow(r, !!q);
+        addRow(r, forceOpen);
       });
-      if (!q && collapsedTableSections.has("Extra")) {
+      if (!forceOpen && collapsedTableSections.has("Extra")) {
         let row = h.nextElementSibling;
         while (row) {
           row.style.display = "none";
@@ -2556,6 +2658,11 @@ function compareTableCard(datasets) {
   const card = el("section", "card");
   card.appendChild(el("h3", null, "Full table  (min / average / max)"));
   card.appendChild(el("div", "muted cmp-legend", "Per metric: blue = lowest average, orange = highest average across runs."));
+  const rows = metricArrays(datasets);
+  const available = sectionKeysFromRows(rows);
+  prepareSectionFilter("view:" + datasets.map(d => d.label).join("|"), available);
+  const tabsHost = el("div", "sectiontabs");
+  card.appendChild(tabsHost);
   const controls = el("div", "proccontrols tablecontrols");
   const search = document.createElement("input");
   search.type = "search";
@@ -2568,21 +2675,24 @@ function compareTableCard(datasets) {
   const host = el("div");
   card.appendChild(host);
 
-  const rows = metricArrays(datasets);
   const main = rows.filter(m => !EXTRA_SECTIONS.has(m.groupSection));
   const extra = rows
     .filter(m => EXTRA_SECTIONS.has(m.groupSection))
     .sort((a, b) => extraRank(a.groupSection) - extraRank(b.groupSection));
 
   function render() {
+    renderSectionTabs(tabsHost, available, () => render());
     const q = cmpTableQuery.trim().toLowerCase();
+    const forceOpen = !!q || sectionFilter !== "All";
     const matches = m => !q || (m.label + " " + (m.unit || "") + " " + (m.section || "")).toLowerCase().includes(q);
-    const visibleMain = main.filter(matches);
-    const visibleExtra = extra.filter(matches);
+    const matchSection = m => sectionFilter === "All"
+      || (EXTRA_SECTIONS.has(m.groupSection) ? sectionFilter === "Extra" : m.groupSection === sectionFilter);
+    const visibleMain = main.filter(m => matchSection(m) && matches(m));
+    const visibleExtra = extra.filter(m => matchSection(m) && matches(m));
     host.innerHTML = "";
     count.textContent = (visibleMain.length + visibleExtra.length) + " metrics";
     if (!visibleMain.length && !visibleExtra.length) {
-      host.appendChild(textEl("div", "muted", "No metrics match this search."));
+      host.appendChild(textEl("div", "muted", "No metrics match this filter/search."));
       return;
     }
     const t = el("table", "sticky-table");
@@ -2621,23 +2731,23 @@ function compareTableCard(datasets) {
     let last = null;
     visibleMain.forEach(m => {
       if (m.section !== last) {
-        t.appendChild(tableSectionHeader(m.section, 1 + datasets.length, !!q));
+        t.appendChild(tableSectionHeader(m.section, 1 + datasets.length, forceOpen));
         last = m.section;
       }
-      addRow(m, !!q);
+      addRow(m, forceOpen);
     });
     if (visibleExtra.length) {
-      const h = extraTableHeader("Extra", 1 + datasets.length, !!q);
+      const h = extraTableHeader("Extra", 1 + datasets.length, forceOpen);
       t.appendChild(h);
       last = null;
       visibleExtra.forEach(m => {
         if (m.section !== last) {
-          t.appendChild(tableSectionHeader(m.section, 1 + datasets.length, !!q));
+          t.appendChild(tableSectionHeader(m.section, 1 + datasets.length, forceOpen));
           last = m.section;
         }
-        addRow(m, !!q);
+        addRow(m, forceOpen);
       });
-      if (!q && collapsedTableSections.has("Extra")) {
+      if (!forceOpen && collapsedTableSections.has("Extra")) {
         let row = h.nextElementSibling;
         while (row) {
           row.style.display = "none";

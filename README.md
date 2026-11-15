@@ -11,7 +11,7 @@ Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd 
 - Read-only 1 Hz recording over wireless ADB.
 - Thermal, CPU/GPU/NPU, fan, XR, display, battery, power rail, memory, storage, network, media/audio and controller telemetry.
 - Lightweight headset preview without saving a run.
-- Run and compare views with tables, overlaid graphs and per-process timelines.
+- Run and compare views with tables, overlaid graphs and per-process timelines, plus All/CPU/GPU/Extra section sub-tabs for graphs and tables.
 - Session-wide pinned metrics/processes plus lowest/highest-average highlighting.
 - Self-contained HTML export with common Wi-Fi/device identifiers redacted.
 - Optional root extras for fan RPM/PWM, active panel, calibration and per-process disk I/O.
