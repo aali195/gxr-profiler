@@ -572,14 +572,11 @@ button.pinned-proc-name:hover { text-decoration: underline; }
 /* Process hierarchy visual hierarchy: low-level rows are brighter. */
 .procrow.proc-kind-kernel { background: rgba(245, 247, 250, .035); }
 .procrow.proc-kind-kernel .procname-main { color: #f5f7fa; }
-.procrow.proc-kind-kernel .procname-cell { box-shadow: inset 2px 0 0 #f5f7fa; }
 .procrow.proc-kind-system { background: rgba(214, 219, 227, .022); }
 .procrow.proc-kind-system .procname-main { color: #d6dbe3; }
-.procrow.proc-kind-system .procname-cell { box-shadow: inset 2px 0 0 #d6dbe3; }
 .procrow.proc-kind-system-app { background: rgba(184, 192, 204, .016); }
 .procrow.proc-kind-system-app .procname-main { color: #b8c0cc; }
-.procrow.proc-kind-system-app .procname-cell { box-shadow: inset 2px 0 0 #b8c0cc; }
 .procrow.proc-kind-app .procname-main { color: var(--fg); }
+.procrow.proc-kind-app .procname-cell { box-shadow: inset 2px 0 0 #f5f7fa; }
 .procrow.proc-kind-isolated { background: rgba(198, 120, 221, .035); }
 .procrow.proc-kind-isolated .procname-main { color: #cbb6dd; }
-.procrow.proc-kind-isolated .procname-cell { box-shadow: inset 2px 0 0 #c678dd; }
