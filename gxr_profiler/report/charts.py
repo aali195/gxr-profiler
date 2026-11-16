@@ -32,6 +32,7 @@ class ChartGroup:
     series: list[SeriesSpec]
     bands: list[str] = ()
     section: str = ""
+    extra_sections: tuple[str, ...] = ()
 
 
 def _series(cols: list[str]) -> list[SeriesSpec]:
@@ -60,20 +61,21 @@ def _group(
     series: list[SeriesSpec],
     bands: list[str] | None = None,
     section: str = "",
+    extra_sections: list[str] | None = None,
 ) -> ChartGroup:
     bands = bands or []
     units = {s.unit for s in series}
     units |= {_BAND_UNITS[b] for b in bands if _BAND_UNITS.get(b)}
     unit = next(iter(units)) if len(units) == 1 else ""
-    return ChartGroup(group_id, title, unit, series, bands, section)
+    return ChartGroup(group_id, title, unit, series, bands, section, tuple(extra_sections or ()))
 
 
 # Focused groups = one topic/unit per chart. Tables reuse the same group titles,
 # so the grouping also keeps the table rows easy to scan.
 GROUPS: list[ChartGroup] = [
     # Thermal
-    _group("thermal_cpu", "CPU core temperatures", [], ["cpu"], "Thermal"),
-    _group("thermal_gpu", "GPU temperatures", [], ["gpu"], "Thermal"),
+    _group("thermal_cpu", "CPU core temperatures", [], ["cpu"], "Thermal", extra_sections=["CPU"]),
+    _group("thermal_gpu", "GPU temperatures", [], ["gpu"], "Thermal", extra_sections=["GPU"]),
     _group("thermal_npu", "Neural engine temperatures", [], ["npu"], "Thermal"),
     _group(
         "thermal_surfaces",
@@ -116,6 +118,12 @@ GROUPS: list[ChartGroup] = [
         "Cameras (tracked)",
         _series(["cam_head_fps", "cam_hand_fps", "cam_eye_fps", "irled_fps"]),
         section="Cameras",
+    ),
+    _group(
+        "camera_raw",
+        "Cameras (raw streams)",
+        _series(["cib_ht_fps", "cib_hat_fps", "cib_eyet_fps", "cib_depthinput_fps"]),
+        section="Cameras (raw)",
     ),
     # Memory
     _group(
@@ -269,13 +277,6 @@ GROUPS: list[ChartGroup] = [
             ]
         ),
         section="Audio",
-    ),
-    # Cameras (raw streams, extra)
-    _group(
-        "camera_raw",
-        "Cameras (raw streams)",
-        _series(["cib_ht_fps", "cib_hat_fps", "cib_eyet_fps", "cib_depthinput_fps"]),
-        section="Cameras (raw)",
     ),
 ]
 

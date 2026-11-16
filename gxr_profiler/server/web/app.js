@@ -88,8 +88,8 @@ let findSavedSections = null;
 let findSavedTables = null;
 let findTimer = null;
 const collapsedTableSections = new Set(["Extra"]);  // table group headers hidden by the user; Extra starts closed
-const EXTRA_SECTIONS = new Set(["Media & display", "Audio", "Cameras (raw)", "Controllers", "Passthrough", "Raw thermal"]);
-const EXTRA_ORDER = ["Cameras (raw)", "Media & display", "Audio", "Controllers", "Passthrough", "Raw thermal"];
+const EXTRA_SECTIONS = new Set(["Media & display", "Audio", "Controllers", "Passthrough", "Raw thermal"]);
+const EXTRA_ORDER = ["Media & display", "Audio", "Controllers", "Passthrough", "Raw thermal"];
 
 function extraRank(section) {
   const i = EXTRA_ORDER.indexOf(section);
@@ -735,11 +735,32 @@ function sectionFilterName(section) {
   return EXTRA_SECTIONS.has(section) ? "Extra" : section;
 }
 
+function sectionList(sections) {
+  const out = [];
+  (sections || []).forEach(name => {
+    const key = sectionFilterName(name || "Other");
+    if (!out.includes(key)) out.push(key);
+  });
+  return out;
+}
+
+function groupSectionList(group) {
+  return sectionList([group.section || "Other", ...(group.extra_sections || [])]);
+}
+
+function rowSectionList(row) {
+  const raw = Array.isArray(row.groupSections) && row.groupSections.length
+    ? row.groupSections
+    : [row.groupSection || "Other"];
+  return sectionList(raw);
+}
+
 function sectionKeysFromRows(rows) {
   const keys = [];
   rows.forEach(r => {
-    const key = sectionFilterName(r.groupSection || "Other");
-    if (!keys.includes(key)) keys.push(key);
+    rowSectionList(r).forEach(key => {
+      if (!keys.includes(key)) keys.push(key);
+    });
   });
   return keys.filter(k => k !== "Extra").concat(keys.includes("Extra") ? ["Extra"] : []);
 }
@@ -759,8 +780,9 @@ function sectionKeysFromGroups(datasets) {
   const keys = [];
   (SPEC.groups || []).forEach(g => {
     if (!groupHasSeries(g, datasets)) return;
-    const key = sectionFilterName(g.section || "Other");
-    if (!keys.includes(key)) keys.push(key);
+    groupSectionList(g).forEach(key => {
+      if (!keys.includes(key)) keys.push(key);
+    });
   });
   return keys.filter(k => k !== "Extra").concat(keys.includes("Extra") ? ["Extra"] : []);
 }
@@ -821,12 +843,21 @@ function renderSectionBody(parent, datasets) {
   const bySection = {};
   const extraOrder = [];
   const extraBySection = {};
-  SPEC.groups.forEach(g => {
-    const s = g.section || "Other";
-    const extra = EXTRA_SECTIONS.has(s);
-    const section = extra ? "Extra" : s;
-    if (sectionFilter !== "All" && section !== sectionFilter) return;
+  const activeExtra = sectionFilter === "Extra";
+  const usePrimaryBuckets = sectionFilter === "All" || activeExtra;
+  const orderedGroups = sectionFilter === "All" || activeExtra
+    ? SPEC.groups
+    : [...SPEC.groups].sort((a, b) => {
+      const ap = sectionFilterName(a.section || "Other") === sectionFilter ? 0 : 1;
+      const bp = sectionFilterName(b.section || "Other") === sectionFilter ? 0 : 1;
+      return ap - bp;
+    });
+  orderedGroups.forEach(g => {
+    if (sectionFilter !== "All" && !groupSectionList(g).includes(sectionFilter)) return;
     if (!groupHasSeries(g, datasets)) return;
+    const primary = g.section || "Other";
+    const extra = activeExtra && EXTRA_SECTIONS.has(primary);
+    const s = usePrimaryBuckets ? primary : sectionFilter;
     const bucket = extra ? extraBySection : bySection;
     const seq = extra ? extraOrder : order;
     if (!bucket[s]) { bucket[s] = []; seq.push(s); }
@@ -1532,17 +1563,18 @@ function summaryRows(run) {
   const rows = [];
   SPEC.groups.forEach(g => {
     const groupSection = g.section || "Other";
+    const groupSections = [groupSection, ...(g.extra_sections || [])];
     g.series.forEach(s => {
       if (run.series[s.col]) {
-        rows.push({ key: s.col, section: g.title, groupSection, label: s.label, unit: s.unit, scale: s.scale ?? 1, decimals: s.decimals ?? null, arr: run.series[s.col] });
+        rows.push({ key: s.col, section: g.title, groupSection, groupSections, label: s.label, unit: s.unit, scale: s.scale ?? 1, decimals: s.decimals ?? null, arr: run.series[s.col] });
       }
     });
     (g.bands || []).forEach(bid => {
       const b = bandDef(bid);
       const mx = "band::" + bid + "::max", av = "band::" + bid + "::avg";
       const extra = { unit: b.unit, scale: b.scale ?? 1, decimals: b.decimals ?? 1 };
-      if (run.series[mx]) rows.push({ key: mx, section: g.title, groupSection, label: b.label + " (hottest)", ...extra, arr: run.series[mx] });
-      if (run.series[av]) rows.push({ key: av, section: g.title, groupSection, label: b.label + " (average)", ...extra, arr: run.series[av] });
+      if (run.series[mx]) rows.push({ key: mx, section: g.title, groupSection, groupSections, label: b.label + " (hottest)", ...extra, arr: run.series[mx] });
+      if (run.series[av]) rows.push({ key: av, section: g.title, groupSection, groupSections, label: b.label + " (average)", ...extra, arr: run.series[av] });
     });
   });
   return rows;
@@ -2100,10 +2132,17 @@ function summaryTableCard(run) {
     const q = summaryTableQuery.trim().toLowerCase();
     const forceOpen = !!q || sectionFilter !== "All";
     const matches = r => !q || (r.label + " " + (r.unit || "") + " " + (r.section || "")).toLowerCase().includes(q);
-    const matchSection = r => sectionFilter === "All"
-      || (EXTRA_SECTIONS.has(r.groupSection) ? sectionFilter === "Extra" : r.groupSection === sectionFilter);
-    const visibleMain = main.filter(r => matchSection(r) && matches(r));
-    const visibleExtra = extra.filter(r => matchSection(r) && matches(r));
+    const matchSection = r => sectionFilter === "All" || rowSectionList(r).includes(sectionFilter);
+    const sectionOrder = rowsForSection => {
+      if (sectionFilter === "All" || sectionFilter === "Extra") return rowsForSection;
+      return [...rowsForSection].sort((a, b) => {
+        const ap = sectionFilterName(a.groupSection || "Other") === sectionFilter ? 0 : 1;
+        const bp = sectionFilterName(b.groupSection || "Other") === sectionFilter ? 0 : 1;
+        return ap - bp;
+      });
+    };
+    const visibleMain = sectionOrder(main.filter(r => matchSection(r) && matches(r)));
+    const visibleExtra = sectionOrder(extra.filter(r => matchSection(r) && matches(r)));
     host.innerHTML = "";
     count.textContent = (visibleMain.length + visibleExtra.length) + " metrics";
     if (!visibleMain.length && !visibleExtra.length) {
@@ -2617,10 +2656,11 @@ function metricArrays(datasets) {
   const out = [];
   SPEC.groups.forEach(g => {
     const groupSection = g.section || "Other";
+    const groupSections = [groupSection, ...(g.extra_sections || [])];
     const push = (key, label, unit, getter, scale, decimals) => {
       const perRun = datasets.map(d => getter(d.series));
       if (perRun.some(a => a && a.some(x => x != null))) {
-        out.push({ key, section: g.title, groupSection, label, unit, scale, decimals, perRun });
+        out.push({ key, section: g.title, groupSection, groupSections, label, unit, scale, decimals, perRun });
       }
     };
     g.series.forEach(s => push(s.col, s.label, s.unit, ser => ser[s.col], s.scale ?? 1, s.decimals ?? null));
@@ -2686,10 +2726,17 @@ function compareTableCard(datasets) {
     const q = cmpTableQuery.trim().toLowerCase();
     const forceOpen = !!q || sectionFilter !== "All";
     const matches = m => !q || (m.label + " " + (m.unit || "") + " " + (m.section || "")).toLowerCase().includes(q);
-    const matchSection = m => sectionFilter === "All"
-      || (EXTRA_SECTIONS.has(m.groupSection) ? sectionFilter === "Extra" : m.groupSection === sectionFilter);
-    const visibleMain = main.filter(m => matchSection(m) && matches(m));
-    const visibleExtra = extra.filter(m => matchSection(m) && matches(m));
+    const matchSection = m => sectionFilter === "All" || rowSectionList(m).includes(sectionFilter);
+    const sectionOrder = rowsForSection => {
+      if (sectionFilter === "All" || sectionFilter === "Extra") return rowsForSection;
+      return [...rowsForSection].sort((a, b) => {
+        const ap = sectionFilterName(a.groupSection || "Other") === sectionFilter ? 0 : 1;
+        const bp = sectionFilterName(b.groupSection || "Other") === sectionFilter ? 0 : 1;
+        return ap - bp;
+      });
+    };
+    const visibleMain = sectionOrder(main.filter(m => matchSection(m) && matches(m)));
+    const visibleExtra = sectionOrder(extra.filter(m => matchSection(m) && matches(m)));
     host.innerHTML = "";
     count.textContent = (visibleMain.length + visibleExtra.length) + " metrics";
     if (!visibleMain.length && !visibleExtra.length) {
@@ -4281,9 +4328,10 @@ function allSectionTitles() {
   const set = new Set();
   let extra = false;
   (SPEC.groups || []).forEach(g => {
-    const s = g.section || "Other";
-    if (EXTRA_SECTIONS.has(s)) extra = true;
-    else set.add(s);
+    groupSectionList(g).forEach(s => {
+      if (s === "Extra") extra = true;
+      else set.add(s);
+    });
   });
   if (extra) set.add("Extra");
   return Array.from(set);
