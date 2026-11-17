@@ -2,7 +2,7 @@
 
 Detailed notes for **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2 (`SXR2230P`) and Adreno 740. All investigation and capture uses read-only commands.
 
-Quick start, screenshots and the packaged UI are in the root [README](../README.md). CLI usage is in [CLI.md](CLI.md), developer setup in [DEVELOPMENT.md](DEVELOPMENT.md), and every headset command in [COMMANDS.md](COMMANDS.md).
+Quick start, screenshots and the packaged UI are in the root [README](../README.md). CLI usage is in [CLI.md](CLI.md), the user-facing crash/reboot workflow is in [DIAGNOSTICS.md](DIAGNOSTICS.md), developer setup in [DEVELOPMENT.md](DEVELOPMENT.md), and every headset command in [COMMANDS.md](COMMANDS.md).
 
 ## Contents
 
@@ -237,6 +237,7 @@ Each topic links to tests/results first, then the digestible findings and full d
 | [Power modes & battery](gxr-findings/modes.md) | Battery Saver, hand tracking, battery/AC A/B |
 | [Standby & wake](gxr-findings/standby.md) | rest/standby recovery, short vs long gap, status-3 re-entry |
 | [Root](gxr-findings/root.md) | KernelSU reads, fan, calibration, limits |
+| [Crash & soft-reboot logs](gxr-findings/crash-logs.md) | crash/events/system buffers, dropbox, tombstones, exit-info, rescue/boot props, root/SELinux limits |
 | [Measurement coverage](gxr-findings/coverage.md) | captured, opt-in, available, unavailable |
 | [Cross-run analysis](gxr-findings/cross-run.md) | 35-run correlations: thermal stages, fan curve, HDR, Wi-Fi, passthrough, process load |
 | [Process offenders](gxr-findings/processes.md) | idle/active CPU, camera/perception cost, WiFi test client, YouTube/Chronolink, profiler overhead |
@@ -260,4 +261,5 @@ Each topic links to tests/results first, then the digestible findings and full d
 - **Max Wi-Fi throughput reached ~2.17 Gbps** on a 2.5 GbE speedtest, about 87% of line rate, with the camera already thermally halved. The earlier 900 Mbps test was not link-limited: link rate was slightly higher there, so the old client/server path was the ceiling. 1.6 Gbps is a plausible upper cap at good orientation; 1.3-1.4 Gbps is safer with movement/body blocking. See [Wi-Fi & standby](gxr-findings/wifi.md).
 - **The power-rail monitor adds a shell-readable 15 V rail, not battery power.** Rail 1 read about 15 V and 0.6-1.0 W while idle/unplugged; rail 2 was zero. Battery voltage/current/power remain `0`, and the rail labels are not exposed. See [power rails](gxr-findings/power.md).
 - **The controller HAL is the biggest reducible background CPU cost.** With controllers active, `vendor.samsung.hardware.secxrcontroller@1.0-service` averaged ~27-35% CPU in Chronolink runs and dropped to 0 in controller-idle runs. Hand tracking costs ~5-10 CPU points in perception/camera and ~2 GPU points; most Samsung/Google app bloat was not actually running. See [background processes & debloat](gxr-findings/debloat.md).
+- **Two Beat Saber soft reboots were SystemUI HWUI animation races, not thermal/hardware.** Both were `com.android.systemui` native crashes in `libhwui` (`sp<> assignment detected data race` on the main thread, then `PropertyValuesAnimatorSet`/`AnimationContextBridge` SIGSEGV on RenderThread), followed by framework restarts with continuous kernel uptime. The headset was hot (AP ~74-75 C, WIFI ~78 C, status 3, fan 7) but did not reach status 4 or thermally shut down. See [crash & soft-reboot logs](gxr-findings/crash-logs.md) and the [2026-11-17 report](gxr-findings/reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md).
 - **Disabling hand tracking is a suspend, not a teardown** - small thermal benefit. See [Power modes & battery](gxr-findings/modes.md).

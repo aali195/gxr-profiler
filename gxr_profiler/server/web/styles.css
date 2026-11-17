@@ -580,3 +580,73 @@ button.pinned-proc-name:hover { text-decoration: underline; }
 .procrow.proc-kind-app .procname-cell { box-shadow: inset 2px 0 0 #f5f7fa; }
 .procrow.proc-kind-isolated { background: rgba(198, 120, 221, .035); }
 .procrow.proc-kind-isolated .procname-main { color: #cbb6dd; }
+
+/* Diagnostics tab */
+.diag-issue {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 10px 0;
+  background: var(--panel2);
+}
+.diag-issue-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+.diag-issue .diag-summary { margin: 4px 0 8px; font-size: 13px; color: var(--fg); }
+.diag-issue .diag-reco { margin: 8px 0 0; font-size: 12px; color: var(--dim); }
+.diag-evidence {
+  max-height: 360px;
+  overflow: auto;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: #c9d1d9;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diag-crash {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 10px 0;
+  padding: 8px 12px;
+  background: var(--panel2);
+}
+.diag-crash > summary { cursor: pointer; font-size: 12px; color: #c9d1d9; }
+.diag-crash > summary:hover { color: #fff; }
+.diagkv { width: 100%; border-collapse: collapse; font-size: 12px; }
+.diagkv th, .diagkv td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.diagkv th { color: var(--dim); font-weight: 600; white-space: nowrap; }
+.diagkv tr:last-child th, .diagkv tr:last-child td { border-bottom: 0; }
+.badge.sev-critical { background: #3a1f1a; color: #ffb3a0; }
+.badge.sev-warning { background: #3a2f16; color: #f0c000; }
+.badge.sev-info { background: #1c2b3a; color: #79c0ff; }
+.badge.sev-ok { background: #16311f; color: #7ee2a0; }
+.diag-issue.sev-critical { border-left-color: #ff5d5d; }
+.diag-issue.sev-warning { border-left-color: #f0c000; }
+.diag-issue.sev-info { border-left-color: #4f9dff; }
+.diag-issue.sev-ok { border-left-color: #39d353; }
+
+/* Utility tabs are visually separate from the run workflow tabs. */
+.tab.tab-utility {
+  background: #1c2230;
+  color: #9fd0ff;
+  border-color: #2b3a4a;
+}
+.tab.tab-utility:hover { background: #22303f; }
+.tabseparator {
+  width: 1px;
+  height: 24px;
+  flex: 0 0 auto;
+  align-self: center;
+  margin: 0 4px;
+  background: var(--border);
+}
+.tab.tab-utility.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.tools-body { padding-top: 6px; }

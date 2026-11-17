@@ -222,6 +222,56 @@ gxr-profiler filters in Python because `logcat -s` misses colon tags such as
 Logcat is **event-driven**, not a fixed poll. Thermal/fan events are also
 written to `<run>.events.csv`; other values are folded into the next 1 Hz row.
 
+## Tools > Diagnostics (one-click snapshot, separate from runs)
+
+See the [Diagnostics guide](DIAGNOSTICS.md) for the normal-user workflow and how to read the results.
+
+The **Tools > Diagnostics** view collects a read-only snapshot of crash and boot state. It does not create a
+run and does not record continuously. The snapshot is shown in the UI and saved as JSON + Markdown
+under `reports/debug/` next to the exe. Nothing is written, cleared or changed on the headset.
+
+Always collected:
+
+```sh
+getprop
+cat /proc/uptime
+logcat -d -b crash  -v time -t N
+logcat -d -b events -v time -t N
+logcat -d -b system -v time -t N
+logcat -d -b main   -v time -t N
+dumpsys dropbox --print
+dumpsys activity exit-info
+```
+
+`N` is the **Log lines per buffer** option (100-5000, default 1500; `main` is capped lower).
+Thermal context comes from the same lightweight preview used by the Record tab (`dumpsys battery`,
+`dumpsys thermalservice`, fan step, DDR and power rail). Thermal values are shown as context, not as
+proof that heat caused a crash.
+
+Optional root extras (`--root` equivalent; `su -c` may prompt):
+
+```sh
+su -c id
+su -c 'ls -lt /data/tombstones | head -n 10'
+su -c 'ls -lt /data/system/dropbox | head -n 10'
+su -c 'ls -lt /data/anr | head -n 10'
+su -c 'dmesg | tail -n 500'
+su -c 'cat /proc/last_kmsg'
+su -c 'ls -lt /sys/fs/pstore'
+su -c 'cat /metadata/watchdog/mitigation_count.txt'
+su -c 'cat /data/system/package-watchdog.xml'
+```
+
+With **Read tombstone / ANR files** enabled, the newest 20 text tombstones are read (first 30 KB of
+each), plus the newest Dropbox and ANR files. Older tombstones are shown separately from the current
+crash buffer. KernelSU's `u:r:ksu:s0` context may still be denied by SELinux on `/data/tombstones`
+and `/data/system/dropbox`; the snapshot reports the denial instead of failing.
+
+The tab parses native `F DEBUG` blocks, Java `FATAL EXCEPTION` / ANR records, `rescue_note` and
+`boot_progress_*` events, dropbox entries and `exit-info`. It recognizes the SystemUI HWUI
+animation-race signature and explains it as a software issue while keeping thermal/power readings
+separate. See [crash & soft-reboot logs](gxr-findings/crash-logs.md).
+
 ## Media/display/audio (every 10 s, always on)
 
 ```sh

@@ -14,6 +14,7 @@ Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd 
 - Run and compare views with tables, overlaid graphs and per-process timelines, plus All/CPU/GPU/Extra section sub-tabs for graphs and tables.
 - Session-wide pinned metrics/processes plus lowest/highest-average highlighting.
 - Self-contained HTML export with common Wi-Fi/device identifiers redacted.
+- One-click **Tools > Diagnostics** snapshot for crash buffers, boot/rescue state, Dropbox, exit-info and thermal context; saves JSON + Markdown under `reports/debug/`.
 - Optional root extras for fan RPM/PWM, active panel, calibration and per-process disk I/O.
 
 ## Screenshots
@@ -65,7 +66,8 @@ Building from source or running the CLI from Python requires Python 3.11+; see [
 3. Put the exe in a writable folder and double-click it. No `--serial` is needed once a single headset is paired.
 4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset** button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run.
 5. Open **Run** for the results, or select runs in **Compare** to overlay and compare them.
-6. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no internet or Python required.
+6. Open **Tools**, then **Diagnostics**, for a one-click crash/soft-reboot snapshot. It saves JSON + Markdown under `reports/debug/`.
+7. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no internet or Python required.
 
 `runs/` and `reports/` are created next to the exe. Keep the exe folder writable, and do not share the raw `runs/` folder unless you have checked its contents; exported HTML redacts common network/device identifiers.
 
@@ -89,6 +91,7 @@ The GUI needs `adb` and WebView2. It does not need Python. For source setup, arc
 ## Documentation
 
 - [Detailed guide: capture, output/schema and safety](docs/README.md)
+- [Diagnostics guide](docs/DIAGNOSTICS.md)
 - [CLI reference](docs/CLI.md)
 - [Development, tests and packaging](docs/DEVELOPMENT.md)
 - [Every headset command and polling cadence](docs/COMMANDS.md)

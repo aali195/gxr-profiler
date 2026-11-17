@@ -33,6 +33,7 @@ from .camera import (
     parse_xr_heartbeat,
 )
 from .controllers import controller_active, parse_controller, parse_controller_log
+from .crash import parse_crashes, parse_dropbox, parse_events, parse_exit_info, parse_tombstone_text
 from .disk import DISK_RAW_KEYS, disk_rates, parse_diskstats, parse_psi_io
 from .display import COLOR_MODES, HDR_TYPES, parse_display_info
 from .fan import FAN_PWM_RE, FAN_RPM1_RE, FAN_RPM2_RE, parse_fan_root
@@ -198,12 +199,16 @@ __all__ = [
     "parse_controller",
     "parse_controller_log",
     "parse_cpuinfo",
+    "parse_crashes",
     "parse_dcvsh",
     "parse_df_usage",
     "parse_diskstats",
     "parse_display_info",
     "parse_display_props",
+    "parse_dropbox",
     "parse_dynpol",
+    "parse_events",
+    "parse_exit_info",
     "parse_fan_root",
     "parse_fan_step",
     "parse_gpu_mem",
@@ -239,6 +244,7 @@ __all__ = [
     "parse_thermal_changed",
     "parse_thermal_zones",
     "parse_thermalservice",
+    "parse_tombstone_text",
     "parse_wifi_status",
     "parse_xr_heartbeat",
     "parse_zram",

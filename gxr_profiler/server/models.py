@@ -70,6 +70,13 @@ class RecordRequest(BaseModel):
         return cfg
 
 
+class DebugRequest(BaseModel):
+    root: bool = False
+    include_tombstones: bool = False
+    include_dmesg: bool = False
+    log_lines: int = Field(default=1500, ge=100, le=5000)
+
+
 class RecordStatus(BaseModel):
     status: str
     label: str
