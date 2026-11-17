@@ -174,7 +174,8 @@ no thermal-critical trip and no power-rail/battery anomaly in the captured windo
 ## Historical tombstone sweep (later follow-up)
 
 A later Diagnostics root sweep read all 15 text tombstones then present, covering 2026-10-18 to
-2026-11-17. It found more than the two events above:
+2026-11-17. It found more than the two events above. The full sweep is documented in
+[historical tombstone sweep](2026-11-17-historical-tombstones.md):
 
 - 12 `com.android.systemui` tombstones with the same HWUI race signature.
 - 2 `android.hardware.perceptionhost` SIGABRTs:

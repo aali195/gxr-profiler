@@ -13,6 +13,7 @@ SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2, "ok": 3}
 
 
 def analyze_report(report: dict) -> list[dict]:
+    annotate_crashes(report)
     issues: list[dict] = []
     crashes = report.get("crashes") or []
     systemui_hwui = [c for c in crashes if is_systemui_hwui_race(c)]
@@ -46,6 +47,29 @@ def analyze_report(report: dict) -> list[dict]:
     for crash in other_crashes:
         kind = crash.get("kind") or "native"
         process = crash.get("process") or "unknown process"
+        signature = crash.get("signature") or classify_crash(crash)
+        if signature and signature["id"] == "perception_head_tracking_init":
+            issues.append(
+                _issue(
+                    "warning",
+                    signature["title"],
+                    signature["summary"],
+                    [_crash_summary(crash), _top_frame(crash)],
+                    signature["recommendation"],
+                )
+            )
+            continue
+        if signature and signature["id"] == "immersiveviewxr_foveation":
+            issues.append(
+                _issue(
+                    "warning",
+                    signature["title"],
+                    signature["summary"],
+                    [_crash_summary(crash), _top_frame(crash)],
+                    signature["recommendation"],
+                )
+            )
+            continue
         if kind == "native":
             issues.append(
                 _issue(
@@ -148,8 +172,12 @@ def analyze_report(report: dict) -> list[dict]:
             if any(_same_crash_signature(first, crash) for crash in crashes):
                 continue
             process = first.get("process") or "unknown process"
-            is_systemui = is_systemui_hwui_race(first)
-            title = "Historical SystemUI HWUI animation race" if is_systemui else f"Historical tombstone crash: {process}"
+            signature = first.get("signature") or classify_crash(first)
+            title = (
+                f"Historical {signature['title']}"
+                if signature
+                else f"Historical tombstone crash: {process}"
+            )
             files = ", ".join(str(item.get("tombstone")) for item in group[:5] if item.get("tombstone"))
             evidence = [
                 f"{item.get('tombstone')} {item.get('timestamp')} {item.get('signal')} "
@@ -361,11 +389,53 @@ def analyze_report(report: dict) -> list[dict]:
     return issues
 
 
-def is_systemui_hwui_race(crash: dict) -> bool:
-    process = (crash.get("process") or "").strip().lower()
-    if process != "com.android.systemui":
-        return False
-    text = " ".join(
+_SYSTEMUI_HWUI_SIGNATURE = {
+    "id": "systemui_hwui_race",
+    "title": "SystemUI HWUI animation race",
+    "summary": (
+        "SystemUI crashed in Android's HWUI animation code. The crash signature matches a "
+        "strong-pointer/data-race abort or a null animator in PropertyValuesAnimatorSet, not a "
+        "thermal, power or kernel fault by itself."
+    ),
+    "recommendation": (
+        "Check for a SystemUI/system update and capture a tombstone/bugreport. Avoid repeatedly "
+        "triggering the overlay or animation; bright, even lighting may reduce poor-condition "
+        "overlays. A factory reset may clear a corrupt system state, but treat that as a test."
+    ),
+}
+
+_PERCEPTION_HEAD_TRACKING_SIGNATURE = {
+    "id": "perception_head_tracking_init",
+    "title": "Perception head-tracking initialisation failure",
+    "summary": (
+        "The perception host aborted because its internal MotionTrackingAdapter could not "
+        "initialise. This is a native tracking/camera service failure, separate from SystemUI "
+        "and ordinary app crashes."
+    ),
+    "recommendation": (
+        "Check whether it follows standby/wake, camera use or a specific app. Reboot and see if "
+        "it returns; if it repeats, collect a bugreport and check for a system update or a "
+        "camera/perception service fault."
+    ),
+}
+
+_IMMERSIVE_VIEW_FOVEATION_SIGNATURE = {
+    "id": "immersiveviewxr_foveation",
+    "title": "Immersive View XR Vulkan/foveation crash",
+    "summary": (
+        "The Immersive View XR Unity app crashed while creating a Vulkan framebuffer/image "
+        "through Android's foveation layer and the Adreno driver. This points to app/content or "
+        "foveation/driver handling, not the SystemUI HWUI animation race."
+    ),
+    "recommendation": (
+        "Update the app and system, try different content or disable foveation if the app "
+        "exposes it, and record the app version. It is not thermal by itself."
+    ),
+}
+
+
+def _crash_text(crash: dict) -> str:
+    return " ".join(
         [
             crash.get("abort") or "",
             crash.get("cause") or "",
@@ -377,6 +447,13 @@ def is_systemui_hwui_race(crash: dict) -> bool:
             ),
         ]
     )
+
+
+def is_systemui_hwui_race(crash: dict) -> bool:
+    process = (crash.get("process") or "").strip().lower()
+    if process != "com.android.systemui":
+        return False
+    text = _crash_text(crash)
     return any(
         marker in text
         for marker in (
@@ -386,6 +463,41 @@ def is_systemui_hwui_race(crash: dict) -> bool:
             "ProgressBar$CircleAnimationCallback",
         )
     ) or ("AnimatedVectorDrawable" in text and "libhwui" in text)
+
+
+def is_perception_head_tracking_init(crash: dict) -> bool:
+    process = (crash.get("process") or "").strip().lower()
+    return "android.hardware.perceptionhost" in process and (
+        "MotionTrackingAdapter" in _crash_text(crash)
+        or "libperception_head_tracking_host_plugin" in _crash_text(crash)
+    )
+
+
+def is_immersiveviewxr_foveation_crash(crash: dict) -> bool:
+    if (crash.get("process") or "").strip().lower() != "com.google.android.apps.immersiveviewxr":
+        return False
+    text = _crash_text(crash)
+    return "libVkLayer_android_foveation" in text or (
+        "vulkan.adreno" in text and "libunity" in text
+    )
+
+
+def classify_crash(crash: dict) -> dict | None:
+    if is_systemui_hwui_race(crash):
+        return _SYSTEMUI_HWUI_SIGNATURE
+    if is_perception_head_tracking_init(crash):
+        return _PERCEPTION_HEAD_TRACKING_SIGNATURE
+    if is_immersiveviewxr_foveation_crash(crash):
+        return _IMMERSIVE_VIEW_FOVEATION_SIGNATURE
+    return None
+
+
+def annotate_crashes(report: dict) -> None:
+    for key in ("crashes", "tombstone_crashes"):
+        for crash in report.get(key) or []:
+            signature = classify_crash(crash)
+            if signature:
+                crash["signature"] = signature
 
 
 def format_markdown(report: dict) -> str:
@@ -435,6 +547,9 @@ def format_markdown(report: dict) -> str:
         lines.append(f"### {crash.get('timestamp')} - {crash.get('process') or 'unknown'} ({crash.get('kind')})")
         lines.append("")
         lines.append(f"- Signal: {crash.get('signal') or crash.get('cause') or 'n/a'}")
+        if crash.get("signature"):
+            lines.append(f"- Signature: {crash['signature']['title']}")
+            lines.append(f"- Meaning: {crash['signature']['summary']}")
         if crash.get("abort"):
             lines.append(f"- Abort: {crash['abort']}")
         for frame in (crash.get("frames") or [])[:8]:
@@ -445,9 +560,11 @@ def format_markdown(report: dict) -> str:
     if tombstones:
         lines += ["## Tombstones (history)", ""]
         for crash in tombstones[:20]:
+            signature = crash.get("signature", {}).get("title")
             lines.append(
                 f"- {crash.get('tombstone') or 'tombstone'}: {crash.get('timestamp') or 'unknown'} "
                 f"{crash.get('process') or 'unknown'} {crash.get('signal') or ''}"
+                + (f" - {signature}" if signature else "")
             )
         lines.append("")
 
@@ -500,8 +617,9 @@ def _group_crashes(crashes: list[dict]) -> list[list[dict]]:
 
 
 def _crash_signature(crash: dict) -> tuple:
-    if is_systemui_hwui_race(crash):
-        return ("systemui_hwui",)
+    signature = classify_crash(crash)
+    if signature:
+        return (signature["id"],)
     return (crash.get("process"), crash.get("signal"), _top_frame(crash))
 
 

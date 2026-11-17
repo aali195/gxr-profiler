@@ -4508,6 +4508,7 @@ function debugCrashesCard() {
       crash.process || "unknown process",
       "(" + (crash.kind || "native") + ")",
       crash.signal || crash.abort || "",
+      crash.signature ? crash.signature.title : "",
     ].filter(Boolean).join(" | ");
     details.appendChild(summary);
     const meta = [
@@ -4520,6 +4521,15 @@ function debugCrashesCard() {
       ["Top frame", debugFrameText((crash.frames || [])[0]) || debugFrameText(crash.top_frame)],
     ].filter(row => row[1] != null && row[1] !== "");
     details.appendChild(debugKvTable(meta));
+    if (crash.signature) {
+      const box = el("div", "diag-signature");
+      box.appendChild(textEl("b", null, crash.signature.title));
+      box.appendChild(textEl("p", "diag-summary", crash.signature.summary || ""));
+      if (crash.signature.recommendation) {
+        box.appendChild(textEl("p", "diag-reco", "Next: " + crash.signature.recommendation));
+      }
+      details.appendChild(box);
+    }
     const frames = (crash.frames || []).map(debugFrameText).filter(Boolean);
     if (frames.length) {
       const pre = el("pre", "diag-evidence");
@@ -4574,6 +4584,7 @@ function debugTombstonesCard() {
       crash.process || "unknown process",
       crash.signal || "",
       crash.abort || "",
+      crash.signature ? crash.signature.title : "",
     ].filter(Boolean).join(" | ");
     details.appendChild(summary);
     const meta = [
@@ -4587,6 +4598,15 @@ function debugTombstonesCard() {
       ["Top frame", debugFrameText((crash.frames || [])[0])],
     ].filter(row => row[1] != null && row[1] !== "");
     details.appendChild(debugKvTable(meta));
+    if (crash.signature) {
+      const box = el("div", "diag-signature");
+      box.appendChild(textEl("b", null, crash.signature.title));
+      box.appendChild(textEl("p", "diag-summary", crash.signature.summary || ""));
+      if (crash.signature.recommendation) {
+        box.appendChild(textEl("p", "diag-reco", "Next: " + crash.signature.recommendation));
+      }
+      details.appendChild(box);
+    }
     const frames = (crash.frames || []).map(debugFrameText).filter(Boolean);
     if (frames.length) {
       const pre = el("pre", "diag-evidence");

@@ -24,5 +24,6 @@ def test_tools_hub_contains_diagnostics():
     assert "renderDiagnosticsTool" in js
     assert "debugTombstonesCard" in js
     assert "debugExitInfoCard" in js
+    assert "diag-signature" in js
     assert "setToolTab" in js
     assert "/api/debug/collect" in js

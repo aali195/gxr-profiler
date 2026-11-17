@@ -230,9 +230,10 @@ The 2026-11-17 Diagnostics sweep of the 15 retained tombstones (2026-10-18 to 20
   `Head tracking failed to initialize the internal MotionTrackingAdapter component.`
 - 1 `com.google.android.apps.immersiveviewxr` SIGSEGV.
 
-The perceptionhost and immersiveviewxr crashes are separate signatures and are shown as generic
-native crashes by Tools > Diagnostics. This is the expected behaviour for a new crash reason: the
-tool names the process, signal, abort/cause and top frame even without a hand-written rule.
+The perceptionhost and immersiveviewxr crashes are separate signatures. Tools > Diagnostics now
+gives each one a dedicated title, explanation and next step, and still falls back to a generic
+native crash entry for unknown processes. See the
+[historical tombstone sweep](reports/soft-reboots/2026-11-17-historical-tombstones.md).
 
 ## Caveats
 

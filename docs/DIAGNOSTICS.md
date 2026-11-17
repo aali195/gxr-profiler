@@ -67,6 +67,11 @@ and backtrace.
 Historical entries may be days or weeks old. Always check the timestamp and tombstone file name
 before treating one as the cause of the current problem.
 
+Known signatures get a dedicated title, explanation and next step in the expanded entry. Current
+examples include the SystemUI HWUI animation race, the perception head-tracking initialisation
+failure, and the Immersive View XR Vulkan/foveation crash. Unknown native crashes still show their
+process, signal, abort/cause and top frames.
+
 ### Process exits (history)
 
 The latest 20 ActivityManager exit records. This is useful for **silent** failures that do not leave
@@ -114,6 +119,12 @@ The snapshot currently looks for:
 - RescueParty/boot-loop state and recent rescue notes.
 - High-signal system/watchdog/low-memory lines in the system and main buffers.
 - Kernel panic/GPU/OOM/watchdog lines when **Kernel log / pstore** is enabled.
+- Known signatures with a richer explanation:
+  - SystemUI HWUI animation race.
+  - Perception head-tracking initialisation failure
+    (`android.hardware.perceptionhost`, `MotionTrackingAdapter`).
+  - Immersive View XR Vulkan/foveation crash
+    (`com.google.android.apps.immersiveviewxr`, `libVkLayer_android_foveation`).
 - Thermal and power context.
 
 A **new** native crash process is shown as a generic native crash with its stack. It will not be

@@ -650,3 +650,13 @@ button.pinned-proc-name:hover { text-decoration: underline; }
   border-color: var(--accent);
 }
 .tools-body { padding-top: 6px; }
+
+.diag-signature {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: rgba(79, 157, 255, 0.06);
+}
+.diag-signature b { color: #c9d1d9; font-size: 13px; }
+.diag-signature p { margin: 4px 0 0; font-size: 12px; }

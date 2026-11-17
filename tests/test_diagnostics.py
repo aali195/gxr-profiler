@@ -1,5 +1,5 @@
 from gxr_profiler.capture.diagnostics import DiagnosticsCollector
-from gxr_profiler.core.diagnostics import analyze_report, format_markdown, is_systemui_hwui_race
+from gxr_profiler.core.diagnostics import analyze_report, classify_crash, format_markdown, is_systemui_hwui_race
 from gxr_profiler.core.parsers.crash import (
     parse_crashes,
     parse_dropbox,
@@ -293,8 +293,46 @@ def test_historical_tombstone_and_silent_records_are_reported():
     }
     issues = analyze_report(report)
     titles = {issue["title"] for issue in issues}
-    assert "Historical tombstone crash: /vendor/bin/hw/android.hardware.perceptionhost" in titles
+    assert "Historical Perception head-tracking initialisation failure" in titles
     assert "ActivityManager ANR event: com.example.app" in titles
     assert "Recent abnormal app exits" in titles
     assert "System log fault indicators" in titles
     assert any("WATCHDOG" in line for line in next(i for i in issues if i["title"] == "System log fault indicators")["evidence"])
+
+
+IMMERSIVE_TOMBSTONE = """*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Timestamp: 2026-11-08 20:50:18.147410069+0000
+Cmdline: com.google.android.apps.immersiveviewxr
+pid: 27825, tid: 27950, name: Thread-24  >>> com.google.android.apps.immersiveviewxr <<<
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x00ffffffffffffff
+backtrace:
+      #00 pc 000000000020fd18  /vendor/lib64/hw/vulkan.adreno.so (vkCreateImage+328) (BuildId: abc)
+      #01 pc 0000000000021fc0  /system/lib64/vulkan/libVkLayer_android_foveation.so (Initialize+612) (BuildId: def)
+      #02 pc 0000000000ede808  /data/app/example/lib/arm64/libunity.so (BuildId: ghi)
+"""
+
+
+def test_known_perception_and_immersive_signatures():
+    perception = parse_tombstone_text(PERCEPTION_TOMBSTONE)[0]
+    sig = classify_crash(perception)
+    assert sig is not None
+    assert sig["id"] == "perception_head_tracking_init"
+
+    immersive = parse_tombstone_text(IMMERSIVE_TOMBSTONE)[0]
+    sig = classify_crash(immersive)
+    assert sig is not None
+    assert sig["id"] == "immersiveviewxr_foveation"
+    report = {
+        "collected_at": "2026-11-17T19:00:00+00:00",
+        "crashes": [],
+        "tombstone_crashes": [immersive],
+        "events": {},
+        "exit_info": [],
+        "sections": {},
+        "boot": {"props": {}, "rescue_notes": []},
+        "thermal": {},
+        "root": {"requested": False, "available": False},
+    }
+    titles = {issue["title"] for issue in analyze_report(report)}
+    assert "Historical Immersive View XR Vulkan/foveation crash" in titles
+    assert immersive.get("signature", {}).get("id") == "immersiveviewxr_foveation"
