@@ -10,8 +10,9 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..core.adb import AdbError, RealAdb, resolve_serial
+from ..core.adb import AdbClient, AdbError, RealAdb, resolve_serial
 from ..core.apps import (
+    APP_ACTION_SPECS,
     APP_ACTIONS,
     APP_DESTRUCTIVE_ACTIONS,
     APP_LIST_SCRIPT,
@@ -25,7 +26,7 @@ from ..core.apps import (
     parse_package_detail,
     parse_package_lines,
     parse_package_paths,
-    parse_users,
+    size_targets_for_rows,
     summarize,
     validate_package_name,
 )
@@ -33,6 +34,8 @@ from ..core.parsers.util import split_sections
 from ..core.paths import default_reports_dir, ensure_writable_dir
 
 log = logging.getLogger(__name__)
+
+SIZE_BATCH_SIZE = 64
 
 
 class AppsService:
@@ -43,7 +46,7 @@ class AppsService:
         serial: str | None = None,
         reports_dir: str | None = None,
         user: int = 0,
-        adb_factory: Callable[..., object] = RealAdb,
+        adb_factory: Callable[..., AdbClient] = RealAdb,
     ) -> None:
         self.serial = serial
         self.user = user
@@ -51,10 +54,24 @@ class AppsService:
         self.adb_factory = adb_factory
         self.lock = threading.Lock()
 
-    def _adb(self):
+    def _adb(self) -> AdbClient:
         return self.adb_factory(serial=resolve_serial(self.serial))
 
-    def _list_locked(self, adb) -> dict:
+    def _action_specs(self) -> dict:
+        specs = {}
+        for name, spec in APP_ACTION_SPECS.items():
+            specs[name] = {
+                "label": spec["label"],
+                "title": spec["title"],
+                "confirm": spec["confirm"],
+                "description": spec["description"],
+                "command": spec["command"].format(user=self.user, package="{package}"),
+                "destructive": spec["destructive"],
+                "data_loss": spec["data_loss"],
+            }
+        return specs
+
+    def _read_snapshot(self, adb: AdbClient, include_sizes: bool = True) -> dict:
         text = adb.shell(APP_LIST_SCRIPT, timeout=25.0)
         sections = split_sections(text)
         if not parse_package_lines("\n".join(sections.get("PACKAGES", []))):
@@ -63,30 +80,21 @@ class AppsService:
         rows = build_app_rows(sections)
         if not rows:
             raise AdbError("the device returned no installed packages")
-        self._add_sizes(adb, rows)
-        return {
-            "packages": rows,
-            "summary": summarize(rows),
-            "users": parse_users("\n".join(sections.get("USERS", []))),
-            "user": self.user,
-        }
+        if include_sizes:
+            self._add_sizes(adb, rows)
+        return {"packages": rows, "summary": summarize(rows), "action_specs": self._action_specs()}
 
-    def _add_sizes(self, adb, rows: list[dict]) -> None:
-        targets: dict[str, list[dict]] = {}
-        for row in rows:
-            path = row.get("apk_path") or ""
-            if not path:
-                continue
-            target = path.rsplit("/", 1)[0] if path.startswith("/data/app/") else path
-            targets.setdefault(target, []).append(row)
-        if not targets:
-            return
-        command = "du -sk " + " ".join(shlex.quote(target) for target in targets) + " 2>/dev/null"
-        try:
-            sizes = parse_du(adb.shell(command, timeout=20.0))
-        except Exception:
-            log.debug("package size read failed", exc_info=True)
-            return
+    def _add_sizes(self, adb: AdbClient, rows: list[dict]) -> None:
+        targets = size_targets_for_rows(rows)
+        sizes: dict[str, int] = {}
+        items = list(targets)
+        for start in range(0, len(items), SIZE_BATCH_SIZE):
+            batch = items[start : start + SIZE_BATCH_SIZE]
+            command = "du -sk " + " ".join(shlex.quote(target) for target in batch) + " 2>/dev/null"
+            try:
+                sizes.update(parse_du(adb.shell(command, timeout=20.0)))
+            except Exception:
+                log.debug("package size read failed", exc_info=True)
         for target, target_rows in targets.items():
             size_kb = sizes.get(target)
             if size_kb is None:
@@ -96,7 +104,7 @@ class AppsService:
 
     def list_packages(self) -> dict:
         with self.lock:
-            return self._list_locked(self._adb())
+            return self._read_snapshot(self._adb())
 
     def detail(self, package: str, root: bool = False) -> dict:
         package = validate_package_name(package)
@@ -105,7 +113,11 @@ class AppsService:
             text = adb.shell("dumpsys package " + shlex.quote(package), timeout=25.0)
             if "unable to find package" in text.lower() or "unknown package" in text.lower():
                 raise LookupError(f"package not found: {package}")
-            paths = parse_package_paths(adb.shell("pm path " + shlex.quote(package), timeout=10.0))
+            try:
+                paths = parse_package_paths(adb.shell("pm path " + shlex.quote(package), timeout=10.0))
+            except Exception:
+                log.debug("package path read failed", exc_info=True)
+                paths = []
             result = {
                 "package": package,
                 "detail": parse_package_detail(text, paths),
@@ -124,14 +136,22 @@ class AppsService:
             "sizes_kb": {},
             "errors": [],
         }
-        who = adb.shell("su -c id", timeout=8.0)
+        try:
+            who = adb.shell("su -c id", timeout=8.0)
+        except Exception as exc:
+            info["errors"].append(f"root check failed: {exc}")
+            return info
         if "uid=0" not in who:
             info["errors"].append(who.strip() or "su did not return uid=0")
             return info
         info["available"] = True
         paths = [f"/data/user/0/{package}", f"/data/user_de/0/{package}", f"/data/user/0/{package}/cache"]
         command = "du -sk " + " ".join(paths) + " 2>/dev/null"
-        text = adb.shell("su -c " + shlex.quote(command), timeout=20.0)
+        try:
+            text = adb.shell("su -c " + shlex.quote(command), timeout=20.0)
+        except Exception as exc:
+            info["errors"].append(f"root size read failed: {exc}")
+            return info
         if "permission denied" in text.lower():
             info["errors"].append("SELinux denied access to the app data directory")
         sizes = parse_du(text)
@@ -154,7 +174,7 @@ class AppsService:
             raise ValueError("confirmation is required")
         with self.lock:
             adb = self._adb()
-            current = self._list_locked(adb)
+            current = self._read_snapshot(adb, include_sizes=False)
             row = next((item for item in current["packages"] if item["package"] == package), None)
             if row is None:
                 raise LookupError(f"package not found: {package}")
@@ -194,6 +214,3 @@ class AppsService:
                 fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
         except Exception:
             log.warning("could not write app action log", exc_info=True)
-
-    def state(self) -> dict:
-        return {"user": self.user, "serial": self.serial}

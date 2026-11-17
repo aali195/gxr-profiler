@@ -34,20 +34,20 @@
       </div>
       <div id="runlist"></div>
     </aside>
+    <button class="sidebar-edge" id="btn-sidebar" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Hide run list" title="Hide run list">‹</button>
     <main>
       <div class="tabs" id="tabs">
         <button class="tab active" data-tab="live">Record</button>
         <button class="tab" data-tab="run">Run</button>
         <button class="tab" data-tab="compare">Compare</button>
-        <button class="toolbtn sidebartoggle" id="btn-sidebar" type="button" aria-controls="sidebar" aria-expanded="true" title="Hide run list">Hide runs</button>
+        <span class="tabseparator" id="tools-separator" aria-hidden="true"></span>
+        <button class="tab tab-utility" data-tab="tools" id="tools-tab">Tools</button>
         <div class="toolgroup" id="viewtools">
           <button class="toolbtn" id="btn-find" title="Find in page (Ctrl+F)">Find</button>
           <button class="toolbtn view-only" id="btn-collapse" title="Collapse all sections">Collapse all</button>
           <button class="toolbtn view-only" id="btn-expand" title="Expand all sections">Expand all</button>
           <button class="toolbtn view-only" id="btn-yaxis" title="Y-axis origin: 0 or fit to data">Y: 0-based</button>
         </div>
-        <span class="tabseparator" id="tools-separator" aria-hidden="true"></span>
-        <button class="tab tab-utility" data-tab="tools" id="tools-tab">Tools</button>
       </div>
       <div id="findbar" class="findbar" hidden>
         <input id="find-input" type="search" placeholder="Find in page..." autocomplete="off" />

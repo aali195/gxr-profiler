@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from ...core.adb import AdbError
 from ..deps import AppsDep, ManagerDep
 from ..models import AppActionRequest
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -18,7 +21,8 @@ def list_apps(apps: AppsDep):
     except AdbError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"could not list packages: {exc}") from exc
+        log.exception("could not list packages")
+        raise HTTPException(status_code=500, detail="could not list packages") from exc
 
 
 @router.get("/api/apps/{package}")
@@ -32,7 +36,8 @@ def app_detail(package: str, apps: AppsDep, root: bool = False):
     except AdbError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"could not read package details: {exc}") from exc
+        log.exception("could not read package details for %s", package)
+        raise HTTPException(status_code=500, detail="could not read package details") from exc
 
 
 @router.post("/api/apps/{package}/action")
@@ -50,4 +55,5 @@ def app_action(package: str, body: AppActionRequest, apps: AppsDep, manager: Man
     except AdbError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"package action failed: {exc}") from exc
+        log.exception("package action failed for %s", package)
+        raise HTTPException(status_code=500, detail="package action failed") from exc

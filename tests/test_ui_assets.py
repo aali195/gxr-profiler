@@ -17,6 +17,11 @@ def test_tools_hub_contains_diagnostics():
     assert 'data-tab="tools"' in html
     assert "tab tab-utility" in html
     assert 'id="tools-separator"' in html
+    assert html.index('data-tab="compare"') < html.index('id="tools-separator"')
+    assert html.index('id="tools-separator"') < html.index('id="tools-tab"')
+    assert 'class="sidebar-edge"' in html
+    assert "sidebartoggle" not in html
+    assert html.index("</aside>") < html.index('id="btn-sidebar"')
     assert 'data-tab="debug"' not in html
     assert 'id="viewtools"' in html
     assert html.count('class="toolbtn view-only"') == 3
@@ -34,8 +39,17 @@ def test_tools_hub_contains_diagnostics():
     assert "Disable and remove actions are blocked" in js
     assert "appsCellText" in js
     assert "appsRunningLabel" in js
+    assert "processFilterBar" in js
+    assert "PROC_FILTERS" in js
+    assert 'sort: { key: "cpu_pct", dir: -1 }' in js
+    assert 'col.unit || "\\u00a0"' in js
     assert "CPU 5m" in js
     assert "GPU mem" in js
     assert "gpu_mem_kb" in js
     assert "size_kb" in js
     assert "Install size" in js
+
+    start = js.index("const APP_COLUMNS = [")
+    columns = js[start : js.index("];", start)]
+    assert columns.index('key: "size_kb"') < columns.index('key: "cpu_pct"')
+    assert columns.index('key: "installer"') > columns.index('key: "threads"')

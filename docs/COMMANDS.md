@@ -285,7 +285,6 @@ progress. See the [Apps & services guide](APPS.md).
 List and metadata reads:
 
 ```sh
-pm list users
 pm list packages -U --show-versioncode --user 0
 pm list packages -s -u --user 0
 pm list packages -3 -u --user 0
@@ -299,6 +298,7 @@ ps -A -o PID,UID,RSS,NAME
 grep -H '' /proc/[0-9]*/stat 2>/dev/null
 grep -H '' /proc/[0-9]*/oom_score_adj 2>/dev/null
 dumpsys gpu | sed -n '/Memory snapshot for GPU/,/driverPackageName/p'
+du -sk <active-install-paths>
 dumpsys package <package>
 pm path <package>
 ```

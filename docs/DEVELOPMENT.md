@@ -23,7 +23,7 @@ Without installing, run `python -m gxr_profiler ...`.
 ```text
 gxr_profiler/
   cli/       Typer commands (record, runs, report, ui, devices)
-  core/      column registry, schema/labels derived from it, adb client, models, fs/paths, apps package helpers
+  core/      column registry, schema/labels derived from it, adb client, models, fs/paths, apps helpers, shared process snapshot
     parsers/ logcat, thermal, media, audio, radios, cameras, sensors, process, system, display
     device/  props, system, display/panel, audio, root snapshot
   capture/   Recorder lifecycle, logcat stream, pollers, media/process samplers, meta/writer

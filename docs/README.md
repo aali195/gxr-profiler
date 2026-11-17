@@ -168,8 +168,8 @@ For fair runs: unplug AC (charging adds heat), keep identical workload/duration,
 ## Apps & services
 
 See the [Apps & services guide](APPS.md) for the package list, sortable one-shot CPU/RSS/GPU/threads
-usage and OOM columns, system vs user/stock package distinction, reversible per-user removal, full
-uninstall of user apps, confirmation rules, critical-package protection and optional root storage details.
+usage, OOM and size columns, system vs user/stock package distinction, reversible per-user removal,
+full uninstall of user apps, confirmation rules, critical-package protection and optional root storage details.
 
 ## Research & findings
 

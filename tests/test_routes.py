@@ -49,6 +49,10 @@ def test_read_endpoints_and_offline_report(tmp_path):
     assert b"GXR_PROFILER_OFFLINE" in report.content
     assert b"/static/" not in report.content
     assert b"<!-- gxr-profiler:styles:start -->" in report.content
+    assert b'id="tools-tab"' not in report.content
+    assert b'id="tools-separator"' not in report.content
+    assert b'class="sidebar-edge"' in report.content
+    assert b"processFilterBar" in report.content
 
     procs = client.get("/api/runs/before/procs")
     assert procs.status_code == 200

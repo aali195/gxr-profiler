@@ -2,6 +2,7 @@ import re
 
 from fastapi.testclient import TestClient
 
+from gxr_profiler.core.adb import AdbError
 from gxr_profiler.server.app import create_app
 from gxr_profiler.server.deps import get_apps_service, get_manager
 
@@ -45,8 +46,7 @@ class FakeApps:
                 }
             ],
             "summary": {"total": 1},
-            "users": [0],
-            "user": 0,
+            "action_specs": {},
         }
 
     def detail(self, package, root=False):
@@ -153,3 +153,22 @@ def test_app_actions_block_critical_packages(tmp_path):
     )
     assert response.status_code == 403
     assert "cannot be disabled or removed" in response.json()["detail"]
+
+
+def test_app_routes_map_adb_errors_to_503(tmp_path):
+    client, fake, _ = _client(tmp_path)
+    headers = {"X-GXR-Profiler-Token": _token(client)}
+
+    fake.list_packages = lambda: (_ for _ in ()).throw(AdbError("no adb device"))
+    assert client.get("/api/apps").status_code == 503
+
+    fake.detail = lambda package, root=False: (_ for _ in ()).throw(AdbError("no adb device"))
+    assert client.get("/api/apps/com.example.app").status_code == 503
+
+    fake.run_action = lambda package, action, confirm=False: (_ for _ in ()).throw(AdbError("no adb device"))
+    response = client.post(
+        "/api/apps/com.example.app/action",
+        json={"action": "disable", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 503

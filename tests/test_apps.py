@@ -1,90 +1,24 @@
+import pytest
+
 from gxr_profiler.core.apps import (
+    APP_ACTION_SPECS,
+    APP_ACTIONS,
     build_action_command,
     build_app_rows,
     interpret_action_result,
     is_critical_package,
     merge_package_fallback,
-    parse_app_list,
     parse_du,
     parse_package_detail,
     parse_package_lines,
     parse_package_paths,
     parse_process_usage,
+    size_targets_for_rows,
     summarize,
     validate_package_name,
 )
 from gxr_profiler.core.parsers.util import split_sections
-
-APP_LIST = """###USERS
-Users:
-    UserInfo{0:Owner:c13} running
-###PACKAGES
-package:com.example.app uid:10123 versionCode:42
-package:com.android.systemui uid:1000 versionCode:34
-package:com.samsung.stock uid:1000 versionCode:7
-###SYSTEM
-package:com.android.systemui
-package:com.samsung.stock
-###THIRD
-package:com.example.app
-###DISABLED
-package:com.samsung.stock
-###ENABLED
-package:com.example.app
-package:com.android.systemui
-###ALL
-package:com.example.app
-package:com.android.systemui
-package:com.samsung.stock
-package:com.removed.system
-###PATH
-package:/data/app/~~abc/com.example.app-1/base.apk=com.example.app
-package:/system/priv-app/SystemUI/SystemUI.apk=com.android.systemui
-package:/system/priv-app/SamsungStock/SamsungStock.apk=com.samsung.stock
-package:/system/priv-app/Removed/Removed.apk=com.removed.system
-###INSTALLER
-package:com.example.app installer=com.android.vending
-package:com.android.systemui
-package:com.samsung.stock
-package:com.removed.system
-###CPUINFO
-  12.5% 123/com.example.app: 10% user + 2.5% kernel
-   3.0% 456/com.samsung.stock:remote: 1% user + 2% kernel
-###PS
-PID UID RSS NAME
-123 10123 2048 com.example.app
-456 1000 4096 com.samsung.stock:remote
-###STAT
-/proc/123/stat:123 (com.example.app) S 1 0 0 0 0 0 0 0 0 0 200 90 0 0 20 0 12 0 1001 0 0
-/proc/456/stat:456 (com.samsung.stock:remote) S 1 0 0 0 0 0 0 0 0 0 300 60 0 0 20 0 8 0 1002 0 0
-###OOM
-/proc/123/oom_score_adj:905
-/proc/456/oom_score_adj:200
-###GPUMEM
-Proc 123 total: 1048576
-Proc 456 total: 2097152
-"""
-
-DETAIL = """Packages:
-  Package [com.example.app] (abc):
-    userId=10123
-    codePath=/data/app/~~abc/com.example.app-1/base.apk
-    resourcePath=/data/app/~~abc/com.example.app-1/base.apk
-    versionCode=42 minSdk=30 targetSdk=34
-    versionName=1.2.3
-    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
-    privateFlags=[ PRIVATE_FLAG_ISOLATED_SPLIT_LOADING ]
-    dataDir=/data/user/0/com.example.app
-    installerPackageName=com.android.vending
-    firstInstallTime=2025-01-02 03:04:05
-    lastUpdateTime=2025-02-03 04:05:06
-    primaryCpuAbi=arm64-v8a
-    requested permissions:
-      android.permission.INTERNET
-      android.permission.CAMERA
-    install permissions:
-    User 0: ceDataInode=123 installed=true hidden=false suspended=false stopped=false notLaunched=false enabled=0
-"""
+from tests.apps_fixtures import APP_LIST, DETAIL
 
 
 def test_parse_package_lines_variants():
@@ -100,8 +34,7 @@ def test_parse_package_lines_variants():
 
 
 def test_build_rows_classifies_system_user_disabled_removed_and_running():
-    rows, users = parse_app_list(APP_LIST)
-    assert users == [0]
+    rows = build_app_rows(split_sections(APP_LIST))
     by_name = {row["package"]: row for row in rows}
     assert by_name["com.example.app"]["kind"] == "user"
     assert by_name["com.example.app"]["state"] == "enabled"
@@ -120,7 +53,6 @@ def test_build_rows_classifies_system_user_disabled_removed_and_running():
     assert by_name["com.samsung.stock"]["state"] == "disabled"
     assert by_name["com.samsung.stock"]["running"] is True
     assert by_name["com.samsung.stock"]["actions"] == ["enable", "remove_user"]
-    assert by_name["com.removed.system"]["installed"] is False
     assert by_name["com.removed.system"]["state"] == "removed"
     assert by_name["com.removed.system"]["actions"] == ["restore"]
     summary = summarize(rows)
@@ -174,7 +106,18 @@ def test_package_fallback_merges_only_when_primary_list_is_empty():
     assert "com.foo" not in parse_package_lines("\n".join(existing["PACKAGES"]))
 
 
-def test_parse_users_paths_process_usage_and_du():
+def test_size_targets_use_data_app_directory_and_system_file():
+    rows = [
+        {"apk_path": "/data/app/~~abc/com.foo-1/base.apk"},
+        {"apk_path": "/system/app/Foo/Foo.apk"},
+    ]
+    targets = size_targets_for_rows(rows)
+    assert set(targets) == {"/data/app/~~abc/com.foo-1", "/system/app/Foo/Foo.apk"}
+    assert targets["/data/app/~~abc/com.foo-1"] == [rows[0]]
+    assert targets["/system/app/Foo/Foo.apk"] == [rows[1]]
+
+
+def test_parse_paths_process_usage_and_du():
     usage = parse_process_usage(
         "  12.5% 123/com.foo: 10% user + 2.5% kernel\n   1.5% 456/com.foo:worker: 1% user + 0.5% kernel\n",
         "PID UID RSS NAME\n123 10000 2048 com.foo\n456 10000 1024 com.foo:worker\n",
@@ -220,12 +163,8 @@ def test_validate_package_name_and_critical_packages():
     assert validate_package_name("com.example.app") == "com.example.app"
     assert validate_package_name("android") == "android"
     for bad in ("", "../evil", "com.foo; rm -rf /", "com..foo", "com.foo/bar"):
-        try:
+        with pytest.raises(ValueError):
             validate_package_name(bad)
-        except ValueError:
-            pass
-        else:
-            raise AssertionError(f"accepted unsafe package name: {bad!r}")
     assert is_critical_package("com.android.systemui")
     assert is_critical_package("vendor.samsung.hardware.secxrcontroller@1.0-service")
     assert not is_critical_package("com.example.app")
@@ -240,4 +179,12 @@ def test_action_commands_and_result_interpretation():
     assert interpret_action_result("Success") == (True, "Success")
     assert interpret_action_result("Package com.foo new state: disabled-user", 0)[0] is True
     assert interpret_action_result("Failure [DELETE_FAILED_INTERNAL_ERROR]", 0)[0] is False
+    assert interpret_action_result("Unexpected output", 0)[0] is False
     assert interpret_action_result("", 1)[0] is False
+
+
+def test_action_specs_cover_all_actions():
+    assert tuple(APP_ACTION_SPECS) == APP_ACTIONS
+    for name, spec in APP_ACTION_SPECS.items():
+        assert "{package}" in spec["command"]
+        assert build_action_command("com.foo", name).startswith(spec["command"].split("{", 1)[0])

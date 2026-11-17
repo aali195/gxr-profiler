@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from ..core import parsers as P
 from ..core.adb import AdbClient
+from ..core.process_snapshot import PROCESS_SNAPSHOT_WITH_NET_SCRIPT
 from .logcat import DEV_BASE
 from .writer import RunWriter
 
@@ -16,14 +17,7 @@ CPU_HZ = 100.0
 
 PACKAGE_SCRIPT = "echo '###PKGS'; pm list packages -U; echo '###SYSPKGS'; pm list packages -s"
 
-PROCESS_SCRIPT = (
-    "echo '###CPUINFO'; dumpsys cpuinfo; "
-    "echo '###PS'; ps -A -o PID,UID,RSS,NAME; "
-    "echo '###STAT'; grep -H '' /proc/[0-9]*/stat 2>/dev/null; "
-    "echo '###OOM'; grep -H '' /proc/[0-9]*/oom_score_adj 2>/dev/null; "
-    "echo '###GPUMEM'; dumpsys gpu | sed -n '/Memory snapshot for GPU/,/driverPackageName/p'; "
-    "echo '###NET'; dumpsys netstats"
-)
+PROCESS_SCRIPT = PROCESS_SNAPSHOT_WITH_NET_SCRIPT
 
 
 class ProcessSampler:

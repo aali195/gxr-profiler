@@ -155,6 +155,14 @@ def run_ui(port: int = 8765, browser: bool = False, runs_dir: str | None = None,
     service = ExportService(runs_dir)
     window_ref: dict = {}
     api = make_js_api(service, lambda: window_ref.get("window"), webview)
-    window = webview.create_window("GXR Profiler", url, width=1280, height=900, js_api=api)
+    window = webview.create_window(
+        "GXR Profiler",
+        url,
+        width=1280,
+        height=900,
+        min_size=(1000, 700),
+        maximized=True,
+        js_api=api,
+    )
     window_ref["window"] = window
     webview.start()

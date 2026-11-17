@@ -44,7 +44,7 @@ the primary name. The list shows:
 **Size** uses `du -sk` on the active install path (the `/data/app` package directory when
 updated, otherwise the base APK). It excludes app data/cache, which remain in the root detail view.
 
-The header also shows snapshot totals for **CPU 5m**, **RSS**, **GPU mem** and **Install size**
+The header also shows snapshot totals for **CPU 5m**, **RSS**, **GPU mem** and **Size**
 across the listed packages.
 
 ### Process usage snapshot
@@ -102,7 +102,7 @@ for critical packages even if the API is called directly.
 ## Confirmation and critical packages
 
 Every action opens a dialog with the package ID, an explanation, and the exact command that
-will run. Destructive actions require an acknowledgement checkbox.
+will run. Data-loss actions (remove for user 0 and uninstall) require an acknowledgement checkbox.
 
 The critical list follows the [do-not-disable guidance](gxr-findings/debloat.md#do-not-disable):
 SystemUI, OpenXR/XR broker components, Play services, WebView, perception/calibration packages,

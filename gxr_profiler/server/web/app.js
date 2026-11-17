@@ -53,7 +53,7 @@ let debugRequestBusy = false;
 let debugOptions = { root: false, include_tombstones: false, include_dmesg: false, log_lines: 1500 };
 const appsState = {
   data: null, loaded: false, loading: false, attempted: false, error: "",
-  query: "", filter: "all", sort: { key: "package", dir: 1 },
+  query: "", filter: "all", sort: { key: "cpu_pct", dir: -1 },
   selected: null, detail: null, detailError: "", detailLoading: false, detailToken: 0,
   rootDetails: false, actionBusy: false, flash: null,
 };
@@ -622,8 +622,10 @@ function applySidebar() {
   document.documentElement.classList.toggle("sidebar-hidden", !sidebarOpen);
   const btn = document.getElementById("btn-sidebar");
   if (btn) {
-    btn.textContent = sidebarOpen ? "Hide runs" : "Show runs";
-    btn.title = sidebarOpen ? "Hide run list" : "Show run list";
+    const label = sidebarOpen ? "Hide run list" : "Show run list";
+    btn.textContent = sidebarOpen ? "‹" : "›";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
     btn.setAttribute("aria-expanded", String(sidebarOpen));
   }
   setTimeout(() => { updateStickyOffsets(); resizeChartsSoon(); }, 0);
@@ -1196,6 +1198,61 @@ function procMatches(r) {
   return (r.name + " " + (r.package || "") + " " + (r.uid == null ? "" : r.uid)).toLowerCase().includes(q);
 }
 
+const PROC_FILTERS = [
+  ["all", "All"], ["app", "Apps"], ["system", "System"],
+  ["system-app", "System apps"], ["kernel", "Kernel"], ["isolated", "Isolated"],
+];
+
+function processFilterBar(opts) {
+  const bar = el("div", "filterbar");
+  const typeButtons = new Map();
+  const update = () => {
+    typeButtons.forEach((button, value) => {
+      const on = opts.getType() === value;
+      button.classList.toggle("active", on);
+      button.setAttribute("aria-pressed", String(on));
+    });
+    const bgOn = opts.getBackground();
+    bg.classList.toggle("active", bgOn);
+    bg.setAttribute("aria-pressed", String(bgOn));
+  };
+  PROC_FILTERS.forEach(([value, label]) => {
+    const button = el("button", "subtab" + (opts.getType() === value ? " active" : ""), label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(opts.getType() === value));
+    button.onclick = () => {
+      if (opts.getType() === value) return;
+      opts.setType(value);
+      update();
+      opts.onChange();
+    };
+    typeButtons.set(value, button);
+    bar.appendChild(button);
+  });
+  const bg = el("button", "subtab" + (opts.getBackground() ? " active" : ""), "Background");
+  bg.type = "button";
+  bg.title = "Background/cached only";
+  bg.setAttribute("aria-pressed", String(opts.getBackground()));
+  bg.onclick = () => {
+    opts.setBackground(!opts.getBackground());
+    update();
+    opts.onChange();
+  };
+  bar.appendChild(bg);
+  const search = document.createElement("input");
+  search.type = "search";
+  search.className = "filtersearch";
+  search.placeholder = "Search process or package...";
+  search.setAttribute("aria-label", "Search processes");
+  search.value = opts.getQuery();
+  search.oninput = () => {
+    opts.setQuery(search.value);
+    opts.onChange();
+  };
+  bar.appendChild(search);
+  return bar;
+}
+
 function procSortValue(r, col) {
   if (col.key === "kind") return procCategory(r);
   if (col.key === "oom_class") return r.oom_class || "";
@@ -1238,7 +1295,7 @@ function setProcHeader(th, col) {
     label.appendChild(el("span", "sortarrow", procSort.dir < 0 ? "▼" : "▲"));
   }
   th.appendChild(label);
-  if (col.unit) th.appendChild(el("span", "procunit", col.unit));
+  th.appendChild(el("span", "procunit", col.unit || "\u00a0"));
 }
 
 async function fetchProcRows(label) {
@@ -1429,35 +1486,22 @@ async function processesCard(label) {
   }
   if (!data.rows.length) return null;
   const card = el("section", "card process-card");
-  const head = el("div", "runhead");
+  const head = el("div", "runhead processhead");
   const titleBox = el("div", "pickhead");
   titleBox.appendChild(el("h3", null, "Processes"));
   const count = el("span", "pickcount muted");
   titleBox.appendChild(count);
   head.appendChild(titleBox);
+  head.appendChild(processFilterBar({
+    getType: () => procType,
+    setType: value => { procType = value; },
+    getBackground: () => procBackground,
+    setBackground: value => { procBackground = value; },
+    getQuery: () => procQuery,
+    setQuery: value => { procQuery = value; },
+    onChange: () => render(),
+  }));
   card.appendChild(head);
-
-  const controls = el("div", "proccontrols");
-  const search = document.createElement("input");
-  search.type = "search";
-  search.placeholder = "Search process or package...";
-  search.value = procQuery;
-  const typeSel = document.createElement("select");
-  [["all", "All processes"], ["app", "Apps"], ["system", "System"], ["system-app", "System apps"], ["kernel", "Kernel"], ["isolated", "Isolated"]].forEach(([v, l]) => {
-    const o = document.createElement("option"); o.value = v; o.textContent = l; typeSel.appendChild(o);
-  });
-  typeSel.value = procType;
-  const bg = document.createElement("label");
-  bg.className = "proc-check";
-  const bgInput = document.createElement("input");
-  bgInput.type = "checkbox";
-  bgInput.checked = procBackground;
-  bg.appendChild(bgInput);
-  bg.appendChild(document.createTextNode(" Background/cached only"));
-  controls.appendChild(search);
-  controls.appendChild(typeSel);
-  controls.appendChild(bg);
-  card.appendChild(controls);
 
   const chartHost = el("div", "proc-chart-host");
   card.appendChild(chartHost);
@@ -1567,9 +1611,6 @@ async function processesCard(label) {
     }
   }
 
-  search.oninput = () => { procQuery = search.value; render(); };
-  typeSel.onchange = () => { procType = typeSel.value; render(); };
-  bgInput.onchange = () => { procBackground = bgInput.checked; render(); };
   render();
   return card;
 }
@@ -2922,24 +2963,24 @@ async function compareProcessesCard(labels) {
   });
   if (selectedCmpProc && !entries.has(selectedCmpProc)) selectedCmpProc = null;
   const card = el("section", "card process-card");
-  const head = el("div", "runhead");
+  const head = el("div", "runhead processhead");
   const titleBox = el("div", "pickhead");
   titleBox.appendChild(el("h3", null, "Processes"));
   const count = el("span", "pickcount muted");
   titleBox.appendChild(count);
   head.appendChild(titleBox);
+  head.appendChild(processFilterBar({
+    getType: () => cmpProcType,
+    setType: value => { cmpProcType = value; },
+    getBackground: () => cmpProcBackground,
+    setBackground: value => { cmpProcBackground = value; },
+    getQuery: () => cmpProcQuery,
+    setQuery: value => { cmpProcQuery = value; },
+    onChange: () => render(),
+  }));
   card.appendChild(head);
 
-  const controls = el("div", "proccontrols");
-  const search = document.createElement("input");
-  search.type = "search";
-  search.placeholder = "Search process or package...";
-  search.value = cmpProcQuery;
-  const typeSel = document.createElement("select");
-  [["all", "All processes"], ["app", "Apps"], ["system", "System"], ["system-app", "System apps"], ["kernel", "Kernel"], ["isolated", "Isolated"]].forEach(([v, l]) => {
-    const o = document.createElement("option"); o.value = v; o.textContent = l; typeSel.appendChild(o);
-  });
-  typeSel.value = cmpProcType;
+  const controls = el("div", "proccontrols cmpcontrols");
   const sortRunSel = document.createElement("select");
   sortRunSel.title = "Sort full field columns by this run";
   const maxOpt = document.createElement("option");
@@ -2969,19 +3010,9 @@ async function compareProcessesCard(labels) {
     metricSel.appendChild(o);
   });
   metricSel.value = cmpProcMetric;
-  const bg = document.createElement("label");
-  bg.className = "proc-check";
-  const bgInput = document.createElement("input");
-  bgInput.type = "checkbox";
-  bgInput.checked = cmpProcBackground;
-  bg.appendChild(bgInput);
-  bg.appendChild(document.createTextNode(" Background/cached only"));
-  controls.appendChild(search);
-  controls.appendChild(typeSel);
   controls.appendChild(sortRunSel);
   controls.appendChild(modeBtn);
   controls.appendChild(metricSel);
-  controls.appendChild(bg);
   card.appendChild(controls);
 
   const procChartHost = el("div", "proc-chart-host cmp-proc-chart-host");
@@ -3278,8 +3309,6 @@ async function compareProcessesCard(labels) {
   }
 
   search.oninput = () => { cmpProcQuery = search.value; render(); };
-  typeSel.onchange = () => { cmpProcType = typeSel.value; render(); };
-  bgInput.onchange = () => { cmpProcBackground = bgInput.checked; render(); };
   metricSel.onchange = () => {
     cmpProcMetric = metricSel.value;
     cmpProcSort = { key: "max", dir: -1 };
@@ -4832,9 +4861,7 @@ function appsStateClass(row) {
 }
 
 function appsProcCategory(row) {
-  if (row.kind === "user") return "app";
-  if (row.kind === "system-updated") return "system";
-  return "system-app";
+  return row.kind === "user" ? "app" : "system-app";
 }
 
 function appsTypeClass(row) {
@@ -4851,9 +4878,6 @@ function appsRunningLabel(row) {
 }
 
 function appsCellText(row, column) {
-  if (column.key === "kind") return appsKindLabel(row);
-  if (column.key === "state") return appsStateLabel(row);
-  if (column.key === "oom_class") return appsOomLabel(row);
   const value = row[column.key];
   if (value == null || value === "") return "--";
   const scaled = Number(value) * (column.scale == null ? 1 : column.scale);
@@ -4950,7 +4974,6 @@ async function appsFetchDetail(packageName, root) {
   const token = ++appsState.detailToken;
   appsState.detailLoading = true;
   appsState.detailError = "";
-  renderActiveToolBody();
   renderAppsDetailModal();
   try {
     const data = await jget("/api/apps/" + encodeURIComponent(packageName) + "?root=" + (root ? "1" : "0"));
@@ -4963,7 +4986,6 @@ async function appsFetchDetail(packageName, root) {
   } finally {
     if (token === appsState.detailToken) {
       appsState.detailLoading = false;
-      if (activeTab === "tools" && activeToolTab === "apps") renderActiveToolBody();
       renderAppsDetailModal();
     }
   }
@@ -4994,9 +5016,33 @@ function appsDetailKeyHandler(event) {
   closeAppsDetail();
 }
 
+function closeModal(id) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  const previous = node._previousFocus;
+  node.remove();
+  if (previous && previous.isConnected) previous.focus();
+}
+
+function openModal(id, cardClass, onClose, label) {
+  closeModal(id);
+  const backdrop = el("div", "modal-backdrop");
+  backdrop.id = id;
+  backdrop._previousFocus = document.activeElement;
+  const dialog = el("div", "modal-card" + (cardClass ? " " + cardClass : ""));
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  if (label) dialog.setAttribute("aria-label", label);
+  dialog.tabIndex = -1;
+  backdrop.appendChild(dialog);
+  backdrop.onclick = (event) => { if (event.target === backdrop) onClose(); };
+  document.body.appendChild(backdrop);
+  dialog.focus();
+  return dialog;
+}
+
 function closeAppsDetailModal() {
-  const node = document.getElementById("apps-detail-modal");
-  if (node) node.remove();
+  closeModal("apps-detail-modal");
   document.removeEventListener("keydown", appsDetailKeyHandler);
 }
 
@@ -5007,50 +5053,34 @@ function renderAppsDetailModal() {
     closeAppsDetailModal();
     return;
   }
+  const scrollTop = dialog.scrollTop;
+  const rootWasFocused = document.activeElement && document.activeElement.id === "apps-root-details";
   dialog.innerHTML = "";
   dialog.appendChild(appsDetailCard());
+  dialog.scrollTop = scrollTop;
+  if (rootWasFocused) {
+    const rootBox = dialog.querySelector("#apps-root-details");
+    if (rootBox) rootBox.focus();
+  }
 }
 
 function openAppsDetailModal() {
   closeAppsDetailModal();
-  const backdrop = el("div", "modal-backdrop");
-  backdrop.id = "apps-detail-modal";
-  const dialog = el("div", "modal-card apps-detail-card");
-  backdrop.appendChild(dialog);
-  backdrop.onclick = (event) => { if (event.target === backdrop) closeAppsDetail(); };
-  document.body.appendChild(backdrop);
+  openModal("apps-detail-modal", "apps-detail-card", closeAppsDetail, "Package details");
   document.addEventListener("keydown", appsDetailKeyHandler);
   renderAppsDetailModal();
 }
 
 function appsActionSpec(action) {
-  return ({
-    disable: {
-      button: "Disable", title: "Disable package", confirm: "Disable package", destructive: true, dataLoss: false,
-      description: "The package will be disabled for user 0 and its components will stop running. You can enable it again from this tool.",
-      command: pkg => "pm disable-user --user 0 " + pkg,
-    },
-    enable: {
-      button: "Enable", title: "Enable package", confirm: "Enable package", destructive: false, dataLoss: false,
-      description: "The package will be enabled for user 0 and its normal components can run again.",
-      command: pkg => "pm enable --user 0 " + pkg,
-    },
-    remove_user: {
-      button: "Remove for user 0", title: "Remove package for user 0", confirm: "Remove for user 0", destructive: true, dataLoss: true,
-      description: "This removes the package for user 0 only. The stock APK remains in the system image and can be restored with Restore. App data for user 0 may be deleted.",
-      command: pkg => "pm uninstall --user 0 " + pkg,
-    },
-    restore: {
-      button: "Restore", title: "Restore package", confirm: "Restore package", destructive: false, dataLoss: false,
-      description: "Reinstalls the existing system package for user 0. App data removed earlier is not restored.",
-      command: pkg => "cmd package install-existing --user 0 " + pkg,
-    },
-    uninstall: {
-      button: "Uninstall", title: "Uninstall user app", confirm: "Uninstall permanently", destructive: true, dataLoss: true,
-      description: "Permanently uninstalls this user-installed app and its data. It cannot be restored from this tool; reinstall it from the original source.",
-      command: pkg => "pm uninstall " + pkg,
-    },
-  })[action] || null;
+  const specs = (appsState.data && appsState.data.action_specs) || {};
+  const spec = specs[action];
+  if (!spec) return null;
+  return {
+    ...spec,
+    button: spec.label,
+    dataLoss: !!spec.data_loss,
+    command: pkg => String(spec.command || "").replace("{package}", pkg),
+  };
 }
 
 function appsModalKeyHandler(event) {
@@ -5058,19 +5088,15 @@ function appsModalKeyHandler(event) {
 }
 
 function closeAppsModal() {
-  const node = document.getElementById("apps-modal");
-  if (node) node.remove();
+  closeModal("apps-modal");
   document.removeEventListener("keydown", appsModalKeyHandler);
 }
 
 function openAppsConfirm(row, action) {
   const spec = appsActionSpec(action);
   if (!spec) return;
-  if (row.critical && spec.destructive) return;
   closeAppsModal();
-  const backdrop = el("div", "modal-backdrop");
-  backdrop.id = "apps-modal";
-  const dialog = el("div", "modal-card");
+  const dialog = openModal("apps-modal", "", closeAppsModal, spec.title);
   const head = el("div", "modal-head");
   head.appendChild(el("h3", null, spec.title));
   const close = el("button", "toolbtn", "✕");
@@ -5086,7 +5112,7 @@ function openAppsConfirm(row, action) {
   command.textContent = spec.command(row.package);
   dialog.appendChild(command);
   if (spec.dataLoss) {
-    dialog.appendChild(textEl("p", "modal-warning", "This action may delete app data for user 0."));
+    dialog.appendChild(textEl("p", "modal-warning", "This action may delete app data."));
   }
   const checks = [];
   const addCheck = (text) => {
@@ -5117,9 +5143,6 @@ function openAppsConfirm(row, action) {
   actions.appendChild(cancel);
   actions.appendChild(confirm);
   dialog.appendChild(actions);
-  backdrop.appendChild(dialog);
-  backdrop.onclick = (event) => { if (event.target === backdrop) closeAppsModal(); };
-  document.body.appendChild(backdrop);
   document.addEventListener("keydown", appsModalKeyHandler);
   sync();
 }
@@ -5152,6 +5175,13 @@ async function runAppsAction(row, action) {
   }
 }
 
+function appsChip(label, value, className) {
+  const chip = el("span", "appschip" + (className ? " " + className : ""));
+  chip.appendChild(textEl("span", "appschipk", label));
+  chip.appendChild(textEl("span", "appschipv", value == null ? "--" : String(value)));
+  return chip;
+}
+
 function appsHeaderCard() {
   const card = el("section", "card");
   const head = el("div", "appstoolhead");
@@ -5170,29 +5200,19 @@ function appsHeaderCard() {
   [
     ["Total", summary.total], ["System", summary.system], ["User", summary.user],
     ["Disabled", summary.disabled], ["Removed", summary.removed], ["Running", summary.running],
-  ].forEach(([label, value]) => {
-    const chip = el("span", "appschip");
-    chip.appendChild(textEl("span", "appschipk", label));
-    chip.appendChild(textEl("span", "appschipv", value == null ? "--" : String(value)));
-    chips.appendChild(chip);
-  });
+  ].forEach(([label, value]) => chips.appendChild(appsChip(label, value)));
   card.appendChild(chips);
   const totals = el("div", "appschips appstotals");
   [
     ["CPU 5m", summary.cpu_pct == null ? "--" : fmt(summary.cpu_pct, "%", 1)],
     ["RSS", appsFormatKb(summary.rss_kb) || "--"],
     ["GPU mem", appsFormatKb(summary.gpu_mem_kb) || "--"],
-    ["Install size", appsFormatKb(summary.size_kb) || "--"],
-  ].forEach(([label, value]) => {
-    const chip = el("span", "appschip apptotal");
-    chip.appendChild(textEl("span", "appschipk", label));
-    chip.appendChild(textEl("span", "appschipv", value));
-    totals.appendChild(chip);
-  });
+    ["Size", appsFormatKb(summary.size_kb) || "--"],
+  ].forEach(([label, value]) => totals.appendChild(appsChip(label, value, "apptotal")));
   card.appendChild(totals);
   if (appsState.loading && !appsState.data) card.appendChild(el("div", "muted", "Loading installed packages..."));
   card.appendChild(el("p", "muted cardnote", "Android does not expose reliable human-readable app labels over shell, so package IDs are shown. Stock/system packages are marked; per-user removal keeps the factory APK in the system image."));
-  card.appendChild(el("p", "muted cardnote", "CPU, RSS, GPU memory, threads and OOM are a snapshot taken when the list is fetched. CPU is the ~5-minute dumpsys cpuinfo value; RSS/GPU/threads are sums across matching processes. They are not live."));
+  card.appendChild(el("p", "muted cardnote", "CPU, RSS, GPU memory, threads and OOM are a process snapshot taken when the list is fetched; Size is the install footprint. CPU is the ~5-minute dumpsys cpuinfo value. They are not live."));
   return card;
 }
 
@@ -5257,6 +5277,7 @@ function appsDetailCard() {
   const rootLabel = el("label", "modal-check approotcheck");
   const rootBox = document.createElement("input");
   rootBox.type = "checkbox";
+  rootBox.id = "apps-root-details";
   rootBox.checked = !!appsState.rootDetails;
   rootBox.addEventListener("change", () => {
     appsState.rootDetails = rootBox.checked;
@@ -5278,7 +5299,6 @@ function appsDetailCard() {
   const rows = [
     ["Type", appsKindLabel(row)],
     ["State", appsStateLabel(row)],
-    ["Running", appsRunningLabel(row)],
     ["Processes", row.proc_count ? row.proc_count + " running" : "not running"],
     ["OOM class", row.proc_count ? appsOomLabel(row) : null],
     ["CPU (5m)", row.proc_count ? fmt(row.cpu_pct, "%", 1) : null],
@@ -5338,10 +5358,11 @@ function appsTableCard() {
   const count = el("span", "muted tablecount");
   title.appendChild(count);
   head.appendChild(title);
-  const controls = el("div", "appsfilters");
+  const controls = el("div", "filterbar");
   APP_FILTERS.forEach(filter => {
     const button = el("button", "subtab" + (appsState.filter === filter.id ? " active" : ""), filter.label);
     button.type = "button";
+    button.setAttribute("aria-pressed", String(appsState.filter === filter.id));
     button.onclick = () => {
       if (appsState.filter === filter.id) return;
       appsState.filter = filter.id;
@@ -5351,7 +5372,8 @@ function appsTableCard() {
   });
   const search = document.createElement("input");
   search.type = "search";
-  search.className = "appssearch";
+  search.className = "filtersearch";
+  search.setAttribute("aria-label", "Search installed packages");
   search.placeholder = "Search package, process, installer or path...";
   search.value = appsState.query;
   controls.appendChild(search);
@@ -5365,12 +5387,18 @@ function appsTableCard() {
   const headRow = document.createElement("tr");
   APP_COLUMNS.forEach(column => {
     const th = document.createElement("th");
+    th.scope = "col";
+    th.tabIndex = 0;
+    th.setAttribute("role", "button");
     if (column.numeric) th.className = "appnumhead";
     if (column.width) th.style.width = column.width;
     const label = el("span", "prochead-label");
     label.appendChild(document.createTextNode(column.label));
     if (appsState.sort.key === column.key) {
       label.appendChild(el("span", "sortarrow", appsState.sort.dir < 0 ? "▼" : "▲"));
+      th.setAttribute("aria-sort", appsState.sort.dir < 0 ? "descending" : "ascending");
+    } else {
+      th.setAttribute("aria-sort", "none");
     }
     th.appendChild(label);
     th.appendChild(el("span", "procunit", column.unit || "\u00a0"));
@@ -5379,6 +5407,12 @@ function appsTableCard() {
       if (appsState.sort.key === column.key) appsState.sort.dir *= -1;
       else appsState.sort = { key: column.key, dir: column.dir || 1 };
       renderActiveToolBody();
+    };
+    th.onkeydown = (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        th.click();
+      }
     };
     headRow.appendChild(th);
   });
@@ -5527,6 +5561,7 @@ function setToolTab(id) {
 }
 
 function renderToolsView() {
+  if (OFFLINE) return;
   if (findOpen) closeFind();
   const v = document.getElementById("view");
   disposeCharts();
@@ -5960,3 +5995,5 @@ async function init() {
 
 window.addEventListener("resize", () => { updateStickyOffsets(); chartRegistry.forEach(c => { try { c.resize(); } catch (e) {} }); });
 init();
+
+

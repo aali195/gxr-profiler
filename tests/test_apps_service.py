@@ -1,70 +1,25 @@
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from gxr_profiler.core.apps import PACKAGE_FALLBACK_SCRIPT
 from gxr_profiler.server.apps import AppsService
-
-APP_LIST = """###USERS
-Users:
-    UserInfo{0:Owner:c13} running
-###PACKAGES
-package:com.example.app uid:10123 versionCode:42
-package:com.android.systemui uid:1000 versionCode:34
-###SYSTEM
-package:com.android.systemui
-###THIRD
-package:com.example.app
-###DISABLED
-###ENABLED
-package:com.example.app
-package:com.android.systemui
-###ALL
-package:com.example.app
-package:com.android.systemui
-###PATH
-package:/data/app/~~abc/com.example.app-1/base.apk=com.example.app
-package:/system/priv-app/SystemUI/SystemUI.apk=com.android.systemui
-###INSTALLER
-package:com.example.app installer=com.android.vending
-package:com.android.systemui
-###CPUINFO
-  12.5% 321/com.example.app: 10% user + 2.5% kernel
-###PS
-PID UID RSS NAME
-321 10123 2048 com.example.app
-###STAT
-/proc/321/stat:321 (com.example.app) S 1 0 0 0 0 0 0 0 0 0 200 90 0 0 20 0 12 0 1001 0 0
-###OOM
-/proc/321/oom_score_adj:905
-###GPUMEM
-Proc 321 total: 1048576
-"""
-
-DETAIL = """Packages:
-  Package [com.example.app] (abc):
-    codePath=/data/app/~~abc/com.example.app-1/base.apk
-    versionCode=42 minSdk=30 targetSdk=34
-    versionName=1.2.3
-    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]
-    dataDir=/data/user/0/com.example.app
-    installerPackageName=com.android.vending
-    firstInstallTime=2025-01-02 03:04:05
-    lastUpdateTime=2025-02-03 04:05:06
-    User 0: installed=true hidden=false suspended=false stopped=false enabled=0
-"""
+from tests.apps_fixtures import APP_LIST, DETAIL
 
 
 class FakeAppsAdb:
-    def __init__(self, list_text=APP_LIST, detail_text=DETAIL, fail_action=False):
+    def __init__(self, list_text=APP_LIST, detail_text=DETAIL, fail_action=False, root_available=True):
         self.list_text = list_text
         self.detail_text = detail_text
         self.fail_action = fail_action
+        self.root_available = root_available
         self.shell_calls = []
         self.run_calls = []
 
     def shell(self, script, timeout=25.0):
         self.shell_calls.append(script)
-        if "###USERS" in script:
+        if "###PACKAGES" in script:
             return self.list_text
         if script == PACKAGE_FALLBACK_SCRIPT:
             return "package:com.example.app uid:10123\n"
@@ -75,6 +30,8 @@ class FakeAppsAdb:
         if script.startswith("pm path"):
             return "package:/data/app/~~abc/com.example.app-1/base.apk\n"
         if script == "su -c id":
+            if not self.root_available:
+                return "uid=2000(shell) gid=2000(shell)\n"
             return "uid=0(root) gid=0(root) context=u:r:ksu:s0\n"
         if script.startswith("su -c") and "du -sk" in script:
             return "100 /data/user/0/com.example.app\n8 /data/user/0/com.example.app/cache\n"
@@ -95,9 +52,10 @@ def test_apps_service_lists_and_reads_detail(tmp_path):
     adb = FakeAppsAdb()
     service = _service(tmp_path, adb)
     data = service.list_packages()
-    assert data["summary"]["total"] == 2
+    assert data["summary"]["total"] == 4
     assert data["summary"]["size_kb"] == 1536
-    assert data["users"] == [0]
+    assert data["action_specs"]["disable"]["command"] == "pm disable-user --user 0 {package}"
+
     row = next(item for item in data["packages"] if item["package"] == "com.example.app")
     assert row["kind"] == "user"
     assert row["actions"] == ["disable", "uninstall"]
@@ -117,6 +75,14 @@ def test_apps_service_lists_and_reads_detail(tmp_path):
     assert detail["root"]["cache_kb"] == 8
 
 
+def test_apps_service_root_denied_keeps_base_detail(tmp_path):
+    service = _service(tmp_path, FakeAppsAdb(root_available=False))
+    detail = service.detail("com.example.app", root=True)
+    assert detail["detail"]["version_name"] == "1.2.3"
+    assert detail["root"]["available"] is False
+    assert detail["root"]["errors"]
+
+
 def test_apps_service_action_validates_and_logs(tmp_path):
     adb = FakeAppsAdb()
     service = _service(tmp_path, adb)
@@ -133,26 +99,38 @@ def test_apps_service_action_validates_and_logs(tmp_path):
 def test_apps_service_rejects_unavailable_and_critical_actions(tmp_path):
     adb = FakeAppsAdb()
     service = _service(tmp_path, adb)
-    try:
+    with pytest.raises(ValueError):
         service.run_action("com.example.app", "enable", confirm=True)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("enable should be unavailable for an enabled package")
 
-    try:
+    with pytest.raises(PermissionError, match="cannot be disabled or removed"):
         service.run_action("com.android.systemui", "disable", confirm=True)
-    except PermissionError as exc:
-        assert "cannot be disabled or removed" in str(exc)
-    else:
-        raise AssertionError("critical package should not be disableable")
 
-    try:
+    with pytest.raises(ValueError):
         service.run_action("com.example.app", "disable", confirm=False)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("confirmation should be required")
+
+
+def test_apps_service_action_does_not_read_sizes(tmp_path):
+    adb = FakeAppsAdb()
+    service = _service(tmp_path, adb)
+    service.run_action("com.example.app", "disable", confirm=True)
+    assert not any(script.startswith("du -sk") for script in adb.shell_calls)
+
+
+def test_apps_service_batches_size_reads(tmp_path):
+    adb = FakeAppsAdb()
+    service = _service(tmp_path, adb)
+    rows = [{"apk_path": f"/system/app/App{i}/App{i}.apk"} for i in range(130)]
+    service._add_sizes(adb, rows)
+    commands = [script for script in adb.shell_calls if script.startswith("du -sk")]
+    assert len(commands) == 3
+
+
+def test_apps_service_rejects_invalid_package_names(tmp_path):
+    service = _service(tmp_path, FakeAppsAdb())
+    with pytest.raises(ValueError):
+        service.detail("../evil")
+    with pytest.raises(ValueError):
+        service.run_action("../evil", "disable", confirm=True)
 
 
 def test_apps_service_failure_result_and_fallback(tmp_path):

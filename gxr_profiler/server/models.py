@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from pydantic import BaseModel, Field, field_validator
 
-from pydantic import BaseModel, Field
-
+from ..core.apps import APP_ACTIONS
 from ..core.models import CAPTURE_PROFILES, RunConfig, apply_profile
 
 
@@ -80,8 +79,15 @@ class DebugRequest(BaseModel):
 
 
 class AppActionRequest(BaseModel):
-    action: Literal["disable", "enable", "remove_user", "restore", "uninstall"]
+    action: str
     confirm: bool = False
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, value: str) -> str:
+        if value not in APP_ACTIONS:
+            raise ValueError(f"unknown app action: {value}")
+        return value
 
 
 class RecordStatus(BaseModel):

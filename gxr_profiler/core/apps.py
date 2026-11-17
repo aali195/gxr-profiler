@@ -18,15 +18,13 @@ from .parsers.process import (
     parse_proc_stats,
     parse_ps,
 )
-from .parsers.util import split_sections
+from .process_snapshot import PROCESS_SNAPSHOT_SCRIPT
 
 PACKAGE_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*$")
 PACKAGE_LINE_RE = re.compile(r"^package:(.+)$")
-USER_RE = re.compile(r"UserInfo\{(\d+):")
 DETAIL_USER_RE = re.compile(r"^\s*User (\d+):\s*(.*)$", re.MULTILINE)
 
-APP_LIST_SCRIPT = """echo '###USERS'; pm list users
-echo '###PACKAGES'; pm list packages -U --show-versioncode --user 0
+PACKAGE_LIST_SCRIPT = """echo '###PACKAGES'; pm list packages -U --show-versioncode --user 0
 echo '###SYSTEM'; pm list packages -s -u --user 0
 echo '###THIRD'; pm list packages -3 -u --user 0
 echo '###DISABLED'; pm list packages -d --user 0
@@ -34,17 +32,71 @@ echo '###ENABLED'; pm list packages -e --user 0
 echo '###ALL'; pm list packages -u --user 0
 echo '###PATH'; pm list packages -f -u --user 0
 echo '###INSTALLER'; pm list packages -i -u --user 0
-echo '###CPUINFO'; dumpsys cpuinfo
-echo '###PS'; ps -A -o PID,UID,RSS,NAME
-echo '###STAT'; grep -H '' /proc/[0-9]*/stat 2>/dev/null
-echo '###OOM'; grep -H '' /proc/[0-9]*/oom_score_adj 2>/dev/null
-echo '###GPUMEM'; dumpsys gpu | sed -n '/Memory snapshot for GPU/,/driverPackageName/p'
 """
+
+APP_LIST_SCRIPT = PACKAGE_LIST_SCRIPT + PROCESS_SNAPSHOT_SCRIPT
 
 PACKAGE_FALLBACK_SCRIPT = "pm list packages -U --user 0"
 
-APP_ACTIONS = ("disable", "enable", "remove_user", "restore", "uninstall")
-APP_DESTRUCTIVE_ACTIONS = frozenset({"disable", "remove_user", "uninstall"})
+APP_ACTION_SPECS = {
+    "disable": {
+        "label": "Disable",
+        "title": "Disable package",
+        "confirm": "Disable package",
+        "description": (
+            "The package will be disabled for user 0 and its components will stop running. "
+            "You can enable it again from this tool."
+        ),
+        "command": "pm disable-user --user {user} {package}",
+        "destructive": True,
+        "data_loss": False,
+    },
+    "enable": {
+        "label": "Enable",
+        "title": "Enable package",
+        "confirm": "Enable package",
+        "description": "The package will be enabled for user 0 and its normal components can run again.",
+        "command": "pm enable --user {user} {package}",
+        "destructive": False,
+        "data_loss": False,
+    },
+    "remove_user": {
+        "label": "Remove for user 0",
+        "title": "Remove package for user 0",
+        "confirm": "Remove for user 0",
+        "description": (
+            "This removes the package for user 0 only. The stock APK remains in the system image "
+            "and can be restored with Restore. App data for user 0 may be deleted."
+        ),
+        "command": "pm uninstall --user {user} {package}",
+        "destructive": True,
+        "data_loss": True,
+    },
+    "restore": {
+        "label": "Restore",
+        "title": "Restore package",
+        "confirm": "Restore package",
+        "description": ("Reinstalls the existing system package for user 0. App data removed earlier is not restored."),
+        "command": "cmd package install-existing --user {user} {package}",
+        "destructive": False,
+        "data_loss": False,
+    },
+    "uninstall": {
+        "label": "Uninstall",
+        "title": "Uninstall user app",
+        "confirm": "Uninstall permanently",
+        "description": (
+            "Permanently uninstalls this user-installed app and its data. It cannot be restored "
+            "from this tool; reinstall it from the original source."
+        ),
+        "command": "pm uninstall {package}",
+        "destructive": True,
+        "data_loss": True,
+    },
+}
+
+APP_ACTIONS = tuple(APP_ACTION_SPECS)
+APP_DESTRUCTIVE_ACTIONS = frozenset(name for name, spec in APP_ACTION_SPECS.items() if spec["destructive"])
 
 CRITICAL_EXACT = frozenset(
     {
@@ -119,10 +171,6 @@ def _package_set(lines: list[str]) -> set[str]:
         if name and PACKAGE_RE.match(name):
             out.add(name)
     return out
-
-
-def parse_users(text: str) -> list[int]:
-    return sorted({int(m.group(1)) for m in USER_RE.finditer(text)})
 
 
 def parse_package_lines(text: str) -> dict[str, dict]:
@@ -217,6 +265,10 @@ def parse_process_usage(
     return usage
 
 
+def _section_text(sections: dict[str, list[str]], name: str) -> str:
+    return "\n".join(sections.get(name, []))
+
+
 def _path_looks_system(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in SYSTEM_PATH_PREFIXES)
 
@@ -251,20 +303,20 @@ def _actions(kind: str, state: str) -> list[str]:
 
 
 def build_app_rows(sections: dict[str, list[str]]) -> list[dict]:
-    packages = parse_package_lines("\n".join(sections.get("PACKAGES", [])))
-    paths = parse_package_lines("\n".join(sections.get("PATH", [])))
-    installers = parse_package_lines("\n".join(sections.get("INSTALLER", [])))
+    packages = parse_package_lines(_section_text(sections, "PACKAGES"))
+    paths = parse_package_lines(_section_text(sections, "PATH"))
+    installers = parse_package_lines(_section_text(sections, "INSTALLER"))
     system = _package_set(sections.get("SYSTEM", []))
     third = _package_set(sections.get("THIRD", []))
     disabled = _package_set(sections.get("DISABLED", []))
     enabled = _package_set(sections.get("ENABLED", []))
     all_packages = _package_set(sections.get("ALL", []))
     process_usage = parse_process_usage(
-        "\n".join(sections.get("CPUINFO", [])),
-        "\n".join(sections.get("PS", [])),
-        "\n".join(sections.get("STAT", [])),
-        "\n".join(sections.get("OOM", [])),
-        "\n".join(sections.get("GPUMEM", [])),
+        _section_text(sections, "CPUINFO"),
+        _section_text(sections, "PS"),
+        _section_text(sections, "STAT"),
+        _section_text(sections, "OOM"),
+        _section_text(sections, "GPUMEM"),
     )
 
     installed = set(packages) | disabled | enabled
@@ -294,9 +346,7 @@ def build_app_rows(sections: dict[str, list[str]]) -> list[dict]:
                 "installer": base.get("installer", ""),
                 "kind": kind,
                 "system": is_system,
-                "stock": is_system,
                 "state": state,
-                "installed": package in installed,
                 "running": proc_count > 0,
                 "proc_count": proc_count,
                 "cpu_pct": usage.get("cpu_pct", 0.0) if proc_count else None,
@@ -322,7 +372,6 @@ def summarize(rows: list[dict]) -> dict:
         "total": len(rows),
         "system": sum(1 for row in rows if row["kind"] != "user"),
         "user": sum(1 for row in rows if row["kind"] == "user"),
-        "updated_system": sum(1 for row in rows if row["kind"] == "system-updated"),
         "enabled": sum(1 for row in rows if row["state"] == "enabled"),
         "disabled": sum(1 for row in rows if row["state"] == "disabled"),
         "removed": sum(1 for row in rows if row["state"] == "removed"),
@@ -334,9 +383,15 @@ def summarize(rows: list[dict]) -> dict:
     }
 
 
-def parse_app_list(text: str) -> tuple[list[dict], list[int]]:
-    sections = split_sections(text)
-    return build_app_rows(sections), parse_users("\n".join(sections.get("USERS", [])))
+def size_targets_for_rows(rows: list[dict]) -> dict[str, list[dict]]:
+    targets: dict[str, list[dict]] = {}
+    for row in rows:
+        path = row.get("apk_path") or ""
+        if not path:
+            continue
+        target = path.rsplit("/", 1)[0] if path.startswith("/data/app/") else path
+        targets.setdefault(target, []).append(row)
+    return targets
 
 
 def merge_package_fallback(sections: dict[str, list[str]], fallback_text: str) -> None:
@@ -419,16 +474,12 @@ def parse_package_detail(text: str, apk_paths: list[str] | None = None) -> dict:
         "min_sdk": min_sdk,
         "target_sdk": target_sdk,
         "code_path": _field(text, "codePath"),
-        "resource_path": _field(text, "resourcePath"),
         "data_dir": _field(text, "dataDir"),
         "primary_cpu_abi": _field(text, "primaryCpuAbi"),
         "installer": _field(text, "installerPackageName"),
         "first_install_time": _field(text, "firstInstallTime"),
         "last_update_time": _field(text, "lastUpdateTime"),
-        "install_time": _field(text, "installTime"),
-        "update_time": _field(text, "updateTime"),
         "flags": _flags(text, "flags"),
-        "private_flags": _flags(text, "privateFlags"),
         "requested_permissions_count": _permission_count(text),
         "user_states": _user_states(text),
         "apk_paths": list(apk_paths or []),
@@ -447,19 +498,11 @@ def parse_du(text: str) -> dict[str, int]:
 
 
 def build_action_command(package: str, action: str, user: int = 0) -> str:
+    spec = APP_ACTION_SPECS.get(action)
+    if spec is None:
+        raise ValueError(f"unknown app action: {action}")
     package = validate_package_name(package)
-    quoted = shlex.quote(package)
-    if action == "disable":
-        return f"pm disable-user --user {int(user)} {quoted}"
-    if action == "enable":
-        return f"pm enable --user {int(user)} {quoted}"
-    if action == "remove_user":
-        return f"pm uninstall --user {int(user)} {quoted}"
-    if action == "restore":
-        return f"cmd package install-existing --user {int(user)} {quoted}"
-    if action == "uninstall":
-        return f"pm uninstall {quoted}"
-    raise ValueError(f"unknown app action: {action}")
+    return spec["command"].format(user=int(user), package=shlex.quote(package))
 
 
 def interpret_action_result(output: str, returncode: int = 0) -> tuple[bool, str]:

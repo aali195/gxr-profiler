@@ -6,6 +6,7 @@ import copy
 import json
 import math
 import os
+import re
 from datetime import UTC, datetime
 
 from ..core.adb import RunNotFound
@@ -83,6 +84,17 @@ def _redact_meta(meta: dict) -> dict:
     return clean
 
 
+def _strip_tools_ui(html: str) -> str:
+    """Offline reports keep run analysis only; remove Tools markup entirely."""
+    html = re.sub(r'\s*<span class="tabseparator" id="tools-separator"[^>]*></span>', "", html)
+    html = re.sub(
+        r'\s*<button class="tab tab-utility"[^>]*data-tab="tools"[^>]*>Tools</button>',
+        "",
+        html,
+    )
+    return html
+
+
 def _dataset(label: str, meta: dict, df) -> dict:
     elapsed = [float(x) for x in df["elapsed_s"].tolist()] if "elapsed_s" in df.columns else []
     elapsed, series = downsample(elapsed, build_series(df))
@@ -127,7 +139,7 @@ def build(labels_list: list[str], runs_dir: str | None = None, pins=None) -> str
         "exported": datetime.now(UTC).isoformat(),
     }
 
-    html = _web("index.html")
+    html = _strip_tools_ui(_web("index.html"))
     css = _web("styles.css")
     echarts = _web(os.path.join("vendor", "echarts.min.js")).replace("</script", "<\\/script")
     appjs = _web("app.js").replace("</script", "<\\/script")
