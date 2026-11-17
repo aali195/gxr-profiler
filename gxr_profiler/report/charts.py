@@ -123,7 +123,20 @@ GROUPS: list[ChartGroup] = [
         "camera_raw",
         "Cameras (raw streams)",
         _series(["cib_ht_fps", "cib_hat_fps", "cib_eyet_fps", "cib_depthinput_fps"]),
-        section="Cameras (raw)",
+        section="Cameras",
+    ),
+    _group("camera_ambient_light", "Ambient light", _series(["irled_lux"]), section="Cameras"),
+    _group(
+        "camera_ir_brightness",
+        "IR illuminator brightness",
+        _series(["irled_brightness"]),
+        section="Cameras",
+    ),
+    _group(
+        "camera_ir_state",
+        "IR illuminator state",
+        _series(["irled_on", "irled_state"]),
+        section="Cameras",
     ),
     # Memory
     _group(

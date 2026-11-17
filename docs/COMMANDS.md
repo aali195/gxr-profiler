@@ -196,13 +196,28 @@ gxr-profiler filters in Python because `logcat -s` misses colon tags such as
 | `SSRM:Temperature` / `SSRM:S` | supplementary temperatures |
 | `SSRM:w` | `fan_step` |
 | `ThermalManagerService` | Dcvsh CPU caps (`dcvsh_0/2_limit`, `dcvsh_0/2_max`) |
-| `XrHeartbeat` messages | `cam_eye_fps`, `cam_head_fps`, `cam_hand_fps`, `irled_fps` |
+| `XrHeartbeat` messages | `cam_eye_fps`, `cam_head_fps`, `cam_hand_fps` |
 | `[CIB]` messages | raw camera stream rates (`cib_*_{fps,hz}`) |
-| `IRLedController` tag | IR LED rate |
+| `IRLedController` tag | `irled_fps`, `irled_lux`, `irled_brightness`, `irled_state` |
+| `QVRIRLedWriter` tag | `irled_on` |
 | `SXRC_TSVC` | controller connection, battery, firmware, triggers, grip, sticks |
 | `SXRC_POSE` | per-controller pose status/quality → tracking |
 | `CpmInput` | controller start/stop tracking |
 | `PassthroughStateManager` | passthrough requested mode → `passthrough`, `passthrough_mode` |
+
+### IR illuminator / ambient light
+
+- `IRLedController` logs a status line every 5 s with `fps`,
+  `lastIrLedBrightness`, and `flickerSensorLux` from the STK6D2X rear ALS.
+- `/vendor/etc/sxr/irled_control_config.json`: `lux < 2` -> brightness 60,
+  `lux < 7` -> 50; the bands exit at `>= 6` and `>= 8` for 200 ms. No matching
+  band means brightness 0.
+- `QVRIRLedWriter::start/stop` shows whether the emitters are actually
+  emitting. A worn headset in a bright room can have the controller running
+  with the writer stopped.
+- `IRLedController` suspends about 8-10 s after an off-body screen-off.
+- ALS sysfs (`/sys/class/sensors/als_rear/lux`) is root-only under SELinux and
+  invalid while asleep (`als_enable=0`); logcat is the non-root source.
 
 Logcat is **event-driven**, not a fixed poll. Thermal/fan events are also
 written to `<run>.events.csv`; other values are folded into the next 1 Hz row.

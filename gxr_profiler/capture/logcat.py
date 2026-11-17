@@ -125,13 +125,15 @@ class LogcatStream(threading.Thread):
         tag = hdr["tag"]
         msg = hdr["msg"]
         heartbeat = "XrHeartbeat" in msg
-        irled = "IRLedController" in tag
+        irled = any(name in tag for name in ("IRLedController", "QVRIRLedWriter", "IRLedControlConfig"))
+        irled_state = "PerceptionStateMachine" in tag and "IRLedController" in msg
         cib = "[CIB]" in msg
         controller = tag.startswith(("SXRC_TSVC", "SXRC_POSE", "CpmInput"))
         passthrough = tag.startswith("PassthroughStateManager")
         if (
             not heartbeat
             and not irled
+            and not irled_state
             and not cib
             and not controller
             and not passthrough
@@ -155,10 +157,27 @@ class LogcatStream(threading.Thread):
             self.state.update(P.parse_cib(msg))
         elif heartbeat:
             self.state.update(P.parse_xr_heartbeat(msg))
+        elif irled_state:
+            value = P.parse_irled_state(msg)
+            if value is not None:
+                self.state.set("irled_state", value)
         elif irled:
-            fps = P.parse_irled_fps(msg)
-            if fps is not None:
-                self.state.set("irled_fps", fps)
+            if "QVRIRLedWriter" in tag:
+                value = P.parse_irled_writer(msg)
+                if value is not None:
+                    self.state.set("irled_on", value)
+            elif "IRLedController" in tag:
+                status = P.parse_irled_status(msg)
+                if status is not None:
+                    self.state.update(status)
+                    self.state.set("irled_on", 1.0 if status["irled_brightness"] > 0 else 0.0)
+                else:
+                    fps = P.parse_irled_fps(msg)
+                    if fps is not None:
+                        self.state.set("irled_fps", fps)
+                    value = P.parse_irled_state(msg)
+                    if value is not None:
+                        self.state.set("irled_state", value)
         elif tag.startswith("thermal_changed"):
             ev = P.parse_thermal_changed(msg)
             if ev:
