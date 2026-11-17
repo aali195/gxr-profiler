@@ -1,8 +1,9 @@
 """adb access: an injectable client plus convenience helpers.
 
 `AdbClient` is the seam used by the capture layer so tests can substitute a
-fake. `RealAdb` wraps the local `adb` executable. All calls are read-only in
-this project - nothing here writes to the device.
+fake. `RealAdb` wraps the local `adb` executable. Recording and diagnostics use
+only reads here; the optional Tools > Apps workflow uses the same client for
+explicit, confirmed package-manager actions.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ class RunNotFound(FileNotFoundError):
 
 @runtime_checkable
 class AdbClient(Protocol):
-    """Minimal read-only adb surface."""
+    """Minimal adb surface used by the profiler."""
 
     def run(self, args: list[str], timeout: float = 25.0) -> subprocess.CompletedProcess: ...
 

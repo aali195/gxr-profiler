@@ -1,0 +1,243 @@
+from gxr_profiler.core.apps import (
+    build_action_command,
+    build_app_rows,
+    interpret_action_result,
+    is_critical_package,
+    merge_package_fallback,
+    parse_app_list,
+    parse_du,
+    parse_package_detail,
+    parse_package_lines,
+    parse_package_paths,
+    parse_process_usage,
+    summarize,
+    validate_package_name,
+)
+from gxr_profiler.core.parsers.util import split_sections
+
+APP_LIST = """###USERS
+Users:
+    UserInfo{0:Owner:c13} running
+###PACKAGES
+package:com.example.app uid:10123 versionCode:42
+package:com.android.systemui uid:1000 versionCode:34
+package:com.samsung.stock uid:1000 versionCode:7
+###SYSTEM
+package:com.android.systemui
+package:com.samsung.stock
+###THIRD
+package:com.example.app
+###DISABLED
+package:com.samsung.stock
+###ENABLED
+package:com.example.app
+package:com.android.systemui
+###ALL
+package:com.example.app
+package:com.android.systemui
+package:com.samsung.stock
+package:com.removed.system
+###PATH
+package:/data/app/~~abc/com.example.app-1/base.apk=com.example.app
+package:/system/priv-app/SystemUI/SystemUI.apk=com.android.systemui
+package:/system/priv-app/SamsungStock/SamsungStock.apk=com.samsung.stock
+package:/system/priv-app/Removed/Removed.apk=com.removed.system
+###INSTALLER
+package:com.example.app installer=com.android.vending
+package:com.android.systemui
+package:com.samsung.stock
+package:com.removed.system
+###CPUINFO
+  12.5% 123/com.example.app: 10% user + 2.5% kernel
+   3.0% 456/com.samsung.stock:remote: 1% user + 2% kernel
+###PS
+PID UID RSS NAME
+123 10123 2048 com.example.app
+456 1000 4096 com.samsung.stock:remote
+###STAT
+/proc/123/stat:123 (com.example.app) S 1 0 0 0 0 0 0 0 0 0 200 90 0 0 20 0 12 0 1001 0 0
+/proc/456/stat:456 (com.samsung.stock:remote) S 1 0 0 0 0 0 0 0 0 0 300 60 0 0 20 0 8 0 1002 0 0
+###OOM
+/proc/123/oom_score_adj:905
+/proc/456/oom_score_adj:200
+###GPUMEM
+Proc 123 total: 1048576
+Proc 456 total: 2097152
+"""
+
+DETAIL = """Packages:
+  Package [com.example.app] (abc):
+    userId=10123
+    codePath=/data/app/~~abc/com.example.app-1/base.apk
+    resourcePath=/data/app/~~abc/com.example.app-1/base.apk
+    versionCode=42 minSdk=30 targetSdk=34
+    versionName=1.2.3
+    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    privateFlags=[ PRIVATE_FLAG_ISOLATED_SPLIT_LOADING ]
+    dataDir=/data/user/0/com.example.app
+    installerPackageName=com.android.vending
+    firstInstallTime=2025-01-02 03:04:05
+    lastUpdateTime=2025-02-03 04:05:06
+    primaryCpuAbi=arm64-v8a
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.CAMERA
+    install permissions:
+    User 0: ceDataInode=123 installed=true hidden=false suspended=false stopped=false notLaunched=false enabled=0
+"""
+
+
+def test_parse_package_lines_variants():
+    parsed = parse_package_lines(
+        "package:com.foo uid:10000 versionCode:9\n"
+        "package:/data/app/com.foo/base.apk=com.foo\n"
+        "package:com.bar installer=com.android.vending\n"
+    )
+    assert parsed["com.foo"]["uid"] == 10000
+    assert parsed["com.foo"]["version_code"] == 9
+    assert parsed["com.foo"]["apk_path"] == "/data/app/com.foo/base.apk"
+    assert parsed["com.bar"]["installer"] == "com.android.vending"
+
+
+def test_build_rows_classifies_system_user_disabled_removed_and_running():
+    rows, users = parse_app_list(APP_LIST)
+    assert users == [0]
+    by_name = {row["package"]: row for row in rows}
+    assert by_name["com.example.app"]["kind"] == "user"
+    assert by_name["com.example.app"]["state"] == "enabled"
+    assert by_name["com.example.app"]["running"] is True
+    assert by_name["com.example.app"]["proc_count"] == 1
+    assert by_name["com.example.app"]["cpu_pct"] == 12.5
+    assert by_name["com.example.app"]["rss_kb"] == 2048
+    assert by_name["com.example.app"]["gpu_mem_kb"] == 1024
+    assert by_name["com.example.app"]["threads"] == 12
+    assert by_name["com.example.app"]["oom_class"] == "cached"
+    assert by_name["com.example.app"]["proc_names"] == ["com.example.app"]
+    assert by_name["com.example.app"]["actions"] == ["disable", "uninstall"]
+    assert by_name["com.android.systemui"]["kind"] == "system"
+    assert by_name["com.android.systemui"]["critical"] is True
+    assert by_name["com.android.systemui"]["actions"] == []
+    assert by_name["com.samsung.stock"]["state"] == "disabled"
+    assert by_name["com.samsung.stock"]["running"] is True
+    assert by_name["com.samsung.stock"]["actions"] == ["enable", "remove_user"]
+    assert by_name["com.removed.system"]["installed"] is False
+    assert by_name["com.removed.system"]["state"] == "removed"
+    assert by_name["com.removed.system"]["actions"] == ["restore"]
+    summary = summarize(rows)
+    assert summary["total"] == 4
+    assert summary["system"] == 3
+    assert summary["user"] == 1
+    assert summary["removed"] == 1
+    assert summary["cpu_pct"] == 15.5
+    assert summary["rss_kb"] == 6144
+    assert summary["gpu_mem_kb"] == 3072
+    assert summary["size_kb"] == 0
+
+
+def test_missing_path_and_type_defaults_to_system_for_safety():
+    sections = split_sections("###PACKAGES\npackage:com.mystery uid:1000\n")
+    row = build_app_rows(sections)[0]
+    assert row["kind"] == "system"
+    assert "uninstall" not in row["actions"]
+
+
+def test_critical_packages_cannot_be_disabled_or_removed():
+    sections = split_sections(
+        "###PACKAGES\npackage:com.android.systemui uid:1000\n"
+        "###SYSTEM\npackage:com.android.systemui\n"
+        "###DISABLED\npackage:com.android.systemui\n"
+        "###PATH\npackage:/system/priv-app/SystemUI/SystemUI.apk=com.android.systemui\n"
+    )
+    row = build_app_rows(sections)[0]
+    assert row["critical"] is True
+    assert row["actions"] == ["enable"]
+    assert "disable" not in row["actions"]
+    assert "remove_user" not in row["actions"]
+
+
+def test_updated_system_package_is_distinguished():
+    sections = split_sections(
+        "###PACKAGES\npackage:com.android.systemui uid:1000\n"
+        "###SYSTEM\npackage:com.android.systemui\n"
+        "###PATH\npackage:/data/app/com.android.systemui/base.apk=com.android.systemui\n"
+    )
+    row = build_app_rows(sections)[0]
+    assert row["kind"] == "system-updated"
+
+
+def test_package_fallback_merges_only_when_primary_list_is_empty():
+    sections = split_sections("###PACKAGES\nError: Unknown option\n")
+    merge_package_fallback(sections, "package:com.foo uid:10000\n")
+    assert parse_package_lines("\n".join(sections["PACKAGES"]))["com.foo"]["uid"] == 10000
+    existing = split_sections("###PACKAGES\npackage:com.bar uid:1\n")
+    merge_package_fallback(existing, "package:com.foo uid:10000\n")
+    assert "com.foo" not in parse_package_lines("\n".join(existing["PACKAGES"]))
+
+
+def test_parse_users_paths_process_usage_and_du():
+    usage = parse_process_usage(
+        "  12.5% 123/com.foo: 10% user + 2.5% kernel\n   1.5% 456/com.foo:worker: 1% user + 0.5% kernel\n",
+        "PID UID RSS NAME\n123 10000 2048 com.foo\n456 10000 1024 com.foo:worker\n",
+        "/proc/123/stat:123 (com.foo) S 1 0 0 0 0 0 0 0 0 0 200 90 0 0 20 0 12 0 1001 0 0\n"
+        "/proc/456/stat:456 (com.foo:worker) S 1 0 0 0 0 0 0 0 0 0 300 60 0 0 20 0 8 0 1002 0 0\n",
+        "/proc/123/oom_score_adj:-800\n/proc/456/oom_score_adj:100\n",
+        "Proc 123 total: 1048576\nProc 456 total: 2097152\n",
+    )
+    assert usage["com.foo"]["proc_count"] == 2
+    assert usage["com.foo"]["cpu_pct"] == 14.0
+    assert usage["com.foo"]["rss_kb"] == 3072
+    assert usage["com.foo"]["gpu_mem_kb"] == 3072
+    assert usage["com.foo"]["threads"] == 20
+    assert usage["com.foo"]["oom_class"] == "system"
+    assert usage["com.foo"]["proc_names"] == ["com.foo", "com.foo:worker"]
+    assert parse_package_paths("package:/a/base.apk\npackage:/a/split.apk\n") == ["/a/base.apk", "/a/split.apk"]
+    assert parse_du("10 /data/user/0/com.foo\n4 /data/user/0/com.foo/cache\n") == {
+        "/data/user/0/com.foo": 10,
+        "/data/user/0/com.foo/cache": 4,
+    }
+
+
+def test_parse_package_detail():
+    detail = parse_package_detail(DETAIL, ["/data/app/base.apk"])
+    assert detail["version_name"] == "1.2.3"
+    assert detail["version_code"] == 42
+    assert detail["min_sdk"] == 30
+    assert detail["target_sdk"] == 34
+    assert detail["code_path"].startswith("/data/app/")
+    assert detail["data_dir"] == "/data/user/0/com.example.app"
+    assert detail["installer"] == "com.android.vending"
+    assert detail["first_install_time"] == "2025-01-02 03:04:05"
+    assert detail["last_update_time"] == "2025-02-03 04:05:06"
+    assert detail["primary_cpu_abi"] == "arm64-v8a"
+    assert detail["flags"] == ["HAS_CODE", "ALLOW_CLEAR_USER_DATA", "ALLOW_BACKUP"]
+    assert detail["requested_permissions_count"] == 2
+    assert detail["user_states"][0]["installed"] is True
+    assert detail["user_states"][0]["enabled"] == 0
+    assert detail["apk_paths"] == ["/data/app/base.apk"]
+
+
+def test_validate_package_name_and_critical_packages():
+    assert validate_package_name("com.example.app") == "com.example.app"
+    assert validate_package_name("android") == "android"
+    for bad in ("", "../evil", "com.foo; rm -rf /", "com..foo", "com.foo/bar"):
+        try:
+            validate_package_name(bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"accepted unsafe package name: {bad!r}")
+    assert is_critical_package("com.android.systemui")
+    assert is_critical_package("vendor.samsung.hardware.secxrcontroller@1.0-service")
+    assert not is_critical_package("com.example.app")
+
+
+def test_action_commands_and_result_interpretation():
+    assert build_action_command("com.foo", "disable") == "pm disable-user --user 0 com.foo"
+    assert build_action_command("com.foo", "enable") == "pm enable --user 0 com.foo"
+    assert build_action_command("com.foo", "remove_user") == "pm uninstall --user 0 com.foo"
+    assert build_action_command("com.foo", "restore") == "cmd package install-existing --user 0 com.foo"
+    assert build_action_command("com.foo", "uninstall") == "pm uninstall com.foo"
+    assert interpret_action_result("Success") == (True, "Success")
+    assert interpret_action_result("Package com.foo new state: disabled-user", 0)[0] is True
+    assert interpret_action_result("Failure [DELETE_FAILED_INTERNAL_ERROR]", 0)[0] is False
+    assert interpret_action_result("", 1)[0] is False

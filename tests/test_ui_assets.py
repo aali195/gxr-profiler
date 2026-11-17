@@ -15,7 +15,7 @@ def test_tools_hub_contains_diagnostics():
     html = (web / "index.html").read_text(encoding="utf-8")
     js = (web / "app.js").read_text(encoding="utf-8")
     assert 'data-tab="tools"' in html
-    assert 'tab tab-utility' in html
+    assert "tab tab-utility" in html
     assert 'id="tools-separator"' in html
     assert 'data-tab="debug"' not in html
     assert 'id="viewtools"' in html
@@ -27,3 +27,15 @@ def test_tools_hub_contains_diagnostics():
     assert "diag-signature" in js
     assert "setToolTab" in js
     assert "/api/debug/collect" in js
+    assert "renderAppsTool" in js
+    assert "/api/apps" in js
+    assert "apps-modal" in js
+    assert "apps-detail-modal" in js
+    assert "Disable and remove actions are blocked" in js
+    assert "appsCellText" in js
+    assert "appsRunningLabel" in js
+    assert "CPU 5m" in js
+    assert "GPU mem" in js
+    assert "gpu_mem_kb" in js
+    assert "size_kb" in js
+    assert "Install size" in js

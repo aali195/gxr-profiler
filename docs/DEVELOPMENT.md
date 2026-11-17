@@ -23,13 +23,13 @@ Without installing, run `python -m gxr_profiler ...`.
 ```text
 gxr_profiler/
   cli/       Typer commands (record, runs, report, ui, devices)
-  core/      column registry, schema/labels derived from it, adb client, models, fs/paths
+  core/      column registry, schema/labels derived from it, adb client, models, fs/paths, apps package helpers
     parsers/ logcat, thermal, media, audio, radios, cameras, sensors, process, system, display
     device/  props, system, display/panel, audio, root snapshot
   capture/   Recorder lifecycle, logcat stream, pollers, media/process samplers, meta/writer
   runs/      RunStore: list/load/rename/delete runs
   report/    chart spec, series shaping, self-contained offline app export
-  server/    app factory, deps, recording manager, export service, routers/, ECharts SPA
+  server/    app factory, deps, recording manager, diagnostics/apps services, export service, routers/, ECharts SPA
 packaging/   PyInstaller onefile spec + entry point
 tests/       pytest suite with a FakeAdb
 ```
@@ -43,7 +43,8 @@ python -m pytest -q
 ```
 
 The tests use a fake ADB device and do not require a connected headset. `pytest` covers parsers,
-recording/storage, the web routes, export behaviour and UI asset checks.
+recording/storage, the web routes, export behaviour, package parsing/actions and UI asset checks.
+The Apps tests use fake `pm`/`dumpsys` output and never touch a real device.
 
 ## Building the executables
 

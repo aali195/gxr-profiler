@@ -6,7 +6,7 @@
 
 Reducing CPU/GPU load while using Chronolink/SteamVR is not about typical Samsung bloat. The expensive work is the **XR compositor, camera/perception pipeline, controller HAL and the streaming client itself**.
 
-> Debloat actions are optional manual operations. They modify the headset and are not part of gxr-profiler's read-only capture path.
+> Debloat actions are optional operations that modify the headset. They are not part of the read-only capture path; use **Tools > Apps** (with confirmation) or the commands below.
 
 ## In plain terms
 
@@ -94,6 +94,10 @@ Bixby, Samsung account/cloud, Galaxy Store, browser, Notes, messaging, Samsung P
 5. **For GPU**, lower Chronolink/SteamVR render resolution or bitrate, and consider 60 Hz via Battery Saver only if you can tolerate the refresh/camera changes.
 
 ## Debloat commands
+
+The same operations are available in the app under **Tools > Apps**, with package metadata,
+system/user/stock filtering, confirmation dialogs and a local action log. See the
+[Apps & services guide](../APPS.md).
 
 Prefer `disable-user` first; it is reversible and does not remove the system image:
 

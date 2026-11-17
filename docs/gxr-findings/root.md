@@ -8,7 +8,7 @@ What read-only KernelSU access unlocks, and what it still cannot see.
 
 ## In plain terms
 
-- Optional root access adds fan speed, per-app disk activity, calibration dates and an estimated first-setup date.
+- Optional root access adds fan speed, per-app disk activity, calibration dates, an estimated first-setup date and app data/cache size in **Tools > Apps**.
 - Root does not unlock real battery/chip power use, AI/DSP load or per-camera rates.
 - All root reads are read-only and do not change the headset.
 - Using root may show a permission prompt.
@@ -29,7 +29,7 @@ Probed 2026-10-20 to 2026-11-01.
 
 ## Findings
 
-- Root adds fan RPM/PWM, per-process I/O, active panel, calibration metadata and first-setup mtime.
+- Root adds fan RPM/PWM, per-process I/O, active panel, calibration metadata, first-setup mtime and app data/cache size.
 - It does not expose real SoC/battery power, NPU/DSP utilisation, or sensor-level camera rates.
 - All privileged operations are read-only; no writes, pushes or sysfs changes.
 - Hand tracking has no user-facing setting; use the perception lifecycle dump, not the service prop.
@@ -46,6 +46,7 @@ Root works via **KernelSU** (`su -c id` -> `uid=0`, `context=u:r.ksu:s0`). Probe
 - **Regulator rails** (`/sys/class/regulator/*/microvolts`): the class exposes ~129 rails, but the selected rails were constant setpoints with no current data, so they are not recorded.
 - **OpenPX calibration metadata**: measured IPD textproto plus eye/face calibration file mtimes.
 - **User-settings mtimes**: used only for the approximate first-setup date.
+- **App data/cache size** (`Tools > Apps` root detail): `du -sk /data/user/0/<pkg> /data/user_de/0/<pkg> /data/user/0/<pkg>/cache`; read-only and opt-in per package.
 
 **Still not available even with root:**
 - `/sys/kernel/debug` is **not mounted** (empty); no `msm_npu`/CDSP/kgsl debug counters.
@@ -53,7 +54,7 @@ Root works via **KernelSU** (`su -c id` -> `uid=0`, `context=u:r.ksu:s0`). Probe
 - NPU sysfs (`/sys/devices/soc0/npu`) is `0x0`; no utilisation counter.
 - `/sys/kernel/boot_cdsp/boot` is permission-denied even as root.
 
-The tool records **fan RPM/PWM** and **per-process disk I/O** (`/proc/<pid>/io`, with `--processes`) using read-only `su -c`. Enabling `kgsl`/`fastrpc` tracepoints for GPU/DSP timelines would require writes and is not done.
+The tool records **fan RPM/PWM** and **per-process disk I/O** (`/proc/<pid>/io`, with `--processes`) using read-only `su -c`, and can show **app data/cache size** in the Apps tool on request. Enabling `kgsl`/`fastrpc` tracepoints for GPU/DSP timelines would require writes and is not done.
 
 Caveat: `su -c` is an escalation and may trigger a root prompt; used only for reads it does not change the device. `IPerceptionControlPlane` still refuses `dumpsys` (`FAILED_TRANSACTION`).
 

@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from ..runs.store import RunStore
+from .apps import AppsService
 from .debug import DebugManager
 from .recording import RecordManager
 
@@ -23,6 +24,11 @@ def get_debug_manager(request: Request) -> DebugManager:
     return request.app.state.debug
 
 
+def get_apps_service(request: Request) -> AppsService:
+    return request.app.state.apps
+
+
 StoreDep = Annotated[RunStore, Depends(get_store)]
 ManagerDep = Annotated[RecordManager, Depends(get_manager)]
 DebugDep = Annotated[DebugManager, Depends(get_debug_manager)]
+AppsDep = Annotated[AppsService, Depends(get_apps_service)]

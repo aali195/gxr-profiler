@@ -12,7 +12,7 @@ from ..core.paths import default_runs_dir
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
-    help="Read-only thermal/performance profiler for Galaxy XR (SM-I610).",
+    help="Thermal/performance profiler for Galaxy XR (SM-I610).",
 )
 
 

@@ -51,6 +51,12 @@ let debugStatus = null;
 let debugPollTimer = null;
 let debugRequestBusy = false;
 let debugOptions = { root: false, include_tombstones: false, include_dmesg: false, log_lines: 1500 };
+const appsState = {
+  data: null, loaded: false, loading: false, attempted: false, error: "",
+  query: "", filter: "all", sort: { key: "package", dir: 1 },
+  selected: null, detail: null, detailError: "", detailLoading: false, detailToken: 0,
+  rootDetails: false, actionBusy: false, flash: null,
+};
 let activeToolTab = "diagnostics";
 try {
   const savedToolTab = storedSetting("toolTab");
@@ -4788,9 +4794,695 @@ function renderDiagnosticsTool(host) {
   }
 }
 
+const APP_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "system", label: "System" },
+  { id: "user", label: "User" },
+  { id: "disabled", label: "Disabled" },
+  { id: "removed", label: "Removed" },
+];
+const APP_COLUMNS = [
+  { key: "package", label: "Package" },
+  { key: "kind", label: "Type", width: "110px" },
+  { key: "state", label: "State", width: "120px" },
+  { key: "running", label: "Running", width: "100px", dir: -1 },
+  { key: "oom_class", label: "OOM", width: "110px" },
+  { key: "size_kb", label: "Size", unit: "MB", scale: 1 / 1024, decimals: 0, dir: -1, width: "88px", numeric: true },
+  { key: "cpu_pct", label: "CPU 5m", unit: "%", decimals: 1, dir: -1, width: "78px", numeric: true },
+  { key: "rss_kb", label: "RSS", unit: "MB", scale: 1 / 1024, decimals: 0, dir: -1, width: "88px", numeric: true },
+  { key: "gpu_mem_kb", label: "GPU mem", unit: "MB", scale: 1 / 1024, decimals: 0, dir: -1, width: "96px", numeric: true },
+  { key: "threads", label: "Threads", decimals: 0, dir: -1, width: "78px", numeric: true },
+  { key: "installer", label: "Installer", width: "190px" },
+];
+
+function appsRows() {
+  return (appsState.data && appsState.data.packages) || [];
+}
+
+function appsKindLabel(row) {
+  return ({ "system-updated": "System (updated)", system: "System", user: "User" })[row.kind] || "Unknown";
+}
+
+function appsStateLabel(row) {
+  return ({ enabled: "Enabled", disabled: "Disabled", removed: "Removed for user 0" })[row.state] || row.state;
+}
+
+function appsStateClass(row) {
+  return row.state === "enabled" ? "good" : row.state === "removed" ? "bad" : "sev-warning";
+}
+
+function appsProcCategory(row) {
+  if (row.kind === "user") return "app";
+  if (row.kind === "system-updated") return "system";
+  return "system-app";
+}
+
+function appsTypeClass(row) {
+  return "kind-" + appsProcCategory(row);
+}
+
+function appsOomLabel(row) {
+  const value = row.oom_class || "";
+  return value ? value[0].toUpperCase() + value.slice(1) : "--";
+}
+
+function appsRunningLabel(row) {
+  return row.running ? "Running" : "Not running";
+}
+
+function appsCellText(row, column) {
+  if (column.key === "kind") return appsKindLabel(row);
+  if (column.key === "state") return appsStateLabel(row);
+  if (column.key === "oom_class") return appsOomLabel(row);
+  const value = row[column.key];
+  if (value == null || value === "") return "--";
+  const scaled = Number(value) * (column.scale == null ? 1 : column.scale);
+  if (!Number.isFinite(scaled)) return "--";
+  return fmt(scaled, "", column.decimals) + (column.unit === "%" ? "%" : "");
+}
+
+function appsSortValue(row, key) {
+  if (key === "kind") return appsKindLabel(row);
+  if (key === "state") return appsStateLabel(row);
+  if (key === "running") return row.running ? 1 : 0;
+  if (key === "oom_class") return row.oom_adj;
+  return row[key];
+}
+
+function appsFilteredRows() {
+  let rows = appsRows().slice();
+  if (appsState.filter === "system") rows = rows.filter(row => row.kind !== "user");
+  else if (appsState.filter === "user") rows = rows.filter(row => row.kind === "user");
+  else if (appsState.filter === "disabled") rows = rows.filter(row => row.state === "disabled");
+  else if (appsState.filter === "removed") rows = rows.filter(row => row.state === "removed");
+  const query = appsState.query.trim().toLowerCase();
+  if (query) {
+    rows = rows.filter(row => [row.package, row.installer, row.apk_path, row.kind, row.state, row.oom_class, ...(row.proc_names || [])]
+      .filter(Boolean).join(" ").toLowerCase().includes(query));
+  }
+  const key = appsState.sort.key;
+  const dir = appsState.sort.dir || 1;
+  return rows.sort((a, b) => {
+    const av = appsSortValue(a, key);
+    const bv = appsSortValue(b, key);
+    const an = av == null || av === "";
+    const bn = bv == null || bv === "";
+    if (an && bn) return String(a.package || "").localeCompare(String(b.package || ""));
+    if (an) return 1;
+    if (bn) return -1;
+    if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+    return String(av).localeCompare(String(bv)) * dir;
+  });
+}
+
+function appsFormatKb(value) {
+  if (value == null || !Number.isFinite(Number(value))) return null;
+  const kb = Number(value);
+  if (kb >= 1048576) return (kb / 1048576).toFixed(1) + " GB";
+  if (kb >= 1024) return (kb / 1024).toFixed(1) + " MB";
+  return Math.round(kb).toLocaleString() + " KB";
+}
+
+function ensureAppsLoaded() {
+  if (appsState.loaded || appsState.loading || appsState.attempted) return;
+  appsState.loaded = false;
+  appsState.loading = true;
+  appsState.attempted = true;
+  appsState.error = "";
+  appsFetch();
+}
+
+async function appsFetch() {
+  try {
+    const data = await jget("/api/apps");
+    appsState.data = data || {};
+    appsState.loaded = true;
+    appsState.error = "";
+    const selected = appsState.selected;
+    if (selected) {
+      const next = appsRows().find(row => row.package === selected.package);
+      if (next) appsState.selected = next;
+      else {
+        appsState.selected = null;
+        appsState.detail = null;
+        closeAppsDetailModal();
+      }
+    }
+  } catch (e) {
+    appsState.error = e.message || String(e);
+  } finally {
+    appsState.loading = false;
+    if (activeTab === "tools" && activeToolTab === "apps") renderActiveToolBody();
+    renderAppsDetailModal();
+  }
+}
+
+function appsRefresh() {
+  if (appsState.loading) return;
+  appsState.loading = true;
+  appsState.error = "";
+  appsState.flash = null;
+  renderActiveToolBody();
+  appsFetch();
+}
+
+async function appsFetchDetail(packageName, root) {
+  const token = ++appsState.detailToken;
+  appsState.detailLoading = true;
+  appsState.detailError = "";
+  renderActiveToolBody();
+  renderAppsDetailModal();
+  try {
+    const data = await jget("/api/apps/" + encodeURIComponent(packageName) + "?root=" + (root ? "1" : "0"));
+    if (token !== appsState.detailToken) return;
+    appsState.detail = data;
+  } catch (e) {
+    if (token !== appsState.detailToken) return;
+    appsState.detail = null;
+    appsState.detailError = e.message || String(e);
+  } finally {
+    if (token === appsState.detailToken) {
+      appsState.detailLoading = false;
+      if (activeTab === "tools" && activeToolTab === "apps") renderActiveToolBody();
+      renderAppsDetailModal();
+    }
+  }
+}
+
+function selectApp(row) {
+  appsState.selected = row;
+  appsState.detail = null;
+  appsState.detailError = "";
+  appsState.detailToken += 1;
+  renderActiveToolBody();
+  openAppsDetailModal();
+  appsFetchDetail(row.package, appsState.rootDetails);
+}
+
+function closeAppsDetail() {
+  appsState.detailToken += 1;
+  appsState.selected = null;
+  appsState.detail = null;
+  appsState.detailError = "";
+  appsState.detailLoading = false;
+  closeAppsDetailModal();
+  renderActiveToolBody();
+}
+
+function appsDetailKeyHandler(event) {
+  if (event.key !== "Escape" || document.getElementById("apps-modal")) return;
+  closeAppsDetail();
+}
+
+function closeAppsDetailModal() {
+  const node = document.getElementById("apps-detail-modal");
+  if (node) node.remove();
+  document.removeEventListener("keydown", appsDetailKeyHandler);
+}
+
+function renderAppsDetailModal() {
+  const dialog = document.querySelector("#apps-detail-modal .modal-card");
+  if (!dialog) return;
+  if (!appsState.selected) {
+    closeAppsDetailModal();
+    return;
+  }
+  dialog.innerHTML = "";
+  dialog.appendChild(appsDetailCard());
+}
+
+function openAppsDetailModal() {
+  closeAppsDetailModal();
+  const backdrop = el("div", "modal-backdrop");
+  backdrop.id = "apps-detail-modal";
+  const dialog = el("div", "modal-card apps-detail-card");
+  backdrop.appendChild(dialog);
+  backdrop.onclick = (event) => { if (event.target === backdrop) closeAppsDetail(); };
+  document.body.appendChild(backdrop);
+  document.addEventListener("keydown", appsDetailKeyHandler);
+  renderAppsDetailModal();
+}
+
+function appsActionSpec(action) {
+  return ({
+    disable: {
+      button: "Disable", title: "Disable package", confirm: "Disable package", destructive: true, dataLoss: false,
+      description: "The package will be disabled for user 0 and its components will stop running. You can enable it again from this tool.",
+      command: pkg => "pm disable-user --user 0 " + pkg,
+    },
+    enable: {
+      button: "Enable", title: "Enable package", confirm: "Enable package", destructive: false, dataLoss: false,
+      description: "The package will be enabled for user 0 and its normal components can run again.",
+      command: pkg => "pm enable --user 0 " + pkg,
+    },
+    remove_user: {
+      button: "Remove for user 0", title: "Remove package for user 0", confirm: "Remove for user 0", destructive: true, dataLoss: true,
+      description: "This removes the package for user 0 only. The stock APK remains in the system image and can be restored with Restore. App data for user 0 may be deleted.",
+      command: pkg => "pm uninstall --user 0 " + pkg,
+    },
+    restore: {
+      button: "Restore", title: "Restore package", confirm: "Restore package", destructive: false, dataLoss: false,
+      description: "Reinstalls the existing system package for user 0. App data removed earlier is not restored.",
+      command: pkg => "cmd package install-existing --user 0 " + pkg,
+    },
+    uninstall: {
+      button: "Uninstall", title: "Uninstall user app", confirm: "Uninstall permanently", destructive: true, dataLoss: true,
+      description: "Permanently uninstalls this user-installed app and its data. It cannot be restored from this tool; reinstall it from the original source.",
+      command: pkg => "pm uninstall " + pkg,
+    },
+  })[action] || null;
+}
+
+function appsModalKeyHandler(event) {
+  if (event.key === "Escape") closeAppsModal();
+}
+
+function closeAppsModal() {
+  const node = document.getElementById("apps-modal");
+  if (node) node.remove();
+  document.removeEventListener("keydown", appsModalKeyHandler);
+}
+
+function openAppsConfirm(row, action) {
+  const spec = appsActionSpec(action);
+  if (!spec) return;
+  if (row.critical && spec.destructive) return;
+  closeAppsModal();
+  const backdrop = el("div", "modal-backdrop");
+  backdrop.id = "apps-modal";
+  const dialog = el("div", "modal-card");
+  const head = el("div", "modal-head");
+  head.appendChild(el("h3", null, spec.title));
+  const close = el("button", "toolbtn", "✕");
+  close.type = "button";
+  close.title = "Cancel";
+  close.onclick = closeAppsModal;
+  head.appendChild(close);
+  dialog.appendChild(head);
+  const pkg = textEl("div", "modal-package", row.package);
+  dialog.appendChild(pkg);
+  dialog.appendChild(textEl("p", "modal-desc", spec.description));
+  const command = el("pre", "diag-evidence modal-command");
+  command.textContent = spec.command(row.package);
+  dialog.appendChild(command);
+  if (spec.dataLoss) {
+    dialog.appendChild(textEl("p", "modal-warning", "This action may delete app data for user 0."));
+  }
+  const checks = [];
+  const addCheck = (text) => {
+    const label = el("label", "modal-check");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    label.appendChild(cb);
+    label.appendChild(textEl("span", null, text));
+    dialog.appendChild(label);
+    checks.push(cb);
+    cb.addEventListener("change", sync);
+  };
+  if (spec.dataLoss) addCheck("I understand app data may be deleted.");
+  const actions = el("div", "modal-actions");
+  const cancel = el("button", "toolbtn", "Cancel");
+  cancel.type = "button";
+  cancel.onclick = closeAppsModal;
+  const confirm = el("button", "primary" + (spec.destructive ? " danger" : ""), spec.confirm);
+  confirm.type = "button";
+  function sync() {
+    confirm.disabled = appsState.actionBusy || checks.some(cb => !cb.checked);
+  }
+  confirm.onclick = () => {
+    if (confirm.disabled) return;
+    confirm.disabled = true;
+    runAppsAction(row, action);
+  };
+  actions.appendChild(cancel);
+  actions.appendChild(confirm);
+  dialog.appendChild(actions);
+  backdrop.appendChild(dialog);
+  backdrop.onclick = (event) => { if (event.target === backdrop) closeAppsModal(); };
+  document.body.appendChild(backdrop);
+  document.addEventListener("keydown", appsModalKeyHandler);
+  sync();
+}
+
+async function runAppsAction(row, action) {
+  appsState.actionBusy = true;
+  try {
+    const result = await jpost("/api/apps/" + encodeURIComponent(row.package) + "/action", {
+      action,
+      confirm: true,
+    });
+    appsState.flash = {
+      ok: !!result.ok,
+      text: (result.ok ? "Action completed." : "Action failed.") + (result.output ? "\n" + result.output : ""),
+    };
+    if (result.ok && action === "uninstall") {
+      appsState.selected = null;
+      appsState.detail = null;
+    }
+    await appsFetch();
+    if (appsState.selected && appsState.selected.package === row.package) {
+      appsFetchDetail(row.package, appsState.rootDetails);
+    }
+  } catch (e) {
+    appsState.flash = { ok: false, text: e.message || String(e) };
+  } finally {
+    appsState.actionBusy = false;
+    closeAppsModal();
+    if (activeTab === "tools" && activeToolTab === "apps") renderActiveToolBody();
+  }
+}
+
+function appsHeaderCard() {
+  const card = el("section", "card");
+  const head = el("div", "appstoolhead");
+  const copy = el("div");
+  copy.appendChild(el("h3", null, "Installed apps & services"));
+  copy.appendChild(el("p", "muted cardnote", "Read installed packages, disable or remove them, and restore stock system packages. Every destructive action requires confirmation; critical system packages cannot be disabled or removed."));
+  head.appendChild(copy);
+  const refresh = el("button", "toolbtn", appsState.loading ? "Loading..." : "Refresh");
+  refresh.type = "button";
+  refresh.disabled = appsState.loading;
+  refresh.onclick = appsRefresh;
+  head.appendChild(refresh);
+  card.appendChild(head);
+  const summary = (appsState.data && appsState.data.summary) || {};
+  const chips = el("div", "appschips");
+  [
+    ["Total", summary.total], ["System", summary.system], ["User", summary.user],
+    ["Disabled", summary.disabled], ["Removed", summary.removed], ["Running", summary.running],
+  ].forEach(([label, value]) => {
+    const chip = el("span", "appschip");
+    chip.appendChild(textEl("span", "appschipk", label));
+    chip.appendChild(textEl("span", "appschipv", value == null ? "--" : String(value)));
+    chips.appendChild(chip);
+  });
+  card.appendChild(chips);
+  const totals = el("div", "appschips appstotals");
+  [
+    ["CPU 5m", summary.cpu_pct == null ? "--" : fmt(summary.cpu_pct, "%", 1)],
+    ["RSS", appsFormatKb(summary.rss_kb) || "--"],
+    ["GPU mem", appsFormatKb(summary.gpu_mem_kb) || "--"],
+    ["Install size", appsFormatKb(summary.size_kb) || "--"],
+  ].forEach(([label, value]) => {
+    const chip = el("span", "appschip apptotal");
+    chip.appendChild(textEl("span", "appschipk", label));
+    chip.appendChild(textEl("span", "appschipv", value));
+    totals.appendChild(chip);
+  });
+  card.appendChild(totals);
+  if (appsState.loading && !appsState.data) card.appendChild(el("div", "muted", "Loading installed packages..."));
+  card.appendChild(el("p", "muted cardnote", "Android does not expose reliable human-readable app labels over shell, so package IDs are shown. Stock/system packages are marked; per-user removal keeps the factory APK in the system image."));
+  card.appendChild(el("p", "muted cardnote", "CPU, RSS, GPU memory, threads and OOM are a snapshot taken when the list is fetched. CPU is the ~5-minute dumpsys cpuinfo value; RSS/GPU/threads are sums across matching processes. They are not live."));
+  return card;
+}
+
+function appsFlashCard() {
+  const card = el("section", "card appflash " + (appsState.flash.ok ? "good" : "bad"));
+  const head = el("div", "appstoolhead");
+  head.appendChild(el("h3", null, "Last action"));
+  const dismiss = el("button", "toolbtn", "Dismiss");
+  dismiss.type = "button";
+  dismiss.onclick = () => { appsState.flash = null; renderActiveToolBody(); };
+  head.appendChild(dismiss);
+  card.appendChild(head);
+  const pre = el("pre", "diag-evidence appflashout");
+  pre.textContent = appsState.flash.text || "";
+  card.appendChild(pre);
+  return card;
+}
+
+function appsErrorCard() {
+  const card = el("section", "card");
+  card.appendChild(el("h3", null, "Package list unavailable"));
+  card.appendChild(textEl("p", "muted", appsState.error));
+  const retry = el("button", "toolbtn", "Retry");
+  retry.type = "button";
+  retry.onclick = appsRefresh;
+  card.appendChild(retry);
+  return card;
+}
+
+function appsDetailCard() {
+  const row = appsState.selected;
+  const card = el("section", "card appsdetail");
+  const head = el("div", "appstoolhead");
+  const title = el("div", "appsdetail-title");
+  title.appendChild(textEl("h3", null, row.package));
+  const badges = el("div", "appbadges");
+  badges.appendChild(textEl("span", "procbadge " + appsTypeClass(row), appsKindLabel(row)));
+  badges.appendChild(textEl("span", "badge " + appsStateClass(row), appsStateLabel(row)));
+  if (row.critical) badges.appendChild(textEl("span", "badge bad", "Critical"));
+  if (row.running) badges.appendChild(textEl("span", "badge good", "Running"));
+  title.appendChild(badges);
+  head.appendChild(title);
+  const close = el("button", "toolbtn", "Close");
+  close.type = "button";
+  close.onclick = closeAppsDetail;
+  head.appendChild(close);
+  card.appendChild(head);
+  if (row.critical) {
+    card.appendChild(textEl("p", "modal-warning", "This is a critical system component. Disable and remove actions are blocked for this package."));
+  }
+  const actions = el("div", "recordactions");
+  (row.actions || []).forEach(action => {
+    const spec = appsActionSpec(action);
+    if (!spec) return;
+    const button = el("button", "toolbtn" + (spec.destructive ? " danger" : ""), spec.button);
+    button.type = "button";
+    button.disabled = appsState.actionBusy;
+    button.onclick = () => openAppsConfirm(row, action);
+    actions.appendChild(button);
+  });
+  if (!actions.childElementCount) actions.appendChild(el("span", "muted", "No actions are available in this state."));
+  const rootLabel = el("label", "modal-check approotcheck");
+  const rootBox = document.createElement("input");
+  rootBox.type = "checkbox";
+  rootBox.checked = !!appsState.rootDetails;
+  rootBox.addEventListener("change", () => {
+    appsState.rootDetails = rootBox.checked;
+    appsFetchDetail(row.package, appsState.rootDetails);
+  });
+  rootLabel.appendChild(rootBox);
+  rootLabel.appendChild(textEl("span", null, "Root details (data/cache size; may prompt)"));
+  actions.appendChild(rootLabel);
+  card.appendChild(actions);
+
+  if (appsState.detailLoading) {
+    card.appendChild(el("div", "muted", "Loading package details..."));
+    return card;
+  }
+  if (appsState.detailError) {
+    card.appendChild(textEl("p", "modal-warning", appsState.detailError));
+  }
+  const detail = appsState.detail && appsState.detail.detail ? appsState.detail.detail : {};
+  const rows = [
+    ["Type", appsKindLabel(row)],
+    ["State", appsStateLabel(row)],
+    ["Running", appsRunningLabel(row)],
+    ["Processes", row.proc_count ? row.proc_count + " running" : "not running"],
+    ["OOM class", row.proc_count ? appsOomLabel(row) : null],
+    ["CPU (5m)", row.proc_count ? fmt(row.cpu_pct, "%", 1) : null],
+    ["RSS total", row.proc_count ? appsFormatKb(row.rss_kb) : null],
+    ["GPU memory", row.proc_count ? appsFormatKb(row.gpu_mem_kb) : null],
+    ["Install size", appsFormatKb(row.size_kb)],
+    ["Threads", row.proc_count ? row.threads : null],
+    ["Version", [detail.version_name, detail.version_code].filter(v => v != null && v !== "").join(" · ") || row.version_code],
+    ["SDK", detail.min_sdk == null && detail.target_sdk == null ? null : "min " + (detail.min_sdk ?? "?") + " · target " + (detail.target_sdk ?? "?")],
+    ["First installed", detail.first_install_time],
+    ["Last updated", detail.last_update_time],
+    ["Installer", detail.installer || row.installer],
+    ["Code path", detail.code_path || row.apk_path],
+    ["Data dir", detail.data_dir],
+    ["ABI", detail.primary_cpu_abi],
+    ["Flags", (detail.flags || []).join(" ")],
+    ["Requested permissions", detail.requested_permissions_count],
+    ["Users", (detail.user_states || []).map(state => "user " + state.user + (state.installed === false ? " (not installed)" : "")).join(", ")],
+  ].filter(item => item[1] != null && item[1] !== "");
+  if (rows.length) card.appendChild(debugKvTable(rows));
+  if ((row.proc_names || []).length) {
+    const procHead = el("div", "appsubhead", "Processes");
+    card.appendChild(procHead);
+    const procList = el("pre", "diag-evidence");
+    procList.textContent = row.proc_names.join("\n");
+    card.appendChild(procList);
+  }
+  if ((detail.apk_paths || []).length) {
+    const apkHead = el("div", "appsubhead", "APK files");
+    card.appendChild(apkHead);
+    const apk = el("pre", "diag-evidence");
+    apk.textContent = detail.apk_paths.join("\n");
+    card.appendChild(apk);
+  }
+  const root = appsState.detail && appsState.detail.root;
+  if (root && root.requested) {
+    const rootRows = [
+      ["Root available", root.available ? "yes" : "no"],
+      ["App data", appsFormatKb(root.data_kb)],
+      ["Cache", appsFormatKb(root.cache_kb)],
+    ].filter(item => item[1] != null && item[1] !== "");
+    if (rootRows.length) card.appendChild(debugKvTable(rootRows));
+    if ((root.errors || []).length) {
+      const err = el("pre", "diag-evidence");
+      err.textContent = root.errors.join("\n");
+      card.appendChild(err);
+    }
+  }
+  return card;
+}
+
+function appsTableCard() {
+  const card = el("section", "card");
+  const head = el("div", "appstoolhead");
+  const title = el("div");
+  title.appendChild(el("h3", null, "Packages"));
+  const count = el("span", "muted tablecount");
+  title.appendChild(count);
+  head.appendChild(title);
+  const controls = el("div", "appsfilters");
+  APP_FILTERS.forEach(filter => {
+    const button = el("button", "subtab" + (appsState.filter === filter.id ? " active" : ""), filter.label);
+    button.type = "button";
+    button.onclick = () => {
+      if (appsState.filter === filter.id) return;
+      appsState.filter = filter.id;
+      renderActiveToolBody();
+    };
+    controls.appendChild(button);
+  });
+  const search = document.createElement("input");
+  search.type = "search";
+  search.className = "appssearch";
+  search.placeholder = "Search package, process, installer or path...";
+  search.value = appsState.query;
+  controls.appendChild(search);
+  head.appendChild(controls);
+  card.appendChild(head);
+
+  const wrap = el("div", "table-scroll appstablewrap");
+  const table = document.createElement("table");
+  table.className = "appstable";
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  APP_COLUMNS.forEach(column => {
+    const th = document.createElement("th");
+    if (column.numeric) th.className = "appnumhead";
+    if (column.width) th.style.width = column.width;
+    const label = el("span", "prochead-label");
+    label.appendChild(document.createTextNode(column.label));
+    if (appsState.sort.key === column.key) {
+      label.appendChild(el("span", "sortarrow", appsState.sort.dir < 0 ? "▼" : "▲"));
+    }
+    th.appendChild(label);
+    th.appendChild(el("span", "procunit", column.unit || "\u00a0"));
+    th.title = "Sort by " + column.label;
+    th.onclick = () => {
+      if (appsState.sort.key === column.key) appsState.sort.dir *= -1;
+      else appsState.sort = { key: column.key, dir: column.dir || 1 };
+      renderActiveToolBody();
+    };
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+
+  function drawRows() {
+    tbody.innerHTML = "";
+    const rows = appsFilteredRows();
+    count.textContent = rows.length + " of " + appsRows().length + " packages";
+    if (appsState.loading && !appsRows().length) {
+      const tr = document.createElement("tr");
+      const td = textEl("td", "muted", "Loading installed packages...");
+      td.colSpan = APP_COLUMNS.length;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+    if (!rows.length) {
+      const tr = document.createElement("tr");
+      const td = textEl("td", "muted", "No packages match this filter.");
+      td.colSpan = APP_COLUMNS.length;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+    rows.forEach(row => {
+      const tr = el("tr", "approw proc-kind-" + appsProcCategory(row) + (appsState.selected && appsState.selected.package === row.package ? " selected" : ""));
+      tr.tabIndex = 0;
+      tr.onclick = () => selectApp(row);
+      tr.onkeydown = (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectApp(row);
+        }
+      };
+      const packageCell = el("td", "apppkgcell");
+      const packageLine = el("div", "apppkgline");
+      packageLine.appendChild(textEl("span", "apppkg", row.package));
+      if (row.critical) packageLine.appendChild(textEl("span", "badge bad", "critical"));
+      packageCell.appendChild(packageLine);
+      const metaParts = [];
+      if (row.version_code != null) metaParts.push("v" + row.version_code);
+      if (row.uid != null) metaParts.push("UID " + row.uid);
+      if (row.proc_count) metaParts.push(row.proc_count + (row.proc_count === 1 ? " proc" : " procs"));
+      const meta = textEl("div", "apppkgmeta", metaParts.join(" · "));
+      if ((row.proc_names || []).length) meta.title = "Processes: " + row.proc_names.join(", ");
+      packageCell.appendChild(meta);
+      tr.appendChild(packageCell);
+      APP_COLUMNS.slice(1).forEach(column => {
+        const td = el("td");
+        if (column.key === "kind") {
+          td.appendChild(textEl("span", "procbadge " + appsTypeClass(row), appsKindLabel(row)));
+        } else if (column.key === "state") {
+          td.appendChild(textEl("span", "badge " + appsStateClass(row), appsStateLabel(row)));
+        } else if (column.key === "running") {
+          td.appendChild(textEl("span", "badge " + (row.running ? "good" : "idle"), appsRunningLabel(row)));
+        } else if (column.key === "oom_class") {
+          if (row.oom_class) {
+            td.appendChild(textEl("span", "procbadge oom-" + row.oom_class, appsOomLabel(row)));
+          } else {
+            td.textContent = "--";
+          }
+        } else if (column.key === "installer") {
+          td.className = "appinstaller";
+          td.textContent = row.installer || "--";
+        } else {
+          td.className = "appnum";
+          td.textContent = appsCellText(row, column);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  search.oninput = () => { appsState.query = search.value; drawRows(); };
+  drawRows();
+  return card;
+}
+
+function renderAppsTool(host) {
+  host.innerHTML = "";
+  if (OFFLINE) {
+    const card = el("section", "card");
+    card.appendChild(el("h3", null, "Installed apps & services"));
+    card.appendChild(el("div", "muted", "Apps management is not available in offline reports."));
+    host.appendChild(card);
+    return;
+  }
+  ensureAppsLoaded();
+  host.appendChild(appsHeaderCard());
+  if (appsState.flash) host.appendChild(appsFlashCard());
+  if (appsState.error) host.appendChild(appsErrorCard());
+  host.appendChild(appsTableCard());
+}
+
 function toolDefinitions() {
   return [
     { id: "diagnostics", label: "Diagnostics", render: renderDiagnosticsTool },
+    { id: "apps", label: "Apps", render: renderAppsTool },
   ];
 }
 
@@ -4816,6 +5508,11 @@ function setToolTab(id) {
   if (!tools.some(tool => tool.id === id)) return;
   activeToolTab = id;
   try { localStorage.setItem("gxr-profiler.toolTab", id); } catch (e) {}
+  if (id !== "apps") {
+    closeAppsDetailModal();
+    appsState.selected = null;
+    appsState.detail = null;
+  }
   if (id !== "diagnostics") stopDebugPolling();
   const bar = document.getElementById("tools-inner-tabs");
   if (bar) {
@@ -4935,7 +5632,12 @@ function downloadDebugReport() {
 function setTab(tab) {
   if (findOpen) closeFind();
   if (tab !== "live") stopPreview();
-  if (tab !== "tools") stopDebugPolling();
+  if (tab !== "tools") {
+    stopDebugPolling();
+    closeAppsDetailModal();
+    appsState.selected = null;
+    appsState.detail = null;
+  }
   if (tab !== "run") runLoadToken += 1;
   if (tab !== "compare") compareRenderToken += 1;
   activeTab = tab;

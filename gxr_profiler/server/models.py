@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from ..core.models import CAPTURE_PROFILES, RunConfig, apply_profile
@@ -75,6 +77,11 @@ class DebugRequest(BaseModel):
     include_tombstones: bool = False
     include_dmesg: bool = False
     log_lines: int = Field(default=1500, ge=100, le=5000)
+
+
+class AppActionRequest(BaseModel):
+    action: Literal["disable", "enable", "remove_user", "restore", "uninstall"]
+    confirm: bool = False
 
 
 class RecordStatus(BaseModel):

@@ -1,10 +1,10 @@
 # GXR Profiler
 
-Read-only thermal / performance profiler for a **Samsung Galaxy XR (SM-I610)** over wireless ADB. Record a run, then explore or compare runs in a local web app (native window or browser) or a self-contained HTML report. Built for before/after thermal-mod benchmarking.
+Thermal / performance profiler for a **Samsung Galaxy XR (SM-I610)** over wireless ADB. Record a run, then explore or compare runs in a local web app (native window or browser) or a self-contained HTML report. Built for before/after thermal-mod benchmarking.
 
 NOTE: Written with heavy LLM assistance - this grew in size way beyond what I originally had in mind.
 
-Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd wifi status`, `logcat`, `ps`. Nothing is written to the device.
+Recording, preview, diagnostics and exports are read-only. `Tools > Apps` is the one optional package-management workflow; it only changes the headset after an explicit, confirmed action.
 
 ## Features
 
@@ -15,7 +15,8 @@ Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd 
 - Session-wide pinned metrics/processes plus lowest/highest-average highlighting.
 - Self-contained HTML export with common Wi-Fi/device identifiers redacted.
 - One-click **Tools > Diagnostics** snapshot for crash buffers, boot/rescue state, Dropbox, exit-info and thermal context; saves JSON + Markdown under `reports/debug/`.
-- Optional root extras for fan RPM/PWM, active panel, calibration and per-process disk I/O.
+- **Tools > Apps** package manager: list installed apps/system packages with sortable one-shot process CPU/RSS/GPU/threads, OOM and install-size columns, see metadata and state, disable/enable, remove non-critical stock packages for user 0, restore them, or fully uninstall user apps after confirmation. Critical system packages are protected from disable/remove.
+- Optional root extras for fan RPM/PWM, active panel, calibration, per-process disk I/O and app data/cache size.
 
 ## Screenshots
 
@@ -66,7 +67,7 @@ Building from source or running the CLI from Python requires Python 3.11+; see [
 3. Put the exe in a writable folder and double-click it. No `--serial` is needed once a single headset is paired.
 4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset** button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run.
 5. Open **Run** for the results, or select runs in **Compare** to overlay and compare them.
-6. Open **Tools**, then **Diagnostics**, for a one-click crash/soft-reboot snapshot. It saves JSON + Markdown under `reports/debug/`.
+6. Open **Tools > Diagnostics** for a one-click crash/soft-reboot snapshot (JSON + Markdown under `reports/debug/`), or **Tools > Apps** to inspect and manage installed packages.
 7. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no internet or Python required.
 
 `runs/` and `reports/` are created next to the exe. Keep the exe folder writable, and do not share the raw `runs/` folder unless you have checked its contents; exported HTML redacts common network/device identifiers.
@@ -92,6 +93,7 @@ The GUI needs `adb` and WebView2. It does not need Python. For source setup, arc
 
 - [Detailed guide: capture, output/schema and safety](docs/README.md)
 - [Diagnostics guide](docs/DIAGNOSTICS.md)
+- [Apps & services guide](docs/APPS.md)
 - [CLI reference](docs/CLI.md)
 - [Development, tests and packaging](docs/DEVELOPMENT.md)
 - [Every headset command and polling cadence](docs/COMMANDS.md)
@@ -101,8 +103,9 @@ Findings pages label their hardware state: **stock/unmodified before 2026-11-01*
 
 ## Safety
 
-- Every headset command is read-only; nothing persists on the device.
-- `--root` only performs read-only `su -c` reads and may trigger a root prompt.
+- Recording, preview, diagnostics and report export are read-only; nothing persists on the device.
+- `Tools > Apps` can disable, remove for user 0, restore or uninstall packages. It only runs after an explicit confirmation in the local UI, requires the local API token, and logs actions under `reports/apps/`. Non-critical stock packages are removed for user 0 only; the system image is never edited. Critical packages cannot be disabled or removed.
+- `--root` performs read-only `su -c` reads and may trigger a root prompt. App data/cache size is the optional root detail in the Apps tool.
 - Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; raw run files keep the original values.
 
 For detailed safety notes and fair-run guidance, see [safety & fair runs](docs/README.md#safety--fair-runs).

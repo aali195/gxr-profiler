@@ -1,8 +1,12 @@
 # Headset commands, sources & polling
 
-Every command in gxr-profiler is **read-only**. The only privileged commands use
-`su -c` to read root-only files; there are no writes, pushes, `setprop`,
-sysfs writes, logcat clears, or thermalservice overrides.
+Recording, preview, diagnostics and report export use **read-only** commands. The only
+privileged commands use `su -c` to read root-only files; there are no writes, pushes,
+`setprop`, sysfs writes, logcat clears, or thermalservice overrides.
+
+The one exception is **Tools > Apps**, where the user can explicitly confirm package
+disable/remove/restore/uninstall actions. Those commands are listed in
+[Tools > Apps](#tools--apps-package-management) and are never part of a recording.
 
 Device: **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2
 (`SXR2230P`), Adreno 740.
@@ -272,6 +276,66 @@ The tab parses native `F DEBUG` blocks, Java `FATAL EXCEPTION` / ANR records, `r
 animation-race signature and explains it as a software issue while keeping thermal/power readings
 separate. See [crash & soft-reboot logs](gxr-findings/crash-logs.md).
 
+## Tools > Apps (package management)
+
+The Apps tool first reads package state, then optionally runs one confirmed action. The list
+read is read-only; actions are explicit user changes and are blocked while a recording is in
+progress. See the [Apps & services guide](APPS.md).
+
+List and metadata reads:
+
+```sh
+pm list users
+pm list packages -U --show-versioncode --user 0
+pm list packages -s -u --user 0
+pm list packages -3 -u --user 0
+pm list packages -d --user 0
+pm list packages -e --user 0
+pm list packages -u --user 0
+pm list packages -f -u --user 0
+pm list packages -i -u --user 0
+dumpsys cpuinfo
+ps -A -o PID,UID,RSS,NAME
+grep -H '' /proc/[0-9]*/stat 2>/dev/null
+grep -H '' /proc/[0-9]*/oom_score_adj 2>/dev/null
+dumpsys gpu | sed -n '/Memory snapshot for GPU/,/driverPackageName/p'
+dumpsys package <package>
+pm path <package>
+```
+
+These provide the one-shot process usage shown per package (`CPU 5m`, summed RSS/GPU memory,
+threads and OOM class). The list also runs `du -sk` on active install paths for the **Size**
+column; app data/cache size remains a root-only detail. All values are sampled only when the
+list is fetched; there is no live polling in the Apps tool.
+
+If `--show-versioncode` is not supported by the device, the tool falls back to
+`pm list packages -U --user 0`.
+
+Confirmed actions:
+
+```sh
+pm disable-user --user 0 <package>
+pm enable --user 0 <package>
+pm uninstall --user 0 <package>          # stock/system: remove for user 0 only
+cmd package install-existing --user 0 <package>
+pm uninstall <package>                   # user-installed apps only
+```
+
+Every action requires the local API token and a confirmation flag. Critical packages cannot be
+disabled, removed for user 0 or uninstalled; the backend rejects those actions even if the API
+is called directly. Package IDs are validated and shell-quoted. Actions are appended to
+`reports/apps/app-actions.jsonl`.
+
+Optional root detail (read-only, opt-in; may prompt):
+
+```sh
+su -c id
+su -c 'du -sk /data/user/0/<package> /data/user_de/0/<package> /data/user/0/<package>/cache 2>/dev/null'
+```
+
+Root is not required for the actions and does not unlock protected system-APK deletion. The
+system image is never edited.
+
 ## Media/display/audio (every 10 s, always on)
 
 ```sh
@@ -491,9 +555,11 @@ first-setup date.
 | Active panel / LCD type / EDID | Yes, `--root` |
 | Measured IPD + eye/face calibration file dates | Yes, `--root` |
 | Approximate first setup date (user-settings mtimes) | Yes, `--root` |
+| App data/cache size (Tools > Apps detail) | Yes, opt-in per package |
 | `su -c id` manager confirmation | Yes, `--root` |
 | Manufacture date, region/CSC/locale, boundary, current IPD/cal status | No |
 | All other device/build/panel variants | No |
 
-`su -c` reads may trigger a KernelSU/Magisk prompt once. No command changes
-device state.
+`su -c` reads may trigger a KernelSU/Magisk prompt once. Recording, preview,
+diagnostics and export do not change device state. Tools > Apps actions are the
+only exception; they require an explicit confirmation in the local UI.

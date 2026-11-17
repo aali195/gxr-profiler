@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gxr-profiler"
 dynamic = ["version"]
-description = "Read-only thermal/performance profiler for Galaxy XR (SM-I610) over wireless ADB"
+description = "Thermal/performance profiler for Galaxy XR (SM-I610) over wireless ADB"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
