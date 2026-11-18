@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from ...core.adb import AdbError
 from ..deps import AppsDep, ManagerDep
-from ..models import AppActionRequest
+from ..models import AppActionRequest, AppPerformanceRequest
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,3 +57,30 @@ def app_action(package: str, body: AppActionRequest, apps: AppsDep, manager: Man
     except Exception as exc:
         log.exception("package action failed for %s", package)
         raise HTTPException(status_code=500, detail="package action failed") from exc
+
+
+@router.post("/api/apps/{package}/performance")
+def app_performance(
+    package: str,
+    body: AppPerformanceRequest,
+    apps: AppsDep,
+    manager: ManagerDep,
+):
+    if manager.state().get("status") == "recording":
+        raise HTTPException(
+            status_code=409,
+            detail="cannot change packages while a recording is in progress",
+        )
+    try:
+        return apps.set_game_override(package, body.fps, body.downscale, confirm=body.confirm)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AdbError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("package performance override failed for %s", package)
+        raise HTTPException(status_code=500, detail="package performance override failed") from exc

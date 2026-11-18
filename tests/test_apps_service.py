@@ -16,6 +16,8 @@ class FakeAppsAdb:
         self.root_available = root_available
         self.shell_calls = []
         self.run_calls = []
+        self.game_modes = "com.example.app current mode: standard, available game modes: [standard,custom]"
+        self.game_configs = "No intervention found for package com.example.app"
 
     def shell(self, script, timeout=25.0):
         self.shell_calls.append(script)
@@ -27,6 +29,10 @@ class FakeAppsAdb:
             return "1024 /data/app/~~abc/com.example.app-1\n512 /system/priv-app/SystemUI/SystemUI.apk\n"
         if script.startswith("dumpsys package"):
             return self.detail_text
+        if script.startswith("cmd game list-modes "):
+            return self.game_modes
+        if script.startswith("cmd game list-configs "):
+            return self.game_configs
         if script.startswith("pm path"):
             return "package:/data/app/~~abc/com.example.app-1/base.apk\n"
         if script == "su -c id":
@@ -39,6 +45,27 @@ class FakeAppsAdb:
 
     def run(self, args, timeout=25.0):
         self.run_calls.append(args)
+        command = args[-1]
+        if command.startswith("cmd game set "):
+            parts = command.split()
+            fps = parts[parts.index("--fps") + 1] if "--fps" in parts else "disable"
+            downscale = parts[parts.index("--downscale") + 1] if "--downscale" in parts else "disable"
+            scaling = downscale if downscale != "disable" else "-1.0"
+            fps_text = fps if fps != "disable" else ""
+            self.game_modes = "com.example.app current mode: custom, available game modes: [standard,custom]"
+            self.game_configs = (
+                "com.example.app interventions: \n"
+                "[Name:com.example.app Modes: {4=[Game Mode:4,Scaling:"
+                + scaling
+                + ",Use Angle:false,Fps:"
+                + fps_text
+                + ",Loading Boost Duration:-1]}]"
+            )
+            return SimpleNamespace(stdout="Set custom mode intervention config for game\n", stderr="", returncode=0)
+        if command.startswith("cmd game reset "):
+            self.game_modes = "com.example.app current mode: standard, available game modes: [standard,custom]"
+            self.game_configs = "No intervention found for package com.example.app"
+            return SimpleNamespace(stdout="", stderr="", returncode=0)
         if self.fail_action:
             return SimpleNamespace(stdout="Failure [DELETE_FAILED_INTERNAL_ERROR]", stderr="", returncode=1)
         return SimpleNamespace(stdout="Success", stderr="", returncode=0)
@@ -123,6 +150,59 @@ def test_apps_service_batches_size_reads(tmp_path):
     service._add_sizes(adb, rows)
     commands = [script for script in adb.shell_calls if script.startswith("du -sk")]
     assert len(commands) == 3
+
+
+def test_apps_service_game_override(tmp_path):
+    adb = FakeAppsAdb()
+    service = _service(tmp_path, adb)
+    detail = service.detail("com.example.app")
+    assert detail["game"]["supported"] is True
+    assert detail["game"]["fps"] == "disable"
+
+    result = service.set_game_override("com.example.app", "90", "0.8", confirm=True)
+    assert result["ok"] is True
+    assert result["command"] == "cmd game set --fps 90 --downscale 0.8 com.example.app"
+    assert result["game"]["fps"] == "90"
+    assert result["game"]["downscale"] == "0.8"
+    log_path = tmp_path / "reports" / "app-actions.jsonl"
+    entry = json.loads(log_path.read_text(encoding="utf-8").strip())
+    assert entry["action"] == "performance"
+    assert entry["fps"] == "90"
+    assert entry["downscale"] == "0.8"
+
+    result = service.set_game_override("com.example.app", "disable", "0.8", confirm=True)
+    assert result["ok"] is True
+    assert result["command"] == "cmd game set --downscale 0.8 com.example.app"
+    assert result["game"]["fps"] == "disable"
+    assert result["game"]["downscale"] == "0.8"
+
+    result = service.set_game_override("com.example.app", "90", "disable", confirm=True)
+    assert result["ok"] is True
+    assert result["command"] == "cmd game set --fps 90 --downscale disable com.example.app"
+    assert result["game"]["fps"] == "90"
+    assert result["game"]["downscale"] == "disable"
+
+    result = service.set_game_override("com.example.app", "disable", "disable", confirm=True)
+    assert result["ok"] is True
+    assert result["command"] == "cmd game reset com.example.app"
+    assert result["game"]["fps"] == "disable"
+
+    with pytest.raises(ValueError):
+        service.set_game_override("com.example.app", "90", "0.8", confirm=False)
+    with pytest.raises(ValueError):
+        service.set_game_override("com.example.app", "72", "0.8", confirm=True)
+    with pytest.raises(ValueError):
+        service.set_game_override("com.example.app", "90", "0.55", confirm=True)
+    with pytest.raises(PermissionError):
+        service.set_game_override("com.android.systemui", "90", "0.8", confirm=True)
+
+
+def test_apps_service_game_override_unsupported(tmp_path):
+    adb = FakeAppsAdb()
+    adb.game_modes = "com.example.app current mode: unsupported, available game modes: []"
+    service = _service(tmp_path, adb)
+    with pytest.raises(ValueError, match="not supported"):
+        service.set_game_override("com.example.app", "90", "0.8", confirm=True)
 
 
 def test_apps_service_rejects_invalid_package_names(tmp_path):

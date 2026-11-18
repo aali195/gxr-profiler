@@ -39,6 +39,11 @@ def test_tools_hub_contains_diagnostics():
     assert "Disable and remove actions are blocked" in js
     assert "appsCellText" in js
     assert "appsRunningLabel" in js
+    assert "appsPerformanceCard" in js
+    assert "Performance overrides" in js
+    assert "/performance" in js
+    assert "Render scale" in js
+    assert "FPS cap" in js
     assert "processFilterBar" in js
     assert "PROC_FILTERS" in js
     assert 'sort: { key: "cpu_pct", dir: -1 }' in js
@@ -48,6 +53,14 @@ def test_tools_hub_contains_diagnostics():
     assert "gpu_mem_kb" in js
     assert "size_kb" in js
     assert "Install size" in js
+    assert "settings-confirm-modal" in js
+    assert "Disable boundary" in js
+    assert "settingselect" in js
+    assert "OLED burn-in" in js
+    assert "Test only" in js
+    assert "Recommended: hide the recording indicator" in js
+    assert 'textEl("span", "badge good", "Recommended")' in js
+    assert "settings-header-sep" in js
 
     start = js.index("const APP_COLUMNS = [")
     columns = js[start : js.index("];", start)]

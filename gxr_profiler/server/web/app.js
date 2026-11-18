@@ -56,6 +56,10 @@ const appsState = {
   query: "", filter: "all", sort: { key: "cpu_pct", dir: -1 },
   selected: null, detail: null, detailError: "", detailLoading: false, detailToken: 0,
   rootDetails: false, actionBusy: false, flash: null,
+  performanceDraft: null, performanceStatus: null,
+};
+const settingsState = {
+  data: null, loaded: false, loading: false, attempted: false, error: "", flash: null, busy: {},
 };
 let activeToolTab = "diagnostics";
 try {
@@ -4830,6 +4834,21 @@ const APP_FILTERS = [
   { id: "disabled", label: "Disabled" },
   { id: "removed", label: "Removed" },
 ];
+const GAME_FPS_OPTIONS = [
+  ["disable", "Off"],
+  ["30", "30 FPS"],
+  ["45", "45 FPS"],
+  ["60", "60 FPS"],
+  ["90", "90 FPS"],
+];
+const GAME_SCALE_OPTIONS = [
+  ["disable", "Off"],
+  ["0.9", "90%"],
+  ["0.8", "80%"],
+  ["0.7", "70%"],
+  ["0.6", "60%"],
+  ["0.5", "50%"],
+];
 const APP_COLUMNS = [
   { key: "package", label: "Package" },
   { key: "kind", label: "Type", width: "110px" },
@@ -4995,6 +5014,8 @@ function selectApp(row) {
   appsState.selected = row;
   appsState.detail = null;
   appsState.detailError = "";
+  appsState.performanceDraft = null;
+  appsState.performanceStatus = null;
   appsState.detailToken += 1;
   renderActiveToolBody();
   openAppsDetailModal();
@@ -5007,6 +5028,8 @@ function closeAppsDetail() {
   appsState.detail = null;
   appsState.detailError = "";
   appsState.detailLoading = false;
+  appsState.performanceDraft = null;
+  appsState.performanceStatus = null;
   closeAppsDetailModal();
   renderActiveToolBody();
 }
@@ -5347,7 +5370,181 @@ function appsDetailCard() {
       card.appendChild(err);
     }
   }
+  const game = appsState.detail && appsState.detail.game;
+  if (game && game.supported && !row.critical) {
+    card.appendChild(appsPerformanceCard(row, game));
+  }
   return card;
+}
+
+function appsPerformanceCard(row, game) {
+  const card = el("section", "appsperf");
+  card.appendChild(el("div", "appsubhead", "Performance overrides"));
+  card.appendChild(textEl(
+    "p",
+    "muted cardnote",
+    "Android Game Mode custom interventions. Restart the app after applying; downscaling only takes effect on the next launch."
+  ));
+  const mode = game.current_mode || "unknown";
+  const available = (game.available_modes || []).join(", ") || "none";
+  card.appendChild(textEl(
+    "p",
+    "muted cardnote",
+    "Current mode: " + mode + " · Available: " + available + " · " + (game.interventions || "No custom intervention")
+  ));
+  const draft = appsState.performanceDraft || {
+    fps: game.fps || "disable",
+    downscale: game.downscale || "disable",
+  };
+  const grid = el("div", "appsperf-grid");
+  const fpsField = el("div", "field");
+  fpsField.appendChild(el("label", null, "FPS cap"));
+  const fps = document.createElement("select");
+  GAME_FPS_OPTIONS.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    fps.appendChild(option);
+  });
+  fps.value = draft.fps;
+  fps.disabled = appsState.actionBusy;
+  fps.onchange = () => {
+    draft.fps = fps.value;
+    appsState.performanceDraft = draft;
+  };
+  fpsField.appendChild(fps);
+  grid.appendChild(fpsField);
+
+  const scaleField = el("div", "field");
+  scaleField.appendChild(el("label", null, "Render scale"));
+  const scale = document.createElement("select");
+  GAME_SCALE_OPTIONS.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    scale.appendChild(option);
+  });
+  scale.value = draft.downscale;
+  scale.disabled = appsState.actionBusy;
+  scale.onchange = () => {
+    draft.downscale = scale.value;
+    appsState.performanceDraft = draft;
+  };
+  scaleField.appendChild(scale);
+  grid.appendChild(scaleField);
+  card.appendChild(grid);
+
+  const actions = el("div", "recordactions");
+  const apply = el("button", "primary", "Apply");
+  apply.type = "button";
+  apply.disabled = appsState.actionBusy;
+  apply.onclick = () => openAppsPerformanceConfirm(row, "apply", draft);
+  const reset = el("button", "toolbtn", "Reset");
+  reset.type = "button";
+  reset.disabled = appsState.actionBusy;
+  reset.onclick = () => openAppsPerformanceConfirm(row, "reset", draft);
+  actions.appendChild(apply);
+  actions.appendChild(reset);
+  card.appendChild(actions);
+
+  if (appsState.performanceStatus) {
+    const status = appsState.performanceStatus;
+    card.appendChild(textEl("p", "appsperf-status " + (status.ok ? "good" : "bad"), status.text));
+  }
+  return card;
+}
+
+function appsGameOverrideCommand(packageName, fps, downscale) {
+  const args = [];
+  if (fps !== "disable") args.push("--fps", fps);
+  if (downscale !== "disable") args.push("--downscale", downscale);
+  else if (fps !== "disable") args.push("--downscale", "disable");
+  if (!args.length) return "cmd game reset " + packageName;
+  return "cmd game set " + args.join(" ") + " " + packageName;
+}
+
+function openAppsPerformanceConfirm(row, mode, draft) {
+  const reset = mode === "reset";
+  const title = reset ? "Reset performance override" : "Apply performance override";
+  closeAppsModal();
+  const dialog = openModal("apps-modal", "", closeAppsModal, title);
+  const head = el("div", "modal-head");
+  head.appendChild(el("h3", null, title));
+  const close = el("button", "toolbtn", "×");
+  close.type = "button";
+  close.title = "Cancel";
+  close.onclick = closeAppsModal;
+  head.appendChild(close);
+  dialog.appendChild(head);
+  dialog.appendChild(textEl("div", "modal-package", row.package));
+  dialog.appendChild(textEl(
+    "p",
+    "modal-desc",
+    reset
+      ? "Remove the custom Game Mode intervention and restore the device configuration."
+      : "Apply the selected FPS cap and render scale to this app's custom Game Mode."
+  ));
+  const command = el("pre", "diag-evidence modal-command");
+  command.textContent = reset
+    ? "cmd game reset " + row.package
+    : appsGameOverrideCommand(row.package, draft.fps, draft.downscale);
+  dialog.appendChild(command);
+  dialog.appendChild(textEl(
+    "p",
+    "modal-warning",
+    "The app must be restarted for the override to take effect. Higher FPS or a larger render scale may increase heat and power use."
+  ));
+  const actions = el("div", "modal-actions");
+  const cancel = el("button", "toolbtn", "Cancel");
+  cancel.type = "button";
+  cancel.onclick = closeAppsModal;
+  const confirm = el("button", "primary", reset ? "Reset override" : "Apply override");
+  confirm.type = "button";
+  confirm.disabled = appsState.actionBusy;
+  confirm.onclick = () => {
+    if (confirm.disabled) return;
+    confirm.disabled = true;
+    runAppsPerformance(
+      row,
+      reset ? "disable" : draft.fps,
+      reset ? "disable" : draft.downscale
+    );
+  };
+  actions.appendChild(cancel);
+  actions.appendChild(confirm);
+  dialog.appendChild(actions);
+  document.addEventListener("keydown", appsModalKeyHandler);
+}
+
+async function runAppsPerformance(row, fps, downscale) {
+  appsState.actionBusy = true;
+  appsState.performanceStatus = null;
+  try {
+    const result = await jpost(
+      "/api/apps/" + encodeURIComponent(row.package) + "/performance",
+      { fps, downscale, confirm: true }
+    );
+    appsState.performanceStatus = {
+      ok: !!result.ok,
+      text: (result.ok ? "Override applied." : "Override failed.")
+        + (result.output ? "\n" + result.output : ""),
+    };
+    appsState.performanceDraft = null;
+    await appsFetch();
+    if (appsState.selected && appsState.selected.package === row.package) {
+      await appsFetchDetail(row.package, appsState.rootDetails);
+    }
+  } catch (e) {
+    appsState.performanceStatus = { ok: false, text: e.message || String(e) };
+  } finally {
+    appsState.actionBusy = false;
+    closeAppsModal();
+    if (appsState.selected && appsState.selected.package === row.package) {
+      renderAppsDetailModal();
+    } else {
+      renderActiveToolBody();
+    }
+  }
 }
 
 function appsTableCard() {
@@ -5513,10 +5710,339 @@ function renderAppsTool(host) {
   host.appendChild(appsTableCard());
 }
 
+function ensureSettingsLoaded() {
+  if (settingsState.loaded || settingsState.loading || settingsState.attempted) return;
+  settingsState.attempted = true;
+  settingsState.loading = true;
+  settingsState.error = "";
+  settingsFetch();
+}
+
+async function settingsFetch() {
+  try {
+    const data = await jget("/api/settings");
+    settingsState.data = data || {};
+    settingsState.loaded = true;
+    settingsState.error = "";
+  } catch (e) {
+    settingsState.error = e.message || String(e);
+  } finally {
+    settingsState.loading = false;
+    if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
+  }
+}
+
+function settingsRefresh() {
+  if (settingsState.loading) return;
+  settingsState.loading = true;
+  settingsState.error = "";
+  settingsState.flash = null;
+  if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
+  settingsFetch();
+}
+
+async function settingsToggle(item, enabled) {
+  if (settingsState.busy[item.id]) return;
+  settingsState.busy[item.id] = true;
+  if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
+  try {
+    const result = await jpost("/api/settings/" + encodeURIComponent(item.id), { enabled });
+    let text = (result.ok ? "Setting updated." : "Setting applied, but verification failed.")
+      + (result.output ? "\n" + result.output : "");
+    if (result.ok && item.id === "xr_perf_metrics" && enabled) {
+      text += "\nReminder: turn the performance overlay off when finished to avoid OLED burn-in.";
+    }
+    settingsState.flash = { ok: !!result.ok, text };
+  } catch (e) {
+    settingsState.flash = { ok: false, text: e.message || String(e) };
+  } finally {
+    delete settingsState.busy[item.id];
+    await settingsFetch();
+  }
+}
+
+async function settingsSetValue(item, value) {
+  if (settingsState.busy[item.id] || value === (item.value || "")) return;
+  settingsState.busy[item.id] = true;
+  if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
+  try {
+    const result = await jpost("/api/settings/" + encodeURIComponent(item.id), { value });
+    settingsState.flash = {
+      ok: !!result.ok,
+      text: (result.ok ? "Setting updated to " + (result.label || value) + "." : "Setting applied, but verification failed.")
+        + (result.output ? "\n" + result.output : ""),
+    };
+  } catch (e) {
+    settingsState.flash = { ok: false, text: e.message || String(e) };
+  } finally {
+    delete settingsState.busy[item.id];
+    await settingsFetch();
+  }
+}
+
+function settingsRequestToggle(item, enabled) {
+  if (item.confirm_on_disable && !enabled) {
+    settingsConfirmDisable(item);
+    return;
+  }
+  settingsToggle(item, enabled);
+}
+
+function settingsModalKeyHandler(event) {
+  if (event.key === "Escape") closeSettingsConfirm();
+}
+
+function closeSettingsConfirm() {
+  closeModal("settings-confirm-modal");
+  document.removeEventListener("keydown", settingsModalKeyHandler);
+}
+
+function settingsConfirmDisable(item) {
+  closeSettingsConfirm();
+  const dialog = openModal("settings-confirm-modal", "", closeSettingsConfirm, "Disable " + item.label);
+  const head = el("div", "modal-head");
+  head.appendChild(el("h3", null, "Disable " + item.label + "?"));
+  const close = el("button", "toolbtn", "?");
+  close.type = "button";
+  close.title = "Cancel";
+  close.onclick = closeSettingsConfirm;
+  head.appendChild(close);
+  dialog.appendChild(head);
+  dialog.appendChild(textEl("p", "modal-desc", item.warning || "This is a safety-related change."));
+  const command = el("pre", "diag-evidence modal-command");
+  command.textContent = (item.commands && item.commands.revert && item.commands.revert[0]) || "";
+  dialog.appendChild(command);
+  const actions = el("div", "modal-actions");
+  const cancel = el("button", "toolbtn", "Cancel");
+  cancel.type = "button";
+  cancel.onclick = closeSettingsConfirm;
+  const confirm = el("button", "primary danger", "Disable boundary");
+  confirm.type = "button";
+  confirm.onclick = () => {
+    closeSettingsConfirm();
+    settingsToggle(item, false);
+  };
+  actions.appendChild(cancel);
+  actions.appendChild(confirm);
+  dialog.appendChild(actions);
+  document.addEventListener("keydown", settingsModalKeyHandler);
+}
+
+function settingsChoiceLabel(item) {
+  const option = (item.options || []).find(entry => entry.value === item.value);
+  return option ? option.label : "Unknown";
+}
+
+function settingsDefaultLabel(item) {
+  if (item.default_label) return item.default_label;
+  return item.default_enabled ? "On" : "Off";
+}
+
+function settingsStatusLabel(item) {
+  if (item.kind === "choice") return settingsChoiceLabel(item);
+  return ({
+    active: "On",
+    inactive: "Off",
+    partial: "Needs reapply",
+    unavailable: "Not installed",
+    unknown: "Unknown",
+  })[item.state] || "Unknown";
+}
+
+function settingsStatusClass(item) {
+  if (item.kind === "choice") return item.state === "active" ? "good" : "bad";
+  return item.state === "active" ? "good" : item.state === "inactive" ? "idle" : item.state === "partial" ? "sev-warning" : "bad";
+}
+
+function settingsPersistenceLabel(item) {
+  return ({
+    persistent: "Survives reboots",
+    until_reboot: "Until reboot",
+    module: "Requires module/service",
+  })[item.persistence] || "Persistence unknown";
+}
+
+function settingsPersistenceClass(item) {
+  return item.persistence === "persistent" ? "good" : item.persistence === "until_reboot" ? "sev-warning" : "bad";
+}
+
+function settingsHeaderCard() {
+  const card = el("section", "card");
+  const head = el("div", "appstoolhead");
+  const copy = el("div");
+  copy.appendChild(el("h3", null, "Settings"));
+  copy.appendChild(el("p", "muted cardnote", "Device settings here are not tied to a run; changes are applied immediately and can be reverted."));
+  copy.appendChild(el("p", "muted cardnote", "Recommended: hide the recording indicator (green dot) under Privacy indicators."));
+  const checked = settingsState.data && settingsState.data.checked_at;
+  copy.appendChild(el("p", "muted cardnote", checked
+    ? "Status checked " + fmtStamp(Date.parse(checked), true) + "."
+    : (settingsState.loading ? "Checking current setting values..." : "No status snapshot loaded.")));
+  head.appendChild(copy);
+  const refresh = el("button", "toolbtn", settingsState.loading ? "Checking..." : "Refresh");
+  refresh.type = "button";
+  refresh.disabled = settingsState.loading;
+  refresh.onclick = settingsRefresh;
+  head.appendChild(refresh);
+  card.appendChild(head);
+  card.appendChild(el("div", "settings-header-sep"));
+  return card;
+}
+
+function settingsFlashCard() {
+  const card = el("section", "card appflash " + (settingsState.flash.ok ? "good" : "bad"));
+  const head = el("div", "appstoolhead");
+  head.appendChild(el("h3", null, "Last change"));
+  const dismiss = el("button", "toolbtn", "Dismiss");
+  dismiss.type = "button";
+  dismiss.onclick = () => { settingsState.flash = null; renderActiveToolBody(); };
+  head.appendChild(dismiss);
+  card.appendChild(head);
+  const pre = el("pre", "diag-evidence appflashout");
+  pre.textContent = settingsState.flash.text || "";
+  card.appendChild(pre);
+  return card;
+}
+
+function settingsErrorCard() {
+  const card = el("section", "card");
+  card.appendChild(el("h3", null, "Settings unavailable"));
+  card.appendChild(textEl("p", "muted", settingsState.error));
+  const retry = el("button", "toolbtn", "Retry");
+  retry.type = "button";
+  retry.onclick = settingsRefresh;
+  card.appendChild(retry);
+  return card;
+}
+
+function settingsRow(item) {
+  const row = el("div", "settingrow" + (item.state === "partial" ? " partial" : ""));
+  const main = el("div", "settingmain");
+  const title = el("div", "settingtitle");
+  title.appendChild(textEl("h4", null, item.label));
+  if (item.recommended) title.appendChild(textEl("span", "badge good", "Recommended"));
+  title.appendChild(textEl("span", "badge " + settingsStatusClass(item), settingsStatusLabel(item)));
+  const persistence = textEl("span", "badge " + settingsPersistenceClass(item), settingsPersistenceLabel(item));
+  if (item.persistence_note) persistence.title = item.persistence_note;
+  title.appendChild(persistence);
+  if (item.root_required) title.appendChild(textEl("span", "badge sev-warning", "Root required"));
+  main.appendChild(title);
+  main.appendChild(textEl("p", "settingdesc", item.description));
+  if (item.warning) main.appendChild(textEl("p", "settingwarning", item.warning));
+  if (item.error) main.appendChild(textEl("p", "settingerror", item.error));
+  const details = item.details || [];
+  const meta = el("div", "settingmeta");
+  meta.appendChild(textEl("span", "settingmetaitem", "Default: " + settingsDefaultLabel(item)));
+  details.forEach(detail => {
+    meta.appendChild(textEl("span", "settingmetaitem", detail.label + ": " + detail.value));
+  });
+  main.appendChild(meta);
+  if (item.commands) {
+    const commandBox = document.createElement("details");
+    commandBox.className = "settingcommands";
+    const summary = document.createElement("summary");
+    summary.textContent = "Commands";
+    commandBox.appendChild(summary);
+    const lines = [
+      "Read:", ...(item.commands.read || []).map(line => "  " + line),
+    ];
+    if (item.kind === "choice") {
+      (item.options || []).forEach(option => {
+        lines.push(option.label + ":", ...(option.commands || []).map(line => "  " + line));
+      });
+    } else {
+      lines.push(
+        "Apply:", ...(item.commands.apply || []).map(line => "  " + line),
+        "Revert:", ...(item.commands.revert || []).map(line => "  " + line),
+      );
+    }
+    const pre = document.createElement("pre");
+    pre.textContent = lines.join("\n");
+    commandBox.appendChild(pre);
+    main.appendChild(commandBox);
+  }
+  row.appendChild(main);
+
+  const controls = el("div", "settingcontrols");
+  if (item.kind === "choice") {
+    const select = document.createElement("select");
+    select.className = "settingselect";
+    select.disabled = !!settingsState.busy[item.id] || item.state === "unavailable";
+    select.setAttribute("aria-label", item.label);
+    const current = item.value || "";
+    const hasCurrent = (item.options || []).some(option => option.value === current);
+    if (!hasCurrent) {
+      const unknown = document.createElement("option");
+      unknown.value = current;
+      unknown.textContent = current ? "Unknown (" + current + ")" : "Unknown";
+      select.appendChild(unknown);
+    }
+    (item.options || []).forEach(option => {
+      const node = document.createElement("option");
+      node.value = option.value;
+      node.textContent = option.label;
+      select.appendChild(node);
+    });
+    select.value = current;
+    select.onchange = () => settingsSetValue(item, select.value);
+    controls.appendChild(select);
+  } else {
+    const checked = !!item.enabled;
+    const toggle = el("button", "settingswitch" + (checked ? " on" : ""));
+    toggle.type = "button";
+    toggle.setAttribute("role", "switch");
+    toggle.setAttribute("aria-checked", String(checked));
+    toggle.setAttribute("aria-label", (checked ? "Disable " : "Enable ") + item.label);
+    toggle.title = checked ? "Turn off" : "Turn on";
+    toggle.disabled = !!settingsState.busy[item.id] || item.state === "unavailable";
+    toggle.onclick = () => settingsRequestToggle(item, !checked);
+    controls.appendChild(toggle);
+    if (item.state === "partial") {
+      const reapply = el("button", "toolbtn", "Reapply");
+      reapply.type = "button";
+      reapply.disabled = !!settingsState.busy[item.id];
+      reapply.title = "Reapply this setting";
+      reapply.onclick = () => settingsToggle(item, true);
+      controls.appendChild(reapply);
+    }
+  }
+  row.appendChild(controls);
+  return row;
+}
+
+function settingsSectionCard(section) {
+  const card = el("section", "card settings-section");
+  const title = el("div", "settings-summarytitle");
+  title.appendChild(el("h3", null, section.title));
+  if (section.test_only) title.appendChild(textEl("span", "badge sev-warning", "Test only"));
+  card.appendChild(title);
+  if (section.description) card.appendChild(el("p", "muted cardnote", section.description));
+  const list = el("div", "settings-list");
+  (section.settings || []).forEach(item => list.appendChild(settingsRow(item)));
+  card.appendChild(list);
+  return card;
+}
+
+function renderSettingsTool(host) {
+  host.innerHTML = "";
+  if (OFFLINE) {
+    const card = el("section", "card");
+    card.appendChild(el("h3", null, "Settings"));
+    card.appendChild(el("div", "muted", "Settings are not available in offline reports."));
+    host.appendChild(card);
+    return;
+  }
+  ensureSettingsLoaded();
+  host.appendChild(settingsHeaderCard());
+  if (settingsState.flash) host.appendChild(settingsFlashCard());
+  if (settingsState.error) host.appendChild(settingsErrorCard());
+  const sections = (settingsState.data && settingsState.data.sections) || [];
+  sections.forEach(section => host.appendChild(settingsSectionCard(section)));
+}
 function toolDefinitions() {
   return [
     { id: "diagnostics", label: "Diagnostics", render: renderDiagnosticsTool },
     { id: "apps", label: "Apps", render: renderAppsTool },
+    { id: "settings", label: "Settings", render: renderSettingsTool },
   ];
 }
 
@@ -5548,6 +6074,7 @@ function setToolTab(id) {
     appsState.detail = null;
   }
   if (id !== "diagnostics") stopDebugPolling();
+  if (id === "settings") settingsRefresh();
   const bar = document.getElementById("tools-inner-tabs");
   if (bar) {
     bar.querySelectorAll(".innertab").forEach(btn => {
@@ -5682,6 +6209,7 @@ function setTab(tab) {
   else if (tab === "run") renderRunView();
   else if (tab === "compare") renderCompareView();
   else if (tab === "tools") {
+    if (activeToolTab === "settings") settingsRefresh();
     renderToolsView();
     if (activeToolTab === "diagnostics") refreshDebugStatus();
   }
@@ -5995,6 +6523,3 @@ async function init() {
 
 window.addEventListener("resize", () => { updateStickyOffsets(); chartRegistry.forEach(c => { try { c.resize(); } catch (e) {} }); });
 init();
-
-
-

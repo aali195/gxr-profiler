@@ -98,6 +98,13 @@ APP_ACTION_SPECS = {
 APP_ACTIONS = tuple(APP_ACTION_SPECS)
 APP_DESTRUCTIVE_ACTIONS = frozenset(name for name, spec in APP_ACTION_SPECS.items() if spec["destructive"])
 
+GAME_FPS_VALUES = ("30", "45", "60", "90", "disable")
+GAME_DOWNSCALE_VALUES = ("0.5", "0.6", "0.7", "0.8", "0.9", "disable")
+
+GAME_MODE_RE = re.compile(r"current mode:\s*([A-Za-z]+),\s*available game modes:\s*\[([^\]]*)\]")
+GAME_SCALING_RE = re.compile(r"Scaling:\s*([0-9.]+)")
+GAME_FPS_RE = re.compile(r"Fps:\s*([0-9]+)")
+
 CRITICAL_EXACT = frozenset(
     {
         "android",
@@ -155,6 +162,76 @@ def validate_package_name(package: str) -> str:
     if not name or len(name) > 255 or not PACKAGE_RE.match(name):
         raise ValueError("invalid package name")
     return name
+
+
+def validate_game_fps(value: str) -> str:
+    if value not in GAME_FPS_VALUES:
+        raise ValueError(f"invalid game FPS value: {value}")
+    return value
+
+
+def validate_game_downscale(value: str) -> str:
+    if value not in GAME_DOWNSCALE_VALUES:
+        raise ValueError(f"invalid game downscale value: {value}")
+    return value
+
+
+def build_game_override_command(package: str, fps: str, downscale: str) -> str:
+    package = validate_package_name(package)
+    fps = validate_game_fps(fps)
+    downscale = validate_game_downscale(downscale)
+    args = []
+    if fps != "disable":
+        args.extend(["--fps", fps])
+    if downscale != "disable":
+        args.extend(["--downscale", downscale])
+    elif fps != "disable":
+        # The game command preserves the previous scale when the flag is omitted.
+        args.extend(["--downscale", "disable"])
+    if not args:
+        return f"cmd game reset {shlex.quote(package)}"
+    return f"cmd game set {' '.join(args)} {shlex.quote(package)}"
+
+
+def parse_game_info(modes_text: str, configs_text: str = "") -> dict:
+    raw = " ".join((modes_text or "").split())
+    match = GAME_MODE_RE.search(raw)
+    if not match:
+        return {
+            "supported": False,
+            "current_mode": "",
+            "available_modes": [],
+            "fps": "disable",
+            "downscale": "disable",
+            "interventions": "No custom intervention",
+        }
+    current_mode = match.group(1).lower()
+    available_modes = [item.strip().lower() for item in match.group(2).split(",") if item.strip()]
+    fps_match = GAME_FPS_RE.search(configs_text or "")
+    scale_match = GAME_SCALING_RE.search(configs_text or "")
+    fps = fps_match.group(1) if fps_match else "disable"
+    downscale = "disable"
+    if scale_match:
+        try:
+            downscale = f"{float(scale_match.group(1)):g}"
+        except ValueError:
+            downscale = scale_match.group(1)
+    parts = []
+    if fps != "disable":
+        parts.append(f"FPS {fps}")
+    if downscale != "disable":
+        try:
+            parts.append(f"render scale {float(downscale) * 100:g}%")
+        except ValueError:
+            parts.append(f"render scale {downscale}")
+    return {
+        "supported": "custom" in available_modes,
+        "current_mode": current_mode,
+        "available_modes": available_modes,
+        "fps": fps,
+        "downscale": downscale,
+        "interventions": ", ".join(parts) or "No custom intervention",
+    }
 
 
 def is_critical_package(package: str) -> bool:

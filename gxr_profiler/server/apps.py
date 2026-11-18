@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import shlex
 import threading
 from collections.abc import Callable
-from datetime import UTC, datetime
 from pathlib import Path
 
 from ..core.adb import AdbClient, AdbError, RealAdb, resolve_serial
@@ -19,23 +17,39 @@ from ..core.apps import (
     PACKAGE_FALLBACK_SCRIPT,
     build_action_command,
     build_app_rows,
+    build_game_override_command,
     interpret_action_result,
     is_critical_package,
     merge_package_fallback,
     parse_du,
+    parse_game_info,
     parse_package_detail,
     parse_package_lines,
     parse_package_paths,
     size_targets_for_rows,
     summarize,
+    validate_game_downscale,
+    validate_game_fps,
     validate_package_name,
 )
 from ..core.parsers.util import split_sections
-from ..core.paths import default_reports_dir, ensure_writable_dir
+from ..core.paths import default_reports_dir
+from .action_log import append_action_log
 
 log = logging.getLogger(__name__)
 
 SIZE_BATCH_SIZE = 64
+
+_GAME_FAILURE_MARKERS = (
+    "error",
+    "exception",
+    "failure",
+    "failed",
+    "invalid",
+    "not supported",
+    "unsupported",
+    "not found",
+)
 
 
 class AppsService:
@@ -122,10 +136,28 @@ class AppsService:
                 "package": package,
                 "detail": parse_package_detail(text, paths),
                 "critical": is_critical_package(package),
+                "game": self._game_detail(adb, package),
             }
             if root:
                 result["root"] = self._root_detail(adb, package)
             return result
+
+    def _game_detail(self, adb, package: str) -> dict:
+        try:
+            modes_text = adb.shell("cmd game list-modes " + shlex.quote(package), timeout=10.0)
+            configs_text = adb.shell("cmd game list-configs " + shlex.quote(package), timeout=10.0)
+        except Exception as exc:
+            log.debug("game mode read failed for %s", package, exc_info=True)
+            return {
+                "supported": False,
+                "current_mode": "",
+                "available_modes": [],
+                "fps": "disable",
+                "downscale": "disable",
+                "interventions": "No custom intervention",
+                "error": str(exc),
+            }
+        return parse_game_info(modes_text, configs_text)
 
     def _root_detail(self, adb, package: str) -> dict:
         info = {
@@ -199,18 +231,55 @@ class AppsService:
             self._log_action(result)
             return result
 
-    def _log_action(self, result: dict) -> None:
-        try:
-            ensure_writable_dir(self.reports_dir)
-            path = Path(self.reports_dir) / "app-actions.jsonl"
-            entry = {
-                "at": datetime.now(UTC).isoformat(),
-                **{
-                    key: result.get(key)
-                    for key in ("ok", "package", "action", "command", "output", "kind", "state_before")
-                },
+    def set_game_override(self, package: str, fps: str, downscale: str, confirm: bool = False) -> dict:
+        package = validate_package_name(package)
+        fps = validate_game_fps(fps)
+        downscale = validate_game_downscale(downscale)
+        if not confirm:
+            raise ValueError("confirmation is required")
+        if is_critical_package(package):
+            raise PermissionError("critical system packages cannot be performance-tuned")
+        with self.lock:
+            adb = self._adb()
+            game = self._game_detail(adb, package)
+            if not game.get("supported"):
+                raise ValueError("custom game mode interventions are not supported for this package")
+            command = build_game_override_command(package, fps, downscale)
+            proc = adb.run(["shell", command], timeout=20.0)
+            output = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
+            output = output.strip()
+            failed = proc.returncode != 0 or any(marker in output.lower() for marker in _GAME_FAILURE_MARKERS)
+            after = self._game_detail(adb, package)
+            ok = not failed and after.get("fps") == fps and after.get("downscale") == downscale
+            if not ok and not output:
+                output = "The device did not apply the requested game mode."
+            result = {
+                "ok": ok,
+                "package": package,
+                "action": "performance",
+                "command": command,
+                "output": output,
+                "fps": fps,
+                "downscale": downscale,
+                "game": after,
             }
-            with path.open("a", encoding="utf-8", newline="\n") as fh:
-                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
-        except Exception:
-            log.warning("could not write app action log", exc_info=True)
+            self._log_action(result)
+            return result
+
+    def _log_action(self, result: dict) -> None:
+        keys = (
+            "ok",
+            "package",
+            "action",
+            "command",
+            "output",
+            "kind",
+            "state_before",
+            "fps",
+            "downscale",
+        )
+        append_action_log(
+            self.reports_dir,
+            "app-actions.jsonl",
+            {key: result.get(key) for key in keys},
+        )

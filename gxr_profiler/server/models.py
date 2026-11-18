@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from ..core.apps import APP_ACTIONS
+from ..core.apps import APP_ACTIONS, GAME_DOWNSCALE_VALUES, GAME_FPS_VALUES
 from ..core.models import CAPTURE_PROFILES, RunConfig, apply_profile
 
 
@@ -88,6 +88,37 @@ class AppActionRequest(BaseModel):
         if value not in APP_ACTIONS:
             raise ValueError(f"unknown app action: {value}")
         return value
+
+
+class AppPerformanceRequest(BaseModel):
+    fps: str = "disable"
+    downscale: str = "disable"
+    confirm: bool = False
+
+    @field_validator("fps")
+    @classmethod
+    def validate_fps(cls, value: str) -> str:
+        if value not in GAME_FPS_VALUES:
+            raise ValueError(f"invalid game FPS value: {value}")
+        return value
+
+    @field_validator("downscale")
+    @classmethod
+    def validate_downscale(cls, value: str) -> str:
+        if value not in GAME_DOWNSCALE_VALUES:
+            raise ValueError(f"invalid game downscale value: {value}")
+        return value
+
+
+class SettingUpdate(BaseModel):
+    enabled: bool | None = None
+    value: str | None = None
+
+    @model_validator(mode="after")
+    def validate_one_value(self):
+        if (self.enabled is None) == (self.value is None):
+            raise ValueError("provide exactly one of enabled or value")
+        return self
 
 
 class RecordStatus(BaseModel):

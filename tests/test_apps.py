@@ -3,12 +3,16 @@ import pytest
 from gxr_profiler.core.apps import (
     APP_ACTION_SPECS,
     APP_ACTIONS,
+    GAME_DOWNSCALE_VALUES,
+    GAME_FPS_VALUES,
     build_action_command,
     build_app_rows,
+    build_game_override_command,
     interpret_action_result,
     is_critical_package,
     merge_package_fallback,
     parse_du,
+    parse_game_info,
     parse_package_detail,
     parse_package_lines,
     parse_package_paths,
@@ -157,6 +161,44 @@ def test_parse_package_detail():
     assert detail["user_states"][0]["installed"] is True
     assert detail["user_states"][0]["enabled"] == 0
     assert detail["apk_paths"] == ["/data/app/base.apk"]
+
+
+def test_parse_game_info_and_commands():
+    info = parse_game_info(
+        "com.foo current mode: custom, available game modes: [standard,custom]",
+        "com.foo interventions: \n"
+        "[Name:com.foo Modes: {4=[Game Mode:4,Scaling:0.8,Use Angle:false,Fps:90,"
+        "Loading Boost Duration:-1]}]",
+    )
+    assert info["supported"] is True
+    assert info["current_mode"] == "custom"
+    assert info["available_modes"] == ["standard", "custom"]
+    assert info["fps"] == "90"
+    assert info["downscale"] == "0.8"
+    assert "FPS 90" in info["interventions"]
+    assert "80%" in info["interventions"]
+
+    assert build_game_override_command("com.foo", "90", "0.8") == "cmd game set --fps 90 --downscale 0.8 com.foo"
+    assert build_game_override_command("com.foo", "disable", "0.8") == "cmd game set --downscale 0.8 com.foo"
+    assert (
+        build_game_override_command("com.foo", "90", "disable") == "cmd game set --fps 90 --downscale disable com.foo"
+    )
+    assert build_game_override_command("com.foo", "disable", "disable") == "cmd game reset com.foo"
+
+    unsupported = parse_game_info(
+        "com.foo current mode: unsupported, available game modes: []",
+        "No intervention found for package com.foo",
+    )
+    assert unsupported["supported"] is False
+    assert unsupported["fps"] == "disable"
+    assert unsupported["downscale"] == "disable"
+
+    assert "disable" in GAME_FPS_VALUES
+    assert "0.8" in GAME_DOWNSCALE_VALUES
+    with pytest.raises(ValueError):
+        build_game_override_command("com.foo", "72", "0.8")
+    with pytest.raises(ValueError):
+        build_game_override_command("com.foo", "90", "0.55")
 
 
 def test_validate_package_name_and_critical_packages():

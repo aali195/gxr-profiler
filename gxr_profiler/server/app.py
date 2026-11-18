@@ -23,7 +23,8 @@ from .apps import AppsService
 from .debug import DebugManager
 from .export import ExportService, make_js_api
 from .recording import RecordManager
-from .routers import apps, debug, record, report, runs, spec
+from .routers import apps, debug, record, report, runs, settings, spec
+from .settings import SettingsService
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 
@@ -52,6 +53,7 @@ def create_app(runs_dir: str | None = None, serial: str | None = None) -> FastAP
     app.state.manager = RecordManager(runs_dir, serial)
     app.state.debug = DebugManager(serial, os.path.join(default_reports_dir(), "debug"))
     app.state.apps = AppsService(serial)
+    app.state.settings = SettingsService(serial)
 
     app.include_router(spec.router)
     app.include_router(runs.router)
@@ -59,6 +61,7 @@ def create_app(runs_dir: str | None = None, serial: str | None = None) -> FastAP
     app.include_router(report.router)
     app.include_router(debug.router)
     app.include_router(apps.router)
+    app.include_router(settings.router)
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
     @app.middleware("http")

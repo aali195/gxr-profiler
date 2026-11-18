@@ -29,7 +29,7 @@ gxr_profiler/
   capture/   Recorder lifecycle, logcat stream, pollers, media/process samplers, meta/writer
   runs/      RunStore: list/load/rename/delete runs
   report/    chart spec, series shaping, self-contained offline app export
-  server/    app factory, deps, recording manager, diagnostics/apps services, export service, routers/, ECharts SPA
+  server/    app factory, deps, recording manager, diagnostics/apps/settings services, export service, routers/, ECharts SPA
 packaging/   PyInstaller onefile spec + entry point
 tests/       pytest suite with a FakeAdb
 ```
@@ -44,7 +44,7 @@ python -m pytest -q
 
 The tests use a fake ADB device and do not require a connected headset. `pytest` covers parsers,
 recording/storage, the web routes, export behaviour, package parsing/actions and UI asset checks.
-The Apps tests use fake `pm`/`dumpsys` output and never touch a real device.
+The Apps and Settings tests use fake `pm`/`dumpsys`/`device_config` output and never touch a real device.
 
 ## Building the executables
 
@@ -88,4 +88,3 @@ The `release` job runs only for `v*` tags after tests pass. It:
 5. Creates or updates the GitHub release using the tag name.
 
 Create a release by pushing a tag such as `v0.3.0`.
-

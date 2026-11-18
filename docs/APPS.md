@@ -99,6 +99,33 @@ The action buttons are only offered when the package state supports them. The ba
 re-validates the package and action before running anything, and rejects destructive actions
 for critical packages even if the API is called directly.
 
+## Performance overrides (Game Mode)
+
+For packages that support Android game modes, the detail dialog also shows **Performance
+overrides**:
+
+```sh
+cmd game list-modes <package>
+cmd game list-configs <package>
+cmd game set --fps 90 --downscale 0.8 <package>
+cmd game reset <package>
+```
+
+- **FPS cap**: 30, 45, 60, 90 or Off.
+- **Render scale**: 90%, 80%, 70%, 60%, 50% or Off.
+- **Apply** sets a custom Game Mode intervention.
+- **Reset** removes the intervention and restores the device configuration.
+
+This uses Android's Game Mode interventions, not a general per-app resolution control. It is only
+offered when `cmd game list-modes` reports `custom` support. On this build that is limited to a
+few titles, such as Beat Saber, Moonlight XR, NBA 2K and Suzerain; most apps report
+`unsupported`.
+
+The render scale is a buffer scale factor, not an exact pixel resolution. The documented FPS
+values do not include 72 Hz. The app must be restarted after applying a downscale. Critical
+packages are read-only for performance changes, and every change is confirmed and appended to
+`reports/apps/app-actions.jsonl`.
+
 ## Confirmation and critical packages
 
 Every action opens a dialog with the package ID, an explanation, and the exact command that

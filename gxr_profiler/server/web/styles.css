@@ -724,6 +724,16 @@ button.pinned-proc-name:hover { text-decoration: underline; }
 .appsdetail-title h3 { margin: 0; overflow-wrap: anywhere; }
 .appsubhead { font-size: var(--fs-sm); color: var(--dim); margin: 12px 0 4px; font-weight: 600; }
 .approotcheck { margin-top: 0; margin-left: auto; font-size: var(--fs-xs); }
+.appsperf { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 12px; }
+.appsperf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.appsperf-grid select { width: 100%; padding: 8px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel2); color: var(--fg); }
+.appsperf .recordactions { margin-top: 12px; }
+.appsperf-status { margin: 10px 0 0; font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.appsperf-status.good { color: var(--good); }
+.appsperf-status.bad { color: var(--bad); }
+@media (max-width: 720px) {
+  .appsperf-grid { grid-template-columns: 1fr; }
+}
 .toolbtn.danger { color: #ffb3a0; border-color: #5a2a22; background: #2a1714; }
 .toolbtn.danger:hover { background: #3a1f1a; }
 .appflash.good { border-left: 4px solid var(--good); }
@@ -759,3 +769,60 @@ button.pinned-proc-name:hover { text-decoration: underline; }
 .appschip.apptotal .appschipv { color: #9fd0ff; }
 
 
+
+/* Settings tool */
+.settings-header-sep { height: 1px; margin: 14px 0 2px; background: var(--border); }
+.settings-section h3 { margin-bottom: 4px; }
+.settings-section .cardnote { margin: 4px 0 14px; }
+.settings-list { display: flex; flex-direction: column; }
+.settingrow {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+  padding: 14px 0; border-top: 1px solid var(--border);
+}
+.settingrow:first-child { border-top: 0; padding-top: 4px; }
+.settingrow.partial { border-left: 3px solid #f0c000; padding-left: 12px; }
+.settingmain { min-width: 0; flex: 1; }
+.settingtitle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.settingtitle h4 { margin: 0; font-size: var(--fs-md); color: var(--fg); }
+.settingtitle .badge { margin-right: 0; }
+.settingdesc { margin: 6px 0 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--fg); }
+.settingwarning {
+  margin: 6px 0 0; font-size: var(--fs-xs); line-height: 1.45; color: var(--dim);
+}
+.settingerror {
+  margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; font-size: var(--fs-sm); line-height: 1.4;
+  border-left: 3px solid #ff5d5d; background: #3a1f1a; color: #ffb3a0;
+}
+.settingmeta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; color: var(--dim); font-size: var(--fs-xs); }
+.settingmetaitem { white-space: nowrap; }
+.settingcommands { margin-top: 8px; font-size: var(--fs-xs); }
+.settingcommands > summary { color: var(--dim); cursor: pointer; user-select: none; }
+.settingcommands > summary:hover { color: var(--fg); }
+.settingcommands pre {
+  max-height: 200px; overflow: auto; margin: 6px 0 0; padding: 8px 10px; border-radius: 6px;
+  background: #0d1117; border: 1px solid var(--border); color: #c9d1d9;
+  font-size: var(--fs-xs); line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.settingcontrols { display: flex; align-items: center; gap: 8px; flex: none; margin-left: 12px; }
+.settingselect {
+  min-width: 190px; max-width: 260px; padding: 7px 9px; border: 1px solid var(--border);
+  border-radius: 7px; background: #1c2230; color: var(--fg); font-size: var(--fs-sm);
+}
+.settingselect:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settingselect:disabled { opacity: .5; cursor: default; }
+.settings-summarytitle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.settings-summarytitle h3 { margin-bottom: 0; }
+.settingswitch {
+  position: relative; width: 44px; height: 24px; padding: 0; flex: none;
+  border: 1px solid var(--border); border-radius: 999px; background: #1c2230; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.settingswitch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 50%; background: #8b949e; transition: left .15s, background .15s;
+}
+.settingswitch.on { background: #1f6f3a; border-color: #2f8f4e; }
+.settingswitch.on::after { left: 22px; background: #7ee2a0; }
+.settingswitch:hover { border-color: #46505f; }
+.settingswitch:focus-visible, .settingrow .toolbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settingswitch:disabled { opacity: .5; cursor: default; }

@@ -24,6 +24,7 @@ class FakeApps:
     def __init__(self):
         self.detail_calls = []
         self.action_calls = []
+        self.performance_calls = []
         self.fail_action = None
 
     def list_packages(self):
@@ -64,6 +65,21 @@ class FakeApps:
         if not confirm:
             raise ValueError("confirmation is required")
         return {"ok": True, "package": package, "action": action, "output": "Success"}
+
+    def set_game_override(self, package, fps, downscale, confirm=False):
+        self.performance_calls.append((package, fps, downscale, confirm))
+        if self.fail_action == "critical":
+            raise PermissionError("critical system packages cannot be performance-tuned")
+        if not confirm:
+            raise ValueError("confirmation is required")
+        return {
+            "ok": True,
+            "package": package,
+            "action": "performance",
+            "command": "cmd game set --fps 90 --downscale 0.8 " + package,
+            "fps": fps,
+            "downscale": downscale,
+        }
 
 
 def _client(tmp_path, status="idle"):
@@ -155,6 +171,74 @@ def test_app_actions_block_critical_packages(tmp_path):
     assert "cannot be disabled or removed" in response.json()["detail"]
 
 
+def test_app_performance_requires_token_and_confirmation(tmp_path):
+    client, fake, _ = _client(tmp_path)
+    headers = {"X-GXR-Profiler-Token": _token(client)}
+
+    assert (
+        client.post(
+            "/api/apps/com.example.app/performance",
+            json={"fps": "90", "downscale": "0.8"},
+        ).status_code
+        == 403
+    )
+    response = client.post(
+        "/api/apps/com.example.app/performance",
+        json={"fps": "90", "downscale": "0.8", "confirm": False},
+        headers=headers,
+    )
+    assert response.status_code == 400
+    assert fake.performance_calls[-1] == ("com.example.app", "90", "0.8", False)
+
+    response = client.post(
+        "/api/apps/com.example.app/performance",
+        json={"fps": "90", "downscale": "0.8", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert fake.performance_calls[-1] == ("com.example.app", "90", "0.8", True)
+
+
+def test_app_performance_rejects_invalid_values_and_recording(tmp_path):
+    client, _, manager = _client(tmp_path)
+    headers = {"X-GXR-Profiler-Token": _token(client)}
+
+    response = client.post(
+        "/api/apps/com.example.app/performance",
+        json={"fps": "72", "downscale": "0.8", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 422
+    response = client.post(
+        "/api/apps/com.example.app/performance",
+        json={"fps": "90", "downscale": "0.55", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+    manager.status = "recording"
+    response = client.post(
+        "/api/apps/com.example.app/performance",
+        json={"fps": "90", "downscale": "0.8", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 409
+
+
+def test_app_performance_blocks_critical_packages(tmp_path):
+    client, fake, _ = _client(tmp_path)
+    headers = {"X-GXR-Profiler-Token": _token(client)}
+    fake.fail_action = "critical"
+    response = client.post(
+        "/api/apps/com.android.systemui/performance",
+        json={"fps": "90", "downscale": "0.8", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 403
+    assert "cannot be performance-tuned" in response.json()["detail"]
+
+
 def test_app_routes_map_adb_errors_to_503(tmp_path):
     client, fake, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
@@ -169,6 +253,16 @@ def test_app_routes_map_adb_errors_to_503(tmp_path):
     response = client.post(
         "/api/apps/com.example.app/action",
         json={"action": "disable", "confirm": True},
+        headers=headers,
+    )
+    assert response.status_code == 503
+
+    fake.set_game_override = lambda package, fps, downscale, confirm=False: (_ for _ in ()).throw(
+        AdbError("no adb device")
+    )
+    response = client.post(
+        "/api/apps/com.example.app/performance",
+        json={"fps": "90", "downscale": "0.8", "confirm": True},
         headers=headers,
     )
     assert response.status_code == 503

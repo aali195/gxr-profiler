@@ -2,7 +2,7 @@
 
 Detailed notes for **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2 (`SXR2230P`) and Adreno 740. All investigation and capture uses read-only commands.
 
-Quick start, screenshots and the packaged UI are in the root [README](../README.md). CLI usage is in [CLI.md](CLI.md), the user-facing crash/reboot workflow is in [DIAGNOSTICS.md](DIAGNOSTICS.md), the package-management workflow is in [APPS.md](APPS.md), developer setup in [DEVELOPMENT.md](DEVELOPMENT.md), and every headset command in [COMMANDS.md](COMMANDS.md).
+Quick start, screenshots and the packaged UI are in the root [README](../README.md). CLI usage is in [CLI.md](CLI.md), the user-facing crash/reboot workflow is in [DIAGNOSTICS.md](DIAGNOSTICS.md), the package-management workflow is in [APPS.md](APPS.md), the device-settings workflow is in [SETTINGS.md](SETTINGS.md), hidden/experimental settings research in [HIDDEN_ADB_SETTINGS.md](HIDDEN_ADB_SETTINGS.md), developer setup in [DEVELOPMENT.md](DEVELOPMENT.md), and every headset command in [COMMANDS.md](COMMANDS.md).
 
 ## Contents
 
@@ -158,8 +158,8 @@ device_info   # one-time device/build/region/manufacture/setup/panel/display/aud
 ## Safety & fair runs
 
 - Recording, preview, diagnostics and report export are read-only: `cat`, `getprop`, `dumpsys`, `cmd wifi status`, `logcat`, `ps`.
-- `--root` only runs read-only `su -c` reads (fan RPM/PWM, active panel, measured IPD/calibration mtimes, approximate first-setup mtime, `/proc/<pid>/io`, app data/cache size); it may trigger a root prompt. There are no `push`/`setprop`/sysfs writes and no thermalservice inject/override.
-- `Tools > Apps` is the only mutating workflow. Disable/remove/restore/uninstall actions require an explicit confirmation in the local UI, require the local API token, are blocked during recording, and are logged under `reports/apps/`. Stock packages are removed for user 0 only; the system image is not edited.
+- `--root` only runs read-only `su -c` reads (fan RPM/PWM, active panel, measured IPD/calibration mtimes, approximate first-setup mtime, `/proc/<pid>/io`, app data/cache size); it may trigger a root prompt. There are no `push`/`setprop`/sysfs writes and no thermalservice inject/override. The separate Settings tool has two rooted writes: **Disable performance optimization policy** and **Disable fixed Home Space Mode display rate**.
+- `Tools > Apps` and `Tools > Settings` are the mutating workflows. Package actions, including Game Mode performance overrides, require an explicit confirmation in the local UI; package and setting changes require the local API token, are blocked during recording, and are logged under `reports/apps/` and `reports/settings/`. Stock packages are removed for user 0 only; the system image is not edited.
 - Raw device captures are not stored in the repository. Add only sanitized excerpts under `docs/examples/`; never commit serials, account names, or Wi-Fi identifiers.
 - Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; full values remain only in local run files. Offline reports do not include Apps management.
 
@@ -170,6 +170,13 @@ For fair runs: unplug AC (charging adds heat), keep identical workload/duration,
 See the [Apps & services guide](APPS.md) for the package list, sortable one-shot CPU/RSS/GPU/threads
 usage, OOM and size columns, system vs user/stock package distinction, reversible per-user removal,
 full uninstall of user apps, confirmation rules, critical-package protection and optional root storage details.
+
+## Settings
+
+See the [Settings guide](SETTINGS.md) for the XR controls, display/UI settings, green recording
+indicator, update controls, advanced package/key toggles, testing-only entries, persistence rules and
+safety notes. The read-only discovery notes and commands for hidden keys are in
+[Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
 
 ## Research & findings
 
