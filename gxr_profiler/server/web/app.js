@@ -3676,7 +3676,7 @@ function startPreview() {
   titleBox.appendChild(el("span", "pickcount muted", "Manual · not saved"));
   head.appendChild(titleBox);
   const actions = el("div", "runactions");
-  const status = textEl("span", "livestatus", "starting");
+  const status = textEl("span", "livestatus", "connecting");
   status.id = "preview-status";
   const stop = el("button", "toolbtn", "Stop");
   stop.type = "button";
@@ -3688,7 +3688,7 @@ function startPreview() {
   card.appendChild(el("p", "muted cardnote", "Lightweight preview: thermal, power, fan and Wi-Fi samples. Nothing is written to disk."));
   const body = el("div", "preview-body");
   body.id = "preview-body";
-  body.appendChild(el("div", "muted preview-loading", "Reading headset..."));
+  body.appendChild(el("div", "muted preview-loading", "Waiting for headset (retrying for up to 30s)..."));
   card.appendChild(body);
   host.appendChild(card);
   state.timer = setInterval(() => previewTick(state), PREVIEW_INTERVAL_MS);
@@ -3926,7 +3926,7 @@ function renderLiveView() {
       return;
     }
     startBtn.disabled = true;
-    startError.textContent = "";
+    startError.textContent = "Connecting to headset (retrying if needed)...";
     stopPreview();
     ensureAudio();
     try {
@@ -5995,5 +5995,6 @@ async function init() {
 
 window.addEventListener("resize", () => { updateStickyOffsets(); chartRegistry.forEach(c => { try { c.resize(); } catch (e) {} }); });
 init();
+
 
 

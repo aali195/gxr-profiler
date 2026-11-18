@@ -7,7 +7,7 @@ import threading
 from collections import deque
 
 from ..capture.recorder import Recorder
-from ..core.adb import AdbError, RealAdb, resolve_serial
+from ..core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, resolve_serial
 from ..core.models import RunConfig
 from ..core.naming import validate_run_name
 
@@ -50,7 +50,7 @@ class RecordManager:
             if self.thread and self.thread.is_alive():
                 raise RuntimeError("a recording is already running")
         try:
-            serial = resolve_serial(self.serial)
+            serial = resolve_serial(self.serial, wait_seconds=CONNECT_WAIT_S, poll_seconds=CONNECT_POLL_S)
         except AdbError as exc:
             with self.lock:
                 self.status = "error"

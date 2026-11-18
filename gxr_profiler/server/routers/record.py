@@ -9,7 +9,7 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ...capture.poller import Poller
-from ...core.adb import AdbError, RealAdb, resolve_serial
+from ...core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, resolve_serial
 from ..deps import ManagerDep
 from ..models import RecordRequest
 
@@ -22,7 +22,7 @@ def preview(manager: ManagerDep):
     if manager.state().get("status") == "recording":
         raise HTTPException(status_code=409, detail="recording in progress")
     try:
-        adb = RealAdb(serial=resolve_serial(manager.serial))
+        adb = RealAdb(serial=resolve_serial(manager.serial, wait_seconds=CONNECT_WAIT_S, poll_seconds=CONNECT_POLL_S))
         data = Poller(adb).poll_preview()
     except AdbError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

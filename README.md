@@ -46,7 +46,7 @@ Recording, preview, diagnostics and exports are read-only. `Tools > Apps` is the
 ## Requirements
 
 - Windows 10/11
-- `adb` on PATH (or set `ADB`)
+- `adb` on PATH, set via `ADB`, or placed next to `gxr-profiler.exe` (a `platform-tools` subfolder also works)
 - Headset paired over wireless ADB
 - Microsoft Edge WebView2 runtime for the native window (included with current Win10/Win11)
 - **No Python installation is needed for the packaged `.exe`**
@@ -65,7 +65,7 @@ Building from source or running the CLI from Python requires Python 3.11+; see [
    ```
 
 3. Put the exe in a writable folder and double-click it. No `--serial` is needed once a single headset is paired.
-4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset** button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run.
+4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset** button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run. If wireless ADB is still reconnecting, the first Preview/Start waits and retries for up to 30 seconds before reporting an error.
 5. Open **Run** for the results, or select runs in **Compare** to overlay and compare them.
 6. Open **Tools > Diagnostics** for a one-click crash/soft-reboot snapshot (JSON + Markdown under `reports/debug/`), or **Tools > Apps** to inspect and manage installed packages.
 7. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no internet or Python required.
@@ -109,3 +109,5 @@ Findings pages label their hardware state: **stock/unmodified before 2026-11-01*
 - Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; raw run files keep the original values.
 
 For detailed safety notes and fair-run guidance, see [safety & fair runs](docs/README.md#safety--fair-runs).
+
+

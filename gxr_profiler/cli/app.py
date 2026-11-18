@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from ..core.adb import AdbError, RealAdb, RunNotFound, list_devices, resolve_serial
+from ..core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, RunNotFound, list_devices, resolve_serial
 from ..core.columns import COOLDOWN_SENSORS
 from ..core.models import RunConfig
 from ..core.paths import default_runs_dir
@@ -58,7 +58,7 @@ def record(
     from ..tui import Tui
 
     try:
-        serial = resolve_serial(serial)
+        serial = resolve_serial(serial, wait_seconds=CONNECT_WAIT_S, poll_seconds=CONNECT_POLL_S)
     except AdbError as exc:
         _fail(str(exc))
 

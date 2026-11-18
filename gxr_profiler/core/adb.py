@@ -10,10 +10,18 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from .paths import runtime_dir
+
 _NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+
+CONNECT_WAIT_S = 30.0
+CONNECT_POLL_S = 5.0
+DEVICE_LIST_TIMEOUT_S = 5.0
 
 
 class AdbError(RuntimeError):
@@ -22,6 +30,19 @@ class AdbError(RuntimeError):
 
 class RunNotFound(FileNotFoundError):
     pass
+
+
+def resolve_adb_executable(base_dir: str | os.PathLike[str] | None = None) -> str:
+    """Find adb from ADB, the runtime folder, platform-tools, or PATH."""
+    env = os.environ.get("ADB")
+    if env:
+        return env
+    name = "adb.exe" if os.name == "nt" else "adb"
+    root = Path(base_dir) if base_dir is not None else runtime_dir()
+    for candidate in (root / name, root / "platform-tools" / name):
+        if candidate.is_file():
+            return str(candidate)
+    return "adb"
 
 
 @runtime_checkable
@@ -38,7 +59,7 @@ class AdbClient(Protocol):
 @dataclass
 class RealAdb:
     serial: str | None = None
-    exe: str = field(default_factory=lambda: os.environ.get("ADB", "adb"))
+    exe: str = field(default_factory=resolve_adb_executable)
 
     def run(self, args: list[str], timeout: float = 25.0) -> subprocess.CompletedProcess:
         cmd = [self.exe]
@@ -56,7 +77,7 @@ class RealAdb:
                 creationflags=_NO_WINDOW,
             )
         except FileNotFoundError as exc:
-            raise AdbError("adb executable not found (set ADB env var)") from exc
+            raise AdbError("adb executable not found (set ADB or place adb.exe next to gxr-profiler.exe)") from exc
         except subprocess.TimeoutExpired as exc:
             raise AdbError(f"adb timed out: {' '.join(cmd)}") from exc
 
@@ -92,8 +113,8 @@ def run_adb(serial: str | None, args: list[str], timeout: float = 25.0) -> subpr
     return _adhoc(serial).run(args, timeout=timeout)
 
 
-def devices_detailed() -> list[dict]:
-    proc = run_adb(None, ["devices", "-l"])
+def devices_detailed(timeout: float = 25.0) -> list[dict]:
+    proc = run_adb(None, ["devices", "-l"], timeout=timeout)
     out: list[dict] = []
     for line in (proc.stdout or "").splitlines()[1:]:
         line = line.strip()
@@ -111,8 +132,8 @@ def devices_detailed() -> list[dict]:
     return out
 
 
-def list_devices() -> list[tuple[str, str]]:
-    return [(d["serial"], d["state"]) for d in devices_detailed()]
+def list_devices(timeout: float = 25.0) -> list[tuple[str, str]]:
+    return [(d["serial"], d["state"]) for d in devices_detailed(timeout=timeout)]
 
 
 def _physical_serial(serial: str) -> str:
@@ -126,18 +147,7 @@ def _physical_serial(serial: str) -> str:
     return ""
 
 
-def resolve_serial(serial: str | None) -> str:
-    """Return a usable serial; only collapse transports for the same physical device."""
-    if serial:
-        return serial
-    env = os.environ.get("ANDROID_SERIAL")
-    if env:
-        return env
-    all_devs = devices_detailed()
-    ready = [d for d in all_devs if d["state"] == "device"]
-    if not ready:
-        found = ", ".join(f"{d['serial']}({d['state']})" for d in all_devs) or "none"
-        raise AdbError(f"no adb device in 'device' state (found: {found})")
+def _select_ready_serial(ready: list[dict]) -> str:
     if len(ready) == 1:
         return ready[0]["serial"]
 
@@ -161,3 +171,46 @@ def resolve_serial(serial: str | None) -> str:
         return (0, name)
 
     return min(transports, key=rank)["serial"]
+
+
+def resolve_serial(
+    serial: str | None,
+    *,
+    wait_seconds: float = 0.0,
+    poll_seconds: float = CONNECT_POLL_S,
+) -> str:
+    """Return a usable serial; optionally wait for a wireless ADB reconnect."""
+    if serial:
+        return serial
+    env = os.environ.get("ANDROID_SERIAL")
+    if env:
+        return env
+
+    deadline = time.monotonic() + max(0.0, wait_seconds)
+    interval = max(0.1, poll_seconds)
+    last_error: AdbError | None = None
+    while True:
+        remaining = deadline - time.monotonic()
+        timeout = min(DEVICE_LIST_TIMEOUT_S, max(0.5, remaining)) if wait_seconds > 0 else 25.0
+        try:
+            all_devs = devices_detailed(timeout=timeout)
+        except AdbError as exc:
+            if "adb executable not found" in str(exc):
+                raise
+            last_error = exc
+            all_devs = []
+
+        ready = [d for d in all_devs if d["state"] == "device"]
+        if ready:
+            return _select_ready_serial(ready)
+
+        found = ", ".join(f"{d['serial']}({d['state']})" for d in all_devs) or "none"
+        if wait_seconds > 0:
+            last_error = AdbError(f"no adb device in 'device' state after {wait_seconds:.0f}s (last found: {found})")
+        else:
+            last_error = AdbError(f"no adb device in 'device' state (found: {found})")
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise last_error
+        time.sleep(min(interval, remaining))

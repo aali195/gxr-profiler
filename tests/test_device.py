@@ -1,3 +1,5 @@
+import pytest
+
 from gxr_profiler.core.device import parse_display_info
 from gxr_profiler.core.parsers import parse_audio_policy
 
@@ -60,13 +62,95 @@ def test_resolve_serial_collapses_only_same_physical(monkeypatch):
         {"serial": "usb1", "state": "device", "device": "xrvst2", "model": "SM-I610"},
         {"serial": "192.168.0.2:5555", "state": "device", "device": "xrvst2", "model": "SM-I610"},
     ]
-    monkeypatch.setattr(adb, "devices_detailed", lambda: devices)
+    monkeypatch.setattr(adb, "devices_detailed", lambda timeout=25.0: devices)
     monkeypatch.setattr(adb, "_physical_serial", lambda serial: "R3GYC02MM2P")
     assert adb.resolve_serial(None) == "usb1"
 
     monkeypatch.setattr(adb, "_physical_serial", lambda serial: serial)
-    with __import__("pytest").raises(adb.AdbError):
+    with pytest.raises(adb.AdbError):
         adb.resolve_serial(None)
+
+
+class _FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+def _install_clock(monkeypatch, adb):
+    clock = _FakeClock()
+    monkeypatch.setattr(adb.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(adb.time, "sleep", clock.sleep)
+    return clock
+
+
+def test_resolve_serial_retries_until_device_is_ready(monkeypatch):
+    from gxr_profiler.core import adb
+
+    clock = _install_clock(monkeypatch, adb)
+    responses = iter(
+        [
+            [{"serial": "192.168.0.2:5555", "state": "offline"}],
+            [{"serial": "192.168.0.2:5555", "state": "unauthorized"}],
+            [{"serial": "192.168.0.2:5555", "state": "device"}],
+        ]
+    )
+    calls = []
+
+    def devices(timeout=25.0):
+        calls.append(timeout)
+        return next(responses)
+
+    monkeypatch.setattr(adb, "devices_detailed", devices)
+    assert adb.resolve_serial(None, wait_seconds=30, poll_seconds=5) == "192.168.0.2:5555"
+    assert clock.now == 10.0
+    assert len(calls) == 3
+
+
+def test_resolve_serial_times_out_with_clear_error(monkeypatch):
+    from gxr_profiler.core import adb
+
+    clock = _install_clock(monkeypatch, adb)
+    monkeypatch.setattr(
+        adb,
+        "devices_detailed",
+        lambda timeout=25.0: [{"serial": "192.168.0.2:5555", "state": "offline"}],
+    )
+    with pytest.raises(adb.AdbError, match="after 10s"):
+        adb.resolve_serial(None, wait_seconds=10, poll_seconds=5)
+    assert clock.now == 10.0
+
+
+def test_resolve_serial_fails_fast_for_non_retryable_cases(monkeypatch):
+    from gxr_profiler.core import adb
+
+    clock = _install_clock(monkeypatch, adb)
+    monkeypatch.setattr(
+        adb,
+        "devices_detailed",
+        lambda timeout=25.0: [
+            {"serial": "one", "state": "device"},
+            {"serial": "two", "state": "device"},
+        ],
+    )
+    monkeypatch.setattr(adb, "_physical_serial", lambda serial: serial)
+    with pytest.raises(adb.AdbError, match="multiple adb devices"):
+        adb.resolve_serial(None, wait_seconds=30, poll_seconds=5)
+    assert clock.now == 0.0
+
+    monkeypatch.setattr(
+        adb,
+        "devices_detailed",
+        lambda timeout=25.0: (_ for _ in ()).throw(adb.AdbError("adb executable not found (set ADB env var)")),
+    )
+    with pytest.raises(adb.AdbError, match="adb executable not found"):
+        adb.resolve_serial(None, wait_seconds=30, poll_seconds=5)
+    assert clock.now == 0.0
 
 
 def test_calibration_parsers():

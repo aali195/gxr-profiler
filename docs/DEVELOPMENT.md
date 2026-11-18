@@ -8,7 +8,7 @@ running from source, understanding the layout, testing changes and building exec
 Requirements:
 
 - Windows + Python 3.11+
-- `adb` on PATH (or set `ADB`)
+- `adb` on PATH, set via `ADB`, or placed next to the executable (a `platform-tools` subfolder also works)
 - Headset paired over wireless ADB
 
 ```powershell
@@ -88,3 +88,4 @@ The `release` job runs only for `v*` tags after tests pass. It:
 5. Creates or updates the GitHub release using the tag name.
 
 Create a release by pushing a tag such as `v0.3.0`.
+

@@ -31,7 +31,7 @@ With an editable install use `gxr-profiler`; without installing use
 
 **No `--serial` is needed** once the headset is paired. The tool auto-selects a single device,
 collapsing duplicate TCP and mDNS transports of the same headset. Pass `--serial <id>` or set
-`ANDROID_SERIAL` only if multiple devices are connected.
+`ANDROID_SERIAL` only if multiple devices are connected. The adb executable is taken from `ADB`, then `adb(.exe)` next to the executable, then `platform-tools/adb(.exe)`, then `PATH`. After a wireless ADB reconnect, `record` waits up to 30 seconds for the headset to return to the `device` state (5-second polling).
 
 ## `record` flags
 
@@ -62,3 +62,5 @@ Run `gxr-profiler <command> --help` for the complete current flag list.
 The UI exposes Standard, Detailed and Everything presets plus per-option overrides. Profile
 defaults, cadence details and measured overhead are documented in
 [capture profiles & overhead](README.md#capture-profiles--overhead).
+
+

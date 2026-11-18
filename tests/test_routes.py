@@ -179,7 +179,7 @@ def test_preview_route_returns_lightweight_metrics(tmp_path, monkeypatch):
 
     monkeypatch.setattr(record_router, "Poller", FakePoller)
     monkeypatch.setattr(record_router, "RealAdb", lambda serial=None: object())
-    monkeypatch.setattr(record_router, "resolve_serial", lambda serial=None: "fake")
+    monkeypatch.setattr(record_router, "resolve_serial", lambda serial=None, **kwargs: "fake")
     response = client.get("/api/preview")
     assert response.status_code == 200
     assert response.json()["thermal_status"] == 2.0
