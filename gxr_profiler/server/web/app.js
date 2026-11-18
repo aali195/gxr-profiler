@@ -1,6 +1,193 @@
 "use strict";
 
+const TOAST_DEFAULT_MS = 7000;
+const TOAST_WARNING_MS = 10000;
+const TOAST_LONG_MS = 15000;
+const TOAST_MAX_VISIBLE = 4;
+const toastState = { seq: 0, items: new Map() };
+
+function setToastOpen() {
+  if (document.body) {
+    document.body.classList.toggle("toast-open", toastState.items.size > 0);
+  }
+}
+
+function scrollToLatestToast() {
+  if ([...toastState.items.values()].some(item => item.hovered || item.focused)) return;
+  const region = toastRegion();
+  region.scrollTop = region.scrollHeight;
+}
+
+function toastRegion() {
+  let region = document.getElementById("toast-region");
+  if (!region) {
+    region = document.createElement("div");
+    region.id = "toast-region";
+    region.className = "toast-region";
+    region.setAttribute("role", "region");
+    region.setAttribute("aria-label", "Notifications");
+    document.body.appendChild(region);
+  }
+  return region;
+}
+
+function toastDefaultTitle(type) {
+  return ({
+    success: "Done",
+    error: "Something went wrong",
+    warning: "Warning",
+    info: "Notice",
+  })[type] || "Notice";
+}
+
+function startToast(entry) {
+  if (entry.persistent || entry.remaining <= 0 || entry.timer || entry.hovered || entry.focused) return;
+  entry.startedAt = Date.now();
+  entry.timer = setTimeout(() => dismissToast(entry.id), entry.remaining);
+}
+
+function pauseToast(entry) {
+  if (!entry.timer) return;
+  clearTimeout(entry.timer);
+  entry.timer = null;
+  entry.remaining = Math.max(0, entry.remaining - (Date.now() - entry.startedAt));
+  entry.startedAt = 0;
+}
+
+function resumeToast(entry) {
+  if (entry.persistent || entry.hovered || entry.focused || entry.timer) return;
+  if (entry.remaining <= 0) {
+    dismissToast(entry.id);
+    return;
+  }
+  startToast(entry);
+}
+
+function dismissToast(id) {
+  const entry = toastState.items.get(id);
+  if (!entry) return;
+  toastState.items.delete(id);
+  setToastOpen();
+  if (entry.timer) {
+    clearTimeout(entry.timer);
+    entry.timer = null;
+  }
+  entry.el.classList.add("leaving");
+  setTimeout(() => entry.el.remove(), 180);
+}
+
+function trimToasts() {
+  const live = [...toastState.items.values()];
+  if (live.length <= TOAST_MAX_VISIBLE) return;
+  const newestId = Math.max(...live.map(item => item.id));
+  const removable = live
+    .filter(item => !item.persistent && !item.hovered && !item.focused && item.id !== newestId)
+    .sort((a, b) => a.id - b.id);
+  removable.slice(0, live.length - TOAST_MAX_VISIBLE).forEach(item => dismissToast(item.id));
+}
+
+function showToast({ title, message, type = "info", duration, persistent = false } = {}) {
+  const kind = ["success", "error", "warning", "info"].includes(type) ? type : "info";
+  const keep = persistent || kind === "error";
+  const text = message == null ? "" : String(message);
+  const long = text.length > 400 || text.split("\n").length > 8;
+  const durationMs = keep
+    ? 0
+    : (duration ?? (kind === "warning" ? TOAST_WARNING_MS : long ? TOAST_LONG_MS : TOAST_DEFAULT_MS));
+  const key = [kind, title || "", text].join("\n");
+  const existing = [...toastState.items.values()].find(item => item.key === key);
+  if (existing) {
+    pauseToast(existing);
+    existing.persistent = keep;
+    existing.remaining = durationMs;
+    existing.titleEl.textContent = title || toastDefaultTitle(kind);
+    existing.body.textContent = text;
+    existing.body.hidden = !text;
+    existing.body.tabIndex = long ? 0 : -1;
+    existing.el.classList.remove("leaving");
+    if (!existing.hovered && !existing.focused && !existing.el.contains(document.activeElement)) {
+      toastRegion().appendChild(existing.el);
+      scrollToLatestToast();
+    }
+    if (!keep) startToast(existing);
+    return existing.id;
+  }
+  const id = ++toastState.seq;
+  const el = document.createElement("article");
+  el.className = "toast toast-" + kind;
+  el.dataset.toastId = String(id);
+  el.setAttribute("role", kind === "error" ? "alert" : "status");
+  el.setAttribute("aria-atomic", "true");
+  const head = document.createElement("div");
+  head.className = "toast-head";
+  const titleEl = document.createElement("div");
+  titleEl.className = "toast-title";
+  titleEl.textContent = title || toastDefaultTitle(kind);
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "toast-close";
+  close.setAttribute("aria-label", "Dismiss notification");
+  close.textContent = "×";
+  head.appendChild(titleEl);
+  head.appendChild(close);
+  const body = document.createElement("pre");
+  body.className = "toast-body";
+  body.textContent = text;
+  body.hidden = !text;
+  body.tabIndex = long ? 0 : -1;
+  el.appendChild(head);
+  el.appendChild(body);
+  const entry = {
+    id,
+    key,
+    el,
+    titleEl,
+    body,
+    persistent: keep,
+    remaining: durationMs,
+    timer: null,
+    startedAt: 0,
+    hovered: false,
+    focused: false,
+  };
+  close.onclick = () => dismissToast(id);
+  el.addEventListener("mouseenter", () => {
+    entry.hovered = true;
+    pauseToast(entry);
+  });
+  el.addEventListener("mouseleave", () => {
+    entry.hovered = false;
+    resumeToast(entry);
+  });
+  el.addEventListener("focusin", () => {
+    entry.focused = true;
+    pauseToast(entry);
+  });
+  el.addEventListener("focusout", event => {
+    if (!el.contains(event.relatedTarget)) {
+      entry.focused = false;
+      resumeToast(entry);
+    }
+  });
+  toastState.items.set(id, entry);
+  toastRegion().appendChild(el);
+  trimToasts();
+  setToastOpen();
+  scrollToLatestToast();
+  if (!keep) startToast(entry);
+  return id;
+}
+
 function showUiError(message) {
+  try {
+    showToast({
+      title: "UI error",
+      message: "JS error: " + message,
+      type: "error",
+      persistent: true,
+    });
+    return;
+  } catch (e) {}
   const v = document.getElementById("view");
   if (!v) return;
   const box = document.createElement("section");
@@ -55,11 +242,11 @@ const appsState = {
   data: null, loaded: false, loading: false, attempted: false, error: "",
   query: "", filter: "all", sort: { key: "cpu_pct", dir: -1 },
   selected: null, detail: null, detailError: "", detailLoading: false, detailToken: 0,
-  rootDetails: false, actionBusy: false, flash: null,
-  performanceDraft: null, performanceStatus: null,
+  rootDetails: false, actionBusy: false,
+  performanceDraft: null,
 };
 const settingsState = {
-  data: null, loaded: false, loading: false, attempted: false, error: "", flash: null, busy: {},
+  data: null, loaded: false, loading: false, attempted: false, error: "", busy: {},
 };
 let activeToolTab = "diagnostics";
 try {
@@ -211,7 +398,11 @@ function togglePin(kind, item) {
   } else {
     const limit = PIN_LIMITS[kind] == null ? Infinity : PIN_LIMITS[kind];
     if (list.length >= limit) {
-      alert("You can pin up to " + limit + " " + kind + " items. Unpin one to add another.");
+      showToast({
+        title: "Pin limit",
+        message: "You can pin up to " + limit + " " + kind + " items. Unpin one to add another.",
+        type: "warning",
+      });
       return;
     }
     list.push({ ...item });
@@ -395,7 +586,11 @@ async function fetchReportBlob(labels, pinsPayload) {
 
 async function downloadReport(labels, btn) {
   if (!labels.length) {
-    alert("Select at least one run.");
+    showToast({
+      title: "Nothing selected",
+      message: "Select at least one run.",
+      type: "warning",
+    });
     return;
   }
   const pinsPayload = exportPins();
@@ -446,7 +641,11 @@ async function downloadReport(labels, btn) {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     saved = true;
   } catch (e) {
-    alert("Report export failed: " + e.message);
+    showToast({
+      title: "Report export failed",
+      message: e.message || String(e),
+      type: "error",
+    });
   } finally {
     if (btn) {
       btn.disabled = !labels.length;
@@ -4291,7 +4490,11 @@ function renderRunList() {
       try {
         await jdel("/api/runs/" + encodeURIComponent(r.label));
       } catch (err) {
-        alert("Delete failed: " + err.message);
+        showToast({
+          title: "Delete failed",
+          message: err.message || String(err),
+          type: "error",
+        });
         return;
       }
       const wasCurrent = currentRun && currentRun.label === r.label;
@@ -4984,7 +5187,6 @@ function appsRefresh() {
   if (appsState.loading) return;
   appsState.loading = true;
   appsState.error = "";
-  appsState.flash = null;
   renderActiveToolBody();
   appsFetch();
 }
@@ -5015,7 +5217,6 @@ function selectApp(row) {
   appsState.detail = null;
   appsState.detailError = "";
   appsState.performanceDraft = null;
-  appsState.performanceStatus = null;
   appsState.detailToken += 1;
   renderActiveToolBody();
   openAppsDetailModal();
@@ -5029,7 +5230,6 @@ function closeAppsDetail() {
   appsState.detailError = "";
   appsState.detailLoading = false;
   appsState.performanceDraft = null;
-  appsState.performanceStatus = null;
   closeAppsDetailModal();
   renderActiveToolBody();
 }
@@ -5177,10 +5377,11 @@ async function runAppsAction(row, action) {
       action,
       confirm: true,
     });
-    appsState.flash = {
-      ok: !!result.ok,
-      text: (result.ok ? "Action completed." : "Action failed.") + (result.output ? "\n" + result.output : ""),
-    };
+    showToast({
+      title: result.ok ? "Package action completed" : "Package action failed",
+      message: result.output || (result.ok ? "The package action completed." : "The package action failed."),
+      type: result.ok ? "success" : "error",
+    });
     if (result.ok && action === "uninstall") {
       appsState.selected = null;
       appsState.detail = null;
@@ -5190,7 +5391,11 @@ async function runAppsAction(row, action) {
       appsFetchDetail(row.package, appsState.rootDetails);
     }
   } catch (e) {
-    appsState.flash = { ok: false, text: e.message || String(e) };
+    showToast({
+      title: "Package action failed",
+      message: e.message || String(e),
+      type: "error",
+    });
   } finally {
     appsState.actionBusy = false;
     closeAppsModal();
@@ -5236,21 +5441,6 @@ function appsHeaderCard() {
   if (appsState.loading && !appsState.data) card.appendChild(el("div", "muted", "Loading installed packages..."));
   card.appendChild(el("p", "muted cardnote", "Android does not expose reliable human-readable app labels over shell, so package IDs are shown. Stock/system packages are marked; per-user removal keeps the factory APK in the system image."));
   card.appendChild(el("p", "muted cardnote", "CPU, RSS, GPU memory, threads and OOM are a process snapshot taken when the list is fetched; Size is the install footprint. CPU is the ~5-minute dumpsys cpuinfo value. They are not live."));
-  return card;
-}
-
-function appsFlashCard() {
-  const card = el("section", "card appflash " + (appsState.flash.ok ? "good" : "bad"));
-  const head = el("div", "appstoolhead");
-  head.appendChild(el("h3", null, "Last action"));
-  const dismiss = el("button", "toolbtn", "Dismiss");
-  dismiss.type = "button";
-  dismiss.onclick = () => { appsState.flash = null; renderActiveToolBody(); };
-  head.appendChild(dismiss);
-  card.appendChild(head);
-  const pre = el("pre", "diag-evidence appflashout");
-  pre.textContent = appsState.flash.text || "";
-  card.appendChild(pre);
   return card;
 }
 
@@ -5446,11 +5636,6 @@ function appsPerformanceCard(row, game) {
   actions.appendChild(apply);
   actions.appendChild(reset);
   card.appendChild(actions);
-
-  if (appsState.performanceStatus) {
-    const status = appsState.performanceStatus;
-    card.appendChild(textEl("p", "appsperf-status " + (status.ok ? "good" : "bad"), status.text));
-  }
   return card;
 }
 
@@ -5518,24 +5703,27 @@ function openAppsPerformanceConfirm(row, mode, draft) {
 
 async function runAppsPerformance(row, fps, downscale) {
   appsState.actionBusy = true;
-  appsState.performanceStatus = null;
   try {
     const result = await jpost(
       "/api/apps/" + encodeURIComponent(row.package) + "/performance",
       { fps, downscale, confirm: true }
     );
-    appsState.performanceStatus = {
-      ok: !!result.ok,
-      text: (result.ok ? "Override applied." : "Override failed.")
-        + (result.output ? "\n" + result.output : ""),
-    };
+    showToast({
+      title: result.ok ? "Performance override applied" : "Performance override failed",
+      message: result.output || (result.ok ? "The override was applied." : "The override failed."),
+      type: result.ok ? "success" : "error",
+    });
     appsState.performanceDraft = null;
     await appsFetch();
     if (appsState.selected && appsState.selected.package === row.package) {
       await appsFetchDetail(row.package, appsState.rootDetails);
     }
   } catch (e) {
-    appsState.performanceStatus = { ok: false, text: e.message || String(e) };
+    showToast({
+      title: "Performance override failed",
+      message: e.message || String(e),
+      type: "error",
+    });
   } finally {
     appsState.actionBusy = false;
     closeAppsModal();
@@ -5705,7 +5893,6 @@ function renderAppsTool(host) {
   }
   ensureAppsLoaded();
   host.appendChild(appsHeaderCard());
-  if (appsState.flash) host.appendChild(appsFlashCard());
   if (appsState.error) host.appendChild(appsErrorCard());
   host.appendChild(appsTableCard());
 }
@@ -5736,7 +5923,6 @@ function settingsRefresh() {
   if (settingsState.loading) return;
   settingsState.loading = true;
   settingsState.error = "";
-  settingsState.flash = null;
   if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
   settingsFetch();
 }
@@ -5747,14 +5933,22 @@ async function settingsToggle(item, enabled) {
   if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
   try {
     const result = await jpost("/api/settings/" + encodeURIComponent(item.id), { enabled });
-    let text = (result.ok ? "Setting updated." : "Setting applied, but verification failed.")
-      + (result.output ? "\n" + result.output : "");
+    let text = result.output
+      || (result.ok ? "The setting was updated." : "The setting was applied, but verification failed.");
     if (result.ok && item.id === "xr_perf_metrics" && enabled) {
       text += "\nReminder: turn the performance overlay off when finished to avoid OLED burn-in.";
     }
-    settingsState.flash = { ok: !!result.ok, text };
+    showToast({
+      title: result.ok ? "Setting updated" : "Setting verification failed",
+      message: text,
+      type: result.ok ? "success" : "error",
+    });
   } catch (e) {
-    settingsState.flash = { ok: false, text: e.message || String(e) };
+    showToast({
+      title: "Setting update failed",
+      message: e.message || String(e),
+      type: "error",
+    });
   } finally {
     delete settingsState.busy[item.id];
     await settingsFetch();
@@ -5767,13 +5961,19 @@ async function settingsSetValue(item, value) {
   if (activeTab === "tools" && activeToolTab === "settings") renderActiveToolBody();
   try {
     const result = await jpost("/api/settings/" + encodeURIComponent(item.id), { value });
-    settingsState.flash = {
-      ok: !!result.ok,
-      text: (result.ok ? "Setting updated to " + (result.label || value) + "." : "Setting applied, but verification failed.")
-        + (result.output ? "\n" + result.output : ""),
-    };
+    const label = result.label || value;
+    showToast({
+      title: result.ok ? "Setting updated" : "Setting verification failed",
+      message: result.output
+        || (result.ok ? "Updated to " + label + "." : "The setting was applied, but verification failed."),
+      type: result.ok ? "success" : "error",
+    });
   } catch (e) {
-    settingsState.flash = { ok: false, text: e.message || String(e) };
+    showToast({
+      title: "Setting update failed",
+      message: e.message || String(e),
+      type: "error",
+    });
   } finally {
     delete settingsState.busy[item.id];
     await settingsFetch();
@@ -5885,21 +6085,6 @@ function settingsHeaderCard() {
   head.appendChild(refresh);
   card.appendChild(head);
   card.appendChild(el("div", "settings-header-sep"));
-  return card;
-}
-
-function settingsFlashCard() {
-  const card = el("section", "card appflash " + (settingsState.flash.ok ? "good" : "bad"));
-  const head = el("div", "appstoolhead");
-  head.appendChild(el("h3", null, "Last change"));
-  const dismiss = el("button", "toolbtn", "Dismiss");
-  dismiss.type = "button";
-  dismiss.onclick = () => { settingsState.flash = null; renderActiveToolBody(); };
-  head.appendChild(dismiss);
-  card.appendChild(head);
-  const pre = el("pre", "diag-evidence appflashout");
-  pre.textContent = settingsState.flash.text || "";
-  card.appendChild(pre);
   return card;
 }
 
@@ -6033,7 +6218,6 @@ function renderSettingsTool(host) {
   }
   ensureSettingsLoaded();
   host.appendChild(settingsHeaderCard());
-  if (settingsState.flash) host.appendChild(settingsFlashCard());
   if (settingsState.error) host.appendChild(settingsErrorCard());
   const sections = (settingsState.data && settingsState.data.sections) || [];
   sections.forEach(section => host.appendChild(settingsSectionCard(section)));

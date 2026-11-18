@@ -44,6 +44,25 @@ def test_tools_hub_contains_diagnostics():
     assert "/performance" in js
     assert "Render scale" in js
     assert "FPS cap" in js
+    assert "toast-region" in js
+    assert "showToast" in js
+    assert "TOAST_DEFAULT_MS = 7000" in js
+    assert "TOAST_WARNING_MS = 10000" in js
+    assert "TOAST_LONG_MS = 15000" in js
+    assert "mouseenter" in js
+    assert "mouseleave" in js
+    assert "aria-atomic" in js
+    assert "tabIndex" in js
+    assert "toast-open" in js
+    assert "appsFlashCard" not in js
+    assert "settingsFlashCard" not in js
+
+    css = (web / "styles.css").read_text(encoding="utf-8")
+    assert ".toast-region" in css
+    assert ".toast-error" in css
+    assert ".toast-body" in css
+    assert ".toast-body:focus-visible" in css
+    assert "body.toast-open .floatnav" in css
     assert "processFilterBar" in js
     assert "PROC_FILTERS" in js
     assert 'sort: { key: "cpu_pct", dir: -1 }' in js
