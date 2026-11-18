@@ -165,6 +165,7 @@ def run_ui(port: int = 8765, browser: bool = False, runs_dir: str | None = None,
         height=900,
         min_size=(1000, 700),
         maximized=True,
+        text_select=True,
         js_api=api,
     )
     window_ref["window"] = window

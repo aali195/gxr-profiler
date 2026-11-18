@@ -1,4 +1,7 @@
+import inspect
 from pathlib import Path
+
+from gxr_profiler.server.app import run_ui
 
 
 def test_recording_form_contains_max_wait_field():
@@ -54,6 +57,11 @@ def test_tools_hub_contains_diagnostics():
     assert "aria-atomic" in js
     assert "tabIndex" in js
     assert "toast-open" in js
+    assert "copyText" in js
+    assert "copyButton" in js
+    assert "copyablePre" in js
+    assert "toast-copy" in js
+    assert "Copy failed" in js
     assert "appsFlashCard" not in js
     assert "settingsFlashCard" not in js
 
@@ -63,6 +71,9 @@ def test_tools_hub_contains_diagnostics():
     assert ".toast-body" in css
     assert ".toast-body:focus-visible" in css
     assert "body.toast-open .floatnav" in css
+    assert ".copyblock" in css
+    assert ".copybtn" in css
+
     assert "processFilterBar" in js
     assert "PROC_FILTERS" in js
     assert 'sort: { key: "cpu_pct", dir: -1 }' in js
@@ -85,3 +96,7 @@ def test_tools_hub_contains_diagnostics():
     columns = js[start : js.index("];", start)]
     assert columns.index('key: "size_kb"') < columns.index('key: "cpu_pct"')
     assert columns.index('key: "installer"') > columns.index('key: "threads"')
+
+
+def test_native_window_allows_text_selection():
+    assert "text_select=True" in inspect.getsource(run_ui)

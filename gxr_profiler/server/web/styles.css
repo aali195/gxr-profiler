@@ -619,6 +619,17 @@ button.pinned-proc-name:hover { text-decoration: underline; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.copyblock { position: relative; }
+.copyblock > pre { padding-right: 72px; }
+.copybtn {
+  padding: 2px 7px; border: 1px solid #30363d; border-radius: 6px;
+  background: #1c2230; color: #9fd0ff; cursor: pointer;
+  font-size: var(--fs-xs); line-height: 1.2;
+}
+.copybtn:hover, .copybtn:focus-visible { background: #22303f; color: var(--fg); }
+.copybtn.copied { color: var(--good); border-color: #2b5c3a; }
+.copyblock-btn { position: absolute; top: 6px; right: 6px; z-index: 2; }
+.toast-copy { flex: none; margin-right: 2px; }
 .diag-crash {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -840,6 +851,7 @@ body.toast-open .floatnav { opacity: 0; pointer-events: none; }
   background: #0d1117; border: 1px solid var(--border); color: #c9d1d9;
   font-size: var(--fs-xs); line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere;
 }
+.settingcommands .copyblock > pre { padding-right: 72px; }
 .settingcontrols { display: flex; align-items: center; gap: 8px; flex: none; margin-left: 12px; }
 .settingselect {
   min-width: 190px; max-width: 260px; padding: 7px 9px; border: 1px solid var(--border);

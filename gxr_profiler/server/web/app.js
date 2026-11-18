@@ -104,6 +104,8 @@ function showToast({ title, message, type = "info", duration, persistent = false
     existing.body.textContent = text;
     existing.body.hidden = !text;
     existing.body.tabIndex = long ? 0 : -1;
+    existing.text = text;
+    existing.copyBtn.hidden = !text;
     existing.el.classList.remove("leaving");
     if (!existing.hovered && !existing.focused && !existing.el.contains(document.activeElement)) {
       toastRegion().appendChild(existing.el);
@@ -123,12 +125,15 @@ function showToast({ title, message, type = "info", duration, persistent = false
   const titleEl = document.createElement("div");
   titleEl.className = "toast-title";
   titleEl.textContent = title || toastDefaultTitle(kind);
+  const copyBtn = copyButton(() => entry.text, "toast-copy", "Copy");
+  copyBtn.hidden = !text;
   const close = document.createElement("button");
   close.type = "button";
   close.className = "toast-close";
   close.setAttribute("aria-label", "Dismiss notification");
   close.textContent = "×";
   head.appendChild(titleEl);
+  head.appendChild(copyBtn);
   head.appendChild(close);
   const body = document.createElement("pre");
   body.className = "toast-body";
@@ -143,6 +148,8 @@ function showToast({ title, message, type = "info", duration, persistent = false
     el,
     titleEl,
     body,
+    text,
+    copyBtn,
     persistent: keep,
     remaining: durationMs,
     timer: null,
@@ -176,6 +183,73 @@ function showToast({ title, message, type = "info", duration, persistent = false
   scrollToLatestToast();
   if (!keep) startToast(entry);
   return id;
+}
+
+async function copyText(text) {
+  const value = text == null ? "" : String(text);
+  if (!value) throw new Error("Nothing to copy");
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch (e) {
+      // Fall through to the legacy path.
+    }
+  }
+  const area = document.createElement("textarea");
+  area.value = value;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.top = "-1000px";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  area.setSelectionRange(0, value.length);
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } finally {
+    area.remove();
+  }
+  if (!ok) throw new Error("Clipboard unavailable");
+}
+
+function copyButton(textOrGetter, className = "", label = "Copy") {
+  const btn = el("button", "copybtn" + (className ? " " + className : ""), label);
+  btn.type = "button";
+  btn.title = label;
+  btn.setAttribute("aria-label", label);
+  const original = label;
+  btn.onclick = async event => {
+    event.stopPropagation();
+    try {
+      const value = typeof textOrGetter === "function" ? textOrGetter() : textOrGetter;
+      await copyText(value);
+      btn.textContent = "Copied";
+      btn.classList.add("copied");
+      clearTimeout(btn._copyTimer);
+      btn._copyTimer = setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove("copied");
+      }, 1500);
+    } catch (e) {
+      showToast({
+        title: "Copy failed",
+        message: e.message || String(e),
+        type: "error",
+      });
+    }
+  };
+  return btn;
+}
+
+function copyablePre(text, className = "diag-evidence", label = "Copy") {
+  const wrap = el("div", "copyblock");
+  const pre = el("pre", className);
+  pre.textContent = text;
+  wrap.appendChild(pre);
+  wrap.appendChild(copyButton(text, "copyblock-btn", label));
+  return wrap;
 }
 
 function showUiError(message) {
@@ -4722,9 +4796,7 @@ function debugIssuesCard() {
     box.appendChild(textEl("p", "diag-summary", issue.summary || ""));
     const evidence = issue.evidence || [];
     if (evidence.length) {
-      const pre = el("pre", "diag-evidence");
-      pre.textContent = evidence.join("\n");
-      box.appendChild(pre);
+      box.appendChild(copyablePre(evidence.join("\n")));
     }
     if (issue.recommendation) box.appendChild(textEl("p", "diag-reco", "Next: " + issue.recommendation));
     card.appendChild(box);
@@ -4774,14 +4846,10 @@ function debugCrashesCard() {
     }
     const frames = (crash.frames || []).map(debugFrameText).filter(Boolean);
     if (frames.length) {
-      const pre = el("pre", "diag-evidence");
-      pre.textContent = frames.join("\n");
-      details.appendChild(pre);
+      details.appendChild(copyablePre(frames.join("\n")));
     }
     if (crash.raw && crash.raw.length) {
-      const raw = el("pre", "diag-evidence");
-      raw.textContent = crash.raw.join("\n");
-      details.appendChild(raw);
+      details.appendChild(copyablePre(crash.raw.join("\n")));
     }
     card.appendChild(details);
   });
@@ -4807,9 +4875,7 @@ function debugTombstonesCard() {
       const summary = document.createElement("summary");
       summary.textContent = "Tombstone " + tomb.name;
       details.appendChild(summary);
-      const pre = el("pre", "diag-evidence");
-      pre.textContent = tomb.content || "";
-      details.appendChild(pre);
+      details.appendChild(copyablePre(tomb.content || ""));
       card.appendChild(details);
     });
     return card;
@@ -4851,14 +4917,10 @@ function debugTombstonesCard() {
     }
     const frames = (crash.frames || []).map(debugFrameText).filter(Boolean);
     if (frames.length) {
-      const pre = el("pre", "diag-evidence");
-      pre.textContent = frames.join("\n");
-      details.appendChild(pre);
+      details.appendChild(copyablePre(frames.join("\n")));
     }
     if (crash.raw && crash.raw.length) {
-      const pre = el("pre", "diag-evidence");
-      pre.textContent = crash.raw.join("\n");
-      details.appendChild(pre);
+      details.appendChild(copyablePre(crash.raw.join("\n")));
     }
     card.appendChild(details);
   });
@@ -4914,9 +4976,7 @@ function debugBootCard() {
   card.appendChild(debugKvTable(rows));
   const notes = boot.rescue_notes || [];
   if (notes.length) {
-    const pre = el("pre", "diag-evidence");
-    pre.textContent = notes.slice(-8).map(n => `${n.timestamp} count=${n.count} window=${n.window_ms} ms`).join("\n");
-    card.appendChild(pre);
+    card.appendChild(copyablePre(notes.slice(-8).map(n => `${n.timestamp} count=${n.count} window=${n.window_ms} ms`).join("\n")));
   }
   return card;
 }
@@ -4954,9 +5014,7 @@ function debugRootCard() {
   if (!r.available) {
     card.appendChild(el("div", "muted", "Root was requested but is not available."));
     if ((r.errors || []).length) {
-      const pre = el("pre", "diag-evidence");
-      pre.textContent = r.errors.join("\n");
-      card.appendChild(pre);
+      card.appendChild(copyablePre(r.errors.join("\n")));
     }
     return card;
   }
@@ -4969,9 +5027,7 @@ function debugRootCard() {
   ];
   card.appendChild(debugKvTable(rows));
   if ((r.errors || []).length) {
-    const pre = el("pre", "diag-evidence");
-    pre.textContent = r.errors.join("\n");
-    card.appendChild(pre);
+    card.appendChild(copyablePre(r.errors.join("\n")));
   }
   return card;
 }
@@ -5001,9 +5057,7 @@ function debugRawCard() {
     const summary = document.createElement("summary");
     summary.textContent = name + " (" + text.length.toLocaleString() + " chars)";
     details.appendChild(summary);
-    const pre = el("pre", "diag-evidence");
-    pre.textContent = text;
-    details.appendChild(pre);
+    details.appendChild(copyablePre(text));
     card.appendChild(details);
   });
   if (!any) card.appendChild(el("div", "muted", "No raw sections."));
@@ -5331,9 +5385,8 @@ function openAppsConfirm(row, action) {
   const pkg = textEl("div", "modal-package", row.package);
   dialog.appendChild(pkg);
   dialog.appendChild(textEl("p", "modal-desc", spec.description));
-  const command = el("pre", "diag-evidence modal-command");
-  command.textContent = spec.command(row.package);
-  dialog.appendChild(command);
+  const command = spec.command(row.package);
+  dialog.appendChild(copyablePre(command, "diag-evidence modal-command"));
   if (spec.dataLoss) {
     dialog.appendChild(textEl("p", "modal-warning", "This action may delete app data."));
   }
@@ -5535,16 +5588,12 @@ function appsDetailCard() {
   if ((row.proc_names || []).length) {
     const procHead = el("div", "appsubhead", "Processes");
     card.appendChild(procHead);
-    const procList = el("pre", "diag-evidence");
-    procList.textContent = row.proc_names.join("\n");
-    card.appendChild(procList);
+    card.appendChild(copyablePre(row.proc_names.join("\n")));
   }
   if ((detail.apk_paths || []).length) {
     const apkHead = el("div", "appsubhead", "APK files");
     card.appendChild(apkHead);
-    const apk = el("pre", "diag-evidence");
-    apk.textContent = detail.apk_paths.join("\n");
-    card.appendChild(apk);
+    card.appendChild(copyablePre(detail.apk_paths.join("\n")));
   }
   const root = appsState.detail && appsState.detail.root;
   if (root && root.requested) {
@@ -5555,9 +5604,7 @@ function appsDetailCard() {
     ].filter(item => item[1] != null && item[1] !== "");
     if (rootRows.length) card.appendChild(debugKvTable(rootRows));
     if ((root.errors || []).length) {
-      const err = el("pre", "diag-evidence");
-      err.textContent = root.errors.join("\n");
-      card.appendChild(err);
+      card.appendChild(copyablePre(root.errors.join("\n")));
     }
   }
   const game = appsState.detail && appsState.detail.game;
@@ -5669,11 +5716,10 @@ function openAppsPerformanceConfirm(row, mode, draft) {
       ? "Remove the custom Game Mode intervention and restore the device configuration."
       : "Apply the selected FPS cap and render scale to this app's custom Game Mode."
   ));
-  const command = el("pre", "diag-evidence modal-command");
-  command.textContent = reset
+  const command = reset
     ? "cmd game reset " + row.package
     : appsGameOverrideCommand(row.package, draft.fps, draft.downscale);
-  dialog.appendChild(command);
+  dialog.appendChild(copyablePre(command, "diag-evidence modal-command"));
   dialog.appendChild(textEl(
     "p",
     "modal-warning",
@@ -6009,9 +6055,8 @@ function settingsConfirmDisable(item) {
   head.appendChild(close);
   dialog.appendChild(head);
   dialog.appendChild(textEl("p", "modal-desc", item.warning || "This is a safety-related change."));
-  const command = el("pre", "diag-evidence modal-command");
-  command.textContent = (item.commands && item.commands.revert && item.commands.revert[0]) || "";
-  dialog.appendChild(command);
+  const command = (item.commands && item.commands.revert && item.commands.revert[0]) || "";
+  dialog.appendChild(copyablePre(command, "diag-evidence modal-command"));
   const actions = el("div", "modal-actions");
   const cancel = el("button", "toolbtn", "Cancel");
   cancel.type = "button";
@@ -6140,9 +6185,7 @@ function settingsRow(item) {
         "Revert:", ...(item.commands.revert || []).map(line => "  " + line),
       );
     }
-    const pre = document.createElement("pre");
-    pre.textContent = lines.join("\n");
-    commandBox.appendChild(pre);
+    commandBox.appendChild(copyablePre(lines.join("\n"), ""));
     main.appendChild(commandBox);
   }
   row.appendChild(main);
