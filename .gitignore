@@ -8,6 +8,7 @@ __pycache__/
 /dist/
 /runs/
 /reports/
+/apps-staging/
 docs/raw/
 docs/dumps/
 docs/**/*.7z

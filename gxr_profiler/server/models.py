@@ -110,6 +110,22 @@ class AppPerformanceRequest(BaseModel):
         return value
 
 
+class InstallOptions(BaseModel):
+    replace: bool = True
+    allow_downgrade: bool = False
+    grant_permissions: bool = False
+
+
+class InstallPreviewRequest(BaseModel):
+    items: list[str] = Field(min_length=1)
+    obb_packages: dict[str, str] = Field(default_factory=dict)
+    options: InstallOptions = Field(default_factory=InstallOptions)
+
+
+class InstallRequest(InstallPreviewRequest):
+    confirm: bool = False
+
+
 class SettingUpdate(BaseModel):
     enabled: bool | None = None
     value: str | None = None

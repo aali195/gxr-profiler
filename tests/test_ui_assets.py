@@ -65,6 +65,26 @@ def test_tools_hub_contains_diagnostics():
     assert "appsFlashCard" not in js
     assert "settingsFlashCard" not in js
 
+    assert "performanceDraft" in js
+    assert 'id: "installer"' in js
+    assert "renderInstallerTool" in js
+    assert "installerHeaderCard" in js
+    assert "appsInstallFilesView" in js
+    assert "appsInstallPreview" in js
+    assert "appsInstallStartPolling" in js
+    assert "appsInstallRestore" in js
+    assert "/api/apps/install/state" in js
+    assert "webkitGetAsEntry" in js
+    assert "Review install" in js
+    assert "Install completed" in js
+    assert "install-progress-fill" in js
+    assert "install-step" in js
+    assert "xapk" in js
+    assert "OBB" in js
+    assert "Target package" in js
+    assert "apps-install-modal" not in js
+    assert "Install APK / OBB" not in js
+
     css = (web / "styles.css").read_text(encoding="utf-8")
     assert ".toast-region" in css
     assert ".toast-error" in css
@@ -73,6 +93,10 @@ def test_tools_hub_contains_diagnostics():
     assert "body.toast-open .floatnav" in css
     assert ".copyblock" in css
     assert ".copybtn" in css
+    assert ".install-drop" in css
+    assert ".install-body" in css
+    assert ".install-step" in css
+    assert ".install-progress-fill" in css
 
     assert "processFilterBar" in js
     assert "PROC_FILTERS" in js

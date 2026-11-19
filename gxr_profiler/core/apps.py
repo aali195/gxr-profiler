@@ -101,6 +101,12 @@ APP_DESTRUCTIVE_ACTIONS = frozenset(name for name, spec in APP_ACTION_SPECS.item
 GAME_FPS_VALUES = ("30", "45", "60", "90", "disable")
 GAME_DOWNSCALE_VALUES = ("0.5", "0.6", "0.7", "0.8", "0.9", "disable")
 
+OBB_NAME_RE = re.compile(
+    r"^(main|patch)\.(\d+)\.([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)\.obb$",
+    re.IGNORECASE,
+)
+OBB_FILE_RE = re.compile(r"^[^/\\<>:\"|?*\x00-\x1f]+\.obb$", re.IGNORECASE)
+
 GAME_MODE_RE = re.compile(r"current mode:\s*([A-Za-z]+),\s*available game modes:\s*\[([^\]]*)\]")
 GAME_SCALING_RE = re.compile(r"Scaling:\s*([0-9.]+)")
 GAME_FPS_RE = re.compile(r"Fps:\s*([0-9]+)")
@@ -174,6 +180,71 @@ def validate_game_downscale(value: str) -> str:
     if value not in GAME_DOWNSCALE_VALUES:
         raise ValueError(f"invalid game downscale value: {value}")
     return value
+
+
+def parse_obb_name(name: str) -> dict:
+    """Parse the standard ``main|patch.<version>.<package>.obb`` file name."""
+    base = (name or "").replace("\\", "/").rsplit("/", 1)[-1].strip()
+    match = OBB_NAME_RE.match(base)
+    if not match:
+        return {"kind": "", "version_code": None, "package": ""}
+    return {
+        "kind": match.group(1).lower(),
+        "version_code": int(match.group(2)),
+        "package": match.group(3),
+    }
+
+
+def validate_obb_filename(name: str) -> str:
+    base = (name or "").strip()
+    if not base or len(base) > 255 or base != base.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]:
+        raise ValueError("invalid OBB file name")
+    if not OBB_FILE_RE.match(base):
+        raise ValueError("invalid OBB file name")
+    return base
+
+
+def obb_remote_path(package: str, name: str) -> str:
+    package = validate_package_name(package)
+    name = validate_obb_filename(name)
+    return f"/sdcard/Android/obb/{package}/{name}"
+
+
+def build_install_args(
+    paths: list[str],
+    *,
+    replace: bool = True,
+    allow_downgrade: bool = False,
+    grant_permissions: bool = False,
+    user: int = 0,
+    split: bool = False,
+) -> list[str]:
+    """Build adb install arguments for one APK or one split-APK set."""
+    if not paths:
+        raise ValueError("at least one APK is required")
+    args = ["install-multiple" if split or len(paths) > 1 else "install"]
+    if replace:
+        args.append("-r")
+    if allow_downgrade:
+        args.append("-d")
+    if grant_permissions:
+        args.append("-g")
+    args.extend(["--user", str(int(user))])
+    args.extend(str(path) for path in paths)
+    return args
+
+
+def _display_arg(value: object) -> str:
+    text = str(value)
+    if not text:
+        return '""'
+    if any(ch in text for ch in " \t"):
+        return '"' + text.replace('"', '\\"') + '"'
+    return text
+
+
+def format_adb_command(args: list[str]) -> str:
+    return "adb " + " ".join(_display_arg(item) for item in args)
 
 
 def build_game_override_command(package: str, fps: str, downscale: str) -> str:

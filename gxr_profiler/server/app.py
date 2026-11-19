@@ -42,6 +42,7 @@ def create_app(runs_dir: str | None = None, serial: str | None = None) -> FastAP
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
+        application.state.apps.install.cleanup()
         yield
         application.state.manager.shutdown()
         application.state.debug.shutdown()
@@ -52,7 +53,10 @@ def create_app(runs_dir: str | None = None, serial: str | None = None) -> FastAP
     app.state.store = RunStore(runs_dir)
     app.state.manager = RecordManager(runs_dir, serial)
     app.state.debug = DebugManager(serial, os.path.join(default_reports_dir(), "debug"))
-    app.state.apps = AppsService(serial)
+    app.state.apps = AppsService(
+        serial,
+        busy_check=lambda: app.state.manager.state().get("status") == "recording",
+    )
     app.state.settings = SettingsService(serial)
 
     app.include_router(spec.router)

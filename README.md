@@ -4,7 +4,7 @@ Thermal / performance profiler for a **Samsung Galaxy XR (SM-I610)** over wirele
 
 NOTE: Written with heavy LLM assistance - this grew in size way beyond what I originally had in mind.
 
-Recording, preview, diagnostics and exports are read-only. `Tools > Apps` and `Tools > Settings` are the optional device-changing workflows; they only change the headset after an explicit action.
+Recording, preview, diagnostics and exports are read-only. `Tools > Apps`, `Tools > Installer` and `Tools > Settings` are the optional device-changing workflows; they only change the headset after an explicit action.
 
 ## Features
 
@@ -16,6 +16,7 @@ Recording, preview, diagnostics and exports are read-only. `Tools > Apps` and `T
 - Self-contained HTML export with common Wi-Fi/device identifiers redacted.
 - One-click **Tools > Diagnostics** snapshot for crash buffers, boot/rescue state, Dropbox, exit-info and thermal context; saves JSON + Markdown under `reports/debug/`.
 - **Tools > Apps** package manager: list installed apps/system packages with sortable one-shot process CPU/RSS/GPU/threads, OOM and install-size columns, see metadata and state, disable/enable, remove non-critical stock packages for user 0, restore them, fully uninstall user apps after confirmation, and apply per-app Game Mode FPS/render-scale overrides on supported titles. Critical system packages are protected from disable/remove and performance overrides.
+- **Tools > Installer** stages and installs APK, OBB and XAPK files after a command review and confirmation. It groups split APKs by package, infers OBB targets, verifies installed packages and pushed files, and logs each install with file hashes. Critical packages cannot be installed over.
 - **Tools > Settings** reversible device settings, including XR performance metrics, hands breakthrough, touch input, guardian/boundary controls, auto-spatialization, animation/transparency tweaks, advanced performance-policy, child-process, stay-awake and heads-up controls, and Game Optimizing Service, plus testing-only firmware keys. Each row labels whether it survives reboots and warns about burn-in, safety or untested behavior.
 - Optional root extras for fan RPM/PWM, active panel, calibration, per-process disk I/O and app data/cache size.
 
@@ -68,7 +69,7 @@ Building from source or running the CLI from Python requires Python 3.11+; see [
 3. Put the exe in a writable folder and double-click it. No `--serial` is needed once a single headset is paired.
 4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset** button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run. If wireless ADB is still reconnecting, the first Preview/Start waits and retries for up to 30 seconds before reporting an error.
 5. Open **Run** for the results, or select runs in **Compare** to overlay and compare them.
-6. Open **Tools > Diagnostics** for a one-click crash/soft-reboot snapshot (JSON + Markdown under `reports/debug/`), **Tools > Apps** to inspect and manage installed packages, or **Tools > Settings** to toggle reversible device settings such as the green recording indicator.
+6. Open **Tools > Diagnostics** for a one-click crash/soft-reboot snapshot (JSON + Markdown under `reports/debug/`), **Tools > Apps** to inspect and manage installed packages, **Tools > Installer** to install APK/OBB/XAPK files, or **Tools > Settings** to toggle reversible device settings such as the green recording indicator.
 7. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no internet or Python required.
 
 `runs/` and `reports/` are created next to the exe. Keep the exe folder writable, and do not share the raw `runs/` folder unless you have checked its contents; exported HTML redacts common network/device identifiers.
@@ -94,7 +95,7 @@ The GUI needs `adb` and WebView2. It does not need Python. For source setup, arc
 
 - [Detailed guide: capture, output/schema and safety](docs/README.md)
 - [Diagnostics guide](docs/DIAGNOSTICS.md)
-- [Apps & services guide](docs/APPS.md)
+- [Apps, installer & services guide](docs/APPS.md)
 - [Settings guide](docs/SETTINGS.md)
 - [Hidden and experimental ADB settings](docs/HIDDEN_ADB_SETTINGS.md)
 - [CLI reference](docs/CLI.md)
@@ -107,7 +108,8 @@ Findings pages label their hardware state: **stock/unmodified before 2026-11-01*
 ## Safety
 
 - Recording, preview, diagnostics and report export are read-only; nothing persists on the device.
-- `Tools > Apps` can disable, remove for user 0, restore, uninstall packages, or apply Game Mode FPS/render-scale overrides on supported titles. It only runs after an explicit confirmation in the local UI, requires the local API token, and logs actions under `reports/apps/`. Non-critical stock packages are removed for user 0 only; the system image is never edited. Critical packages cannot be disabled, removed, or performance-tuned.
+- `Tools > Apps` can disable, remove for user 0, restore, uninstall packages, or apply Game Mode FPS/render-scale overrides on supported titles. It only runs after an explicit confirmation in the local UI, requires the local API token, and logs actions under `reports/apps/`. Non-critical stock packages are removed for user 0 only; the system image is never edited.
+- `Tools > Installer` can install APK/OBB/XAPK files. Installs are staged locally, hashed, reviewed and sent to user 0 after confirmation; the API token is required and each run is logged under `reports/apps/`. Critical packages cannot be installed over, and installs are blocked during recording.
 - `Tools > Settings` can change reversible device settings, including XR controls, display/UI keys, update packages and optional advanced/testing keys. Changes are blocked during recording and logged under `reports/settings/`. The performance overlay warns about OLED burn-in; disabling the guardian boundary requires confirmation. Some testing-only keys have unverified behavior or numeric mappings.
 - `--root` performs read-only `su -c` reads and may trigger a root prompt. App data/cache size is the optional root detail in the Apps tool.
 - Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; raw run files keep the original values.

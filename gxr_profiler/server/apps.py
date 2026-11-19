@@ -35,6 +35,7 @@ from ..core.apps import (
 from ..core.parsers.util import split_sections
 from ..core.paths import default_reports_dir
 from .action_log import append_action_log
+from .app_install import InstallManager
 
 log = logging.getLogger(__name__)
 
@@ -61,12 +62,24 @@ class AppsService:
         reports_dir: str | None = None,
         user: int = 0,
         adb_factory: Callable[..., AdbClient] = RealAdb,
+        staging_dir: str | None = None,
+        busy_check: Callable[[], bool] | None = None,
     ) -> None:
         self.serial = serial
         self.user = user
         self.reports_dir = reports_dir or str(Path(default_reports_dir()) / "apps")
         self.adb_factory = adb_factory
         self.lock = threading.Lock()
+        self.device_lock = threading.Lock()
+        self.install = InstallManager(
+            serial=serial,
+            reports_dir=self.reports_dir,
+            user=user,
+            staging_dir=staging_dir,
+            busy_check=busy_check,
+            adb_factory=adb_factory,
+            device_lock=self.device_lock,
+        )
 
     def _adb(self) -> AdbClient:
         return self.adb_factory(serial=resolve_serial(self.serial))
@@ -204,32 +217,41 @@ class AppsService:
             raise ValueError(f"unknown app action: {action}")
         if not confirm:
             raise ValueError("confirmation is required")
-        with self.lock:
-            adb = self._adb()
-            current = self._read_snapshot(adb, include_sizes=False)
-            row = next((item for item in current["packages"] if item["package"] == package), None)
-            if row is None:
-                raise LookupError(f"package not found: {package}")
-            if is_critical_package(package) and action in APP_DESTRUCTIVE_ACTIONS:
-                raise PermissionError("critical system packages cannot be disabled or removed")
-            if action not in row["actions"]:
-                raise ValueError(f"{action} is not available for this package in its current state")
-            command = build_action_command(package, action, self.user)
-            proc = adb.run(["shell", command], timeout=20.0)
-            output = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
-            ok, message = interpret_action_result(output, proc.returncode)
-            result = {
-                "ok": ok,
-                "package": package,
-                "action": action,
-                "command": command,
-                "output": message,
-                "returncode": proc.returncode,
-                "kind": row["kind"],
-                "state_before": row["state"],
-            }
-            self._log_action(result)
-            return result
+        if self.install.active():
+            raise RuntimeError("an install is running; wait for it to finish")
+        if not self.device_lock.acquire(blocking=False):
+            raise RuntimeError("another device operation is running")
+        try:
+            if self.install.active():
+                raise RuntimeError("an install is running; wait for it to finish")
+            with self.lock:
+                adb = self._adb()
+                current = self._read_snapshot(adb, include_sizes=False)
+                row = next((item for item in current["packages"] if item["package"] == package), None)
+                if row is None:
+                    raise LookupError(f"package not found: {package}")
+                if is_critical_package(package) and action in APP_DESTRUCTIVE_ACTIONS:
+                    raise PermissionError("critical system packages cannot be disabled or removed")
+                if action not in row["actions"]:
+                    raise ValueError(f"{action} is not available for this package in its current state")
+                command = build_action_command(package, action, self.user)
+                proc = adb.run(["shell", command], timeout=20.0)
+                output = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
+                ok, message = interpret_action_result(output, proc.returncode)
+                result = {
+                    "ok": ok,
+                    "package": package,
+                    "action": action,
+                    "command": command,
+                    "output": message,
+                    "returncode": proc.returncode,
+                    "kind": row["kind"],
+                    "state_before": row["state"],
+                }
+                self._log_action(result)
+                return result
+        finally:
+            self.device_lock.release()
 
     def set_game_override(self, package: str, fps: str, downscale: str, confirm: bool = False) -> dict:
         package = validate_package_name(package)
@@ -239,32 +261,41 @@ class AppsService:
             raise ValueError("confirmation is required")
         if is_critical_package(package):
             raise PermissionError("critical system packages cannot be performance-tuned")
-        with self.lock:
-            adb = self._adb()
-            game = self._game_detail(adb, package)
-            if not game.get("supported"):
-                raise ValueError("custom game mode interventions are not supported for this package")
-            command = build_game_override_command(package, fps, downscale)
-            proc = adb.run(["shell", command], timeout=20.0)
-            output = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
-            output = output.strip()
-            failed = proc.returncode != 0 or any(marker in output.lower() for marker in _GAME_FAILURE_MARKERS)
-            after = self._game_detail(adb, package)
-            ok = not failed and after.get("fps") == fps and after.get("downscale") == downscale
-            if not ok and not output:
-                output = "The device did not apply the requested game mode."
-            result = {
-                "ok": ok,
-                "package": package,
-                "action": "performance",
-                "command": command,
-                "output": output,
-                "fps": fps,
-                "downscale": downscale,
-                "game": after,
-            }
-            self._log_action(result)
-            return result
+        if self.install.active():
+            raise RuntimeError("an install is running; wait for it to finish")
+        if not self.device_lock.acquire(blocking=False):
+            raise RuntimeError("another device operation is running")
+        try:
+            if self.install.active():
+                raise RuntimeError("an install is running; wait for it to finish")
+            with self.lock:
+                adb = self._adb()
+                game = self._game_detail(adb, package)
+                if not game.get("supported"):
+                    raise ValueError("custom game mode interventions are not supported for this package")
+                command = build_game_override_command(package, fps, downscale)
+                proc = adb.run(["shell", command], timeout=20.0)
+                output = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
+                output = output.strip()
+                failed = proc.returncode != 0 or any(marker in output.lower() for marker in _GAME_FAILURE_MARKERS)
+                after = self._game_detail(adb, package)
+                ok = not failed and after.get("fps") == fps and after.get("downscale") == downscale
+                if not ok and not output:
+                    output = "The device did not apply the requested game mode."
+                result = {
+                    "ok": ok,
+                    "package": package,
+                    "action": "performance",
+                    "command": command,
+                    "output": output,
+                    "fps": fps,
+                    "downscale": downscale,
+                    "game": after,
+                }
+                self._log_action(result)
+                return result
+        finally:
+            self.device_lock.release()
 
     def _log_action(self, result: dict) -> None:
         keys = (

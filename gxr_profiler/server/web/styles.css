@@ -816,6 +816,105 @@ body.toast-open .floatnav { opacity: 0; pointer-events: none; }
 .appschip.apptotal { border-color: #2b3a4a; background: #152235; }
 .appschip.apptotal .appschipv { color: #9fd0ff; }
 
+/* Apps: install APK/OBB */
+.appstoolactions { display: flex; align-items: center; gap: 8px; flex: none; }
+.install-body { display: flex; flex-direction: column; gap: 10px; }
+.install-drop {
+  border: 2px dashed #3a4656; border-radius: 12px; padding: 24px 18px; text-align: center;
+  background: #12171f; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.install-drop:hover, .install-drop:focus-visible, .install-drop.dragging {
+  border-color: var(--accent); background: #152235; outline: none;
+}
+.install-drop-title { font-size: var(--fs-md); font-weight: 600; color: var(--fg); margin-bottom: 4px; }
+.install-drop-actions { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+.install-inputs { display: none; }
+.install-listhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  color: var(--dim); font-size: var(--fs-sm); margin-top: 4px;
+}
+.install-list {
+  display: flex; flex-direction: column; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.install-bundlehead {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 10px; background: #152235; border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm); color: #9fd0ff;
+}
+.install-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px;
+  border-bottom: 1px solid var(--border); background: var(--panel2);
+}
+.install-row:last-child { border-bottom: 0; }
+.install-row.upload { background: #12171f; }
+.install-type {
+  flex: none; min-width: 52px; padding: 2px 6px; border-radius: 5px;
+  border: 1px solid var(--border); background: #1c2230; color: #9fd0ff;
+  font-size: var(--fs-xs); font-weight: 600; text-align: center;
+}
+.install-type.apk { color: #7ee787; border-color: #2b5c3a; }
+.install-type.obb { color: #f0c000; border-color: #6b5a1c; }
+.install-type.bad { color: #ffb3a0; border-color: #5a2a22; }
+.install-main { flex: 1; min-width: 0; }
+.install-name { color: var(--fg); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.install-meta { color: var(--dim); font-size: var(--fs-xs); margin-top: 3px; overflow-wrap: anywhere; }
+.install-warning { color: #f0c000; font-size: var(--fs-xs); margin-top: 4px; line-height: 1.35; }
+.install-note { margin: 0; color: #9fd0ff; font-size: var(--fs-sm); }
+.install-error {
+  margin: 6px 0 0; padding: 8px 10px; border-left: 3px solid #ff5d5d; border-radius: 6px;
+  background: #3a1f1a; color: #ffb3a0; font-size: var(--fs-sm); line-height: 1.4;
+}
+.install-errors, .install-warnings { display: flex; flex-direction: column; gap: 4px; }
+.install-warnings .install-warning { margin: 0; }
+.install-pkgfield { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.install-pkgfield label { color: var(--dim); font-size: var(--fs-xs); }
+.install-pkginput {
+  flex: 1; min-width: 180px; padding: 5px 8px; border: 1px solid var(--border);
+  border-radius: 6px; background: #12171f; color: var(--fg);
+  font-size: var(--fs-xs); font-family: Consolas, "Cascadia Mono", monospace;
+}
+.install-pkginput:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.install-progress { height: 5px; margin-top: 7px; border-radius: 999px; background: #20262e; overflow: hidden; }
+.install-progress-fill { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.install-progress-label { font-size: var(--fs-xs); margin-top: 4px; }
+.install-upload-actions { display: flex; gap: 6px; flex: none; align-items: center; }
+.install-options { margin-top: 4px; }
+.install-options .appsubhead { margin-bottom: 2px; }
+.install-safety { font-size: var(--fs-xs); margin: 2px 0 0; }
+.install-total { font-size: var(--fs-sm); margin: 2px 0 0; }
+.install-review-group {
+  border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px;
+  margin: 8px 0; background: var(--panel2);
+}
+.install-review-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.install-review-file { color: var(--fg); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.install-review-path { font-size: var(--fs-xs); overflow-wrap: anywhere; margin-top: 3px; }
+.install-result { border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; background: var(--panel2); }
+.install-result.done { border-color: #2b5c3a; background: #14241a; }
+.install-result.failed { border-color: #5a2a22; background: #2a1714; }
+.install-result.running { border-color: #315e83; background: #152235; }
+.install-result-title { font-weight: 600; color: var(--fg); }
+.install-result-text { font-size: var(--fs-sm); color: var(--dim); margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; }
+.install-steps { display: flex; flex-direction: column; gap: 2px; }
+.install-step { display: flex; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.install-step:last-child { border-bottom: 0; }
+.install-step-mark {
+  flex: none; width: 18px; height: 18px; line-height: 18px; text-align: center;
+  border-radius: 50%; font-size: var(--fs-xs); background: #1c2230; color: var(--dim);
+}
+.install-step.running .install-step-mark { background: #315e83; color: #fff; }
+.install-step.done .install-step-mark { background: #2b5c3a; color: #fff; }
+.install-step.error .install-step-mark { background: #5a2a22; color: #fff; }
+.install-step-body { min-width: 0; flex: 1; }
+.install-step-label { font-size: var(--fs-sm); color: var(--fg); }
+.install-step.pending .install-step-label { color: var(--dim); }
+.install-output { margin: 6px 0 0; max-height: 240px; }
+@media (max-width: 720px) {
+  .install-row { flex-wrap: wrap; }
+  .install-type { min-width: 0; }
+  .appstoolactions { width: 100%; }
+}
 
 
 /* Settings tool */
