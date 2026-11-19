@@ -7,7 +7,8 @@ import json
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
-from ...core.adb import RunNotFound
+from gxr_core.adb import RunNotFound
+
 from ..deps import StoreDep
 from ..reporting import (
     build_report,
@@ -46,14 +47,14 @@ def export_report(
     try:
         validate_selection(labels)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     missing = missing_labels(store, labels)
     if missing:
         raise HTTPException(status_code=404, detail="run not found: " + ", ".join(missing))
     try:
         html = build_report(store, labels, pins=pins_payload)
     except RunNotFound:
-        raise HTTPException(status_code=404, detail="one or more runs not found")
+        raise HTTPException(status_code=404, detail="one or more runs not found") from None
     return Response(
         content=html,
         media_type="text/html; charset=utf-8",

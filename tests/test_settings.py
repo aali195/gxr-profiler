@@ -1,4 +1,4 @@
-from gxr_profiler.core.settings import (
+from gxr_manager.core.settings import (
     SETTING_DEFINITIONS,
     SETTING_SECTIONS,
     get_setting_definition,
@@ -134,7 +134,6 @@ def test_sections_and_new_setting_metadata():
     assert "collapsed" not in advanced
     assert "collapsed" not in testing
     assert advanced["settings"] == [
-        "disable_performance_optimization_policy",
         "disable_child_process_restrictions",
         "stay_awake_while_charging",
         "disable_heads_up_notifications",
@@ -142,6 +141,7 @@ def test_sections_and_new_setting_metadata():
     ]
     assert testing["test_only"] is True
     assert testing["settings"] == [
+        "disable_performance_optimization_policy",
         "disable_animations",
         "reduce_transparency",
         "disable_game_optimizing_service",
@@ -203,7 +203,7 @@ def test_performance_optimization_parser_and_metadata():
     assert "Operation not permitted" in error["error"]
 
     public = public_setting(get_setting_definition("disable_performance_optimization_policy"))
-    assert public["section"] == "advanced"
+    assert public["section"] == "testing"
     assert public["root_required"] is True
     assert public["default_label"] == "Off"
     assert "Requires root" in public["warning"]

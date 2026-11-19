@@ -1,10 +1,10 @@
 import csv
 from pathlib import Path
 
+from gxr_core import parsers as P
+from gxr_core.columns import PROC_COLUMNS
 from gxr_profiler.capture.processes import ProcessSampler
 from gxr_profiler.capture.writer import RunWriter
-from gxr_profiler.core import parsers as P
-from gxr_profiler.core.columns import PROC_COLUMNS
 from gxr_profiler.report.data import process_series_for, procs_for
 from gxr_profiler.runs.store import RunStore
 from tests.fake_adb import FakeAdb

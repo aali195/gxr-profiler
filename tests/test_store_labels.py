@@ -1,7 +1,7 @@
 import json
 
+from gxr_core import labels, schema
 from gxr_profiler.capture.columns import REPORT_COLUMNS
-from gxr_profiler.core import labels, schema
 from gxr_profiler.report import charts
 from gxr_profiler.report.data import MAX_POINTS, downsample
 from gxr_profiler.runs.store import RunStore
@@ -26,7 +26,7 @@ def test_bands_defined():
 
 
 def test_ddr_is_a_cooldown_sensor():
-    from gxr_profiler.core.columns import temp_sensor_options
+    from gxr_core.columns import temp_sensor_options
 
     options = {option["id"]: option["label"] for option in temp_sensor_options()}
     assert options["DDR"] == "DDR (RAM) temperature"
@@ -206,7 +206,7 @@ def test_store_update_rename_and_notes(tmp_path):
 def test_store_delete(tmp_path):
     import pytest
 
-    from gxr_profiler.core.adb import RunNotFound
+    from gxr_core.adb import RunNotFound
 
     runs = tmp_path / "runs"
     runs.mkdir()
@@ -231,7 +231,7 @@ def test_store_delete(tmp_path):
 def test_flat_runs_are_not_listed(tmp_path):
     import pytest
 
-    from gxr_profiler.core.adb import RunNotFound
+    from gxr_core.adb import RunNotFound
 
     runs = tmp_path / "runs"
     runs.mkdir()

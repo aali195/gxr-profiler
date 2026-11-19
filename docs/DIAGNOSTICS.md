@@ -2,7 +2,7 @@
 
 [Back to README](../README.md) | [Commands](COMMANDS.md) | [Crash & soft-reboot log reference](gxr-findings/crash-logs.md)
 
-The **Tools > Diagnostics** tab is a one-click, read-only health snapshot for the headset. Use it after
+The **GXR Manager > Diagnostics** tab is a one-click, read-only health snapshot for the headset. Use it after
 an unexpected restart, a crash, a hang, or any time the headset behaves strangely and you want to know
 what Android recorded.
 
@@ -23,7 +23,7 @@ tombstones often survive longer, but they are not guaranteed.
 ## Quick start
 
 1. Connect the headset over ADB. The UI needs a single paired device, or pass `--serial`.
-2. Open **Tools**, then **Diagnostics**.
+2. Open **GXR Manager**, then **Diagnostics**.
 3. Choose the options you need:
    - **Root extras** - asks `su` for data that normal shell cannot read. It may prompt.
    - **Read tombstone / ANR files** - reads recent native crash and ANR files. Requires root.
@@ -165,7 +165,7 @@ sharing. Prefer the Markdown summary plus the relevant finding excerpts for a bu
 
 | Symptom | What to try |
 |---|---|
-| `no adb device` | Reconnect wireless ADB, or pass `--serial`. |
+| `no adb device` | Reconnect wireless ADB; see [device selection](CLI.md#device-selection). |
 | `su` prompt or root unavailable | Re-enable DFroot/KernelSU, then collect again. |
 | Tombstones say `Permission denied` | Use **Root extras**, or collect `adb bugreport` and inspect its tombstone section. |
 | No crashes found | The crash may have rotated; enable tombstone reading and check Dropbox/exit history. |

@@ -6,10 +6,12 @@ import logging
 import threading
 from collections import deque
 
+from gxr_core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, resolve_serial
+from gxr_core.naming import validate_run_name
+from gxr_core.recording_state import RecordingMarker
+
 from ..capture.recorder import Recorder
-from ..core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, resolve_serial
 from ..core.models import RunConfig
-from ..core.naming import validate_run_name
 
 log = logging.getLogger(__name__)
 
@@ -25,17 +27,20 @@ class RecordManager:
         self.events: deque[dict] = deque(maxlen=2000)
         self.next_seq = 0
         self.row_count = 0
+        self.elapsed = 0.0
         self.status = "idle"
         self.label = ""
         self.duration = 0.0
         self.profile = ""
         self.recorder: Recorder | None = None
         self.thread: threading.Thread | None = None
+        self.recording = RecordingMarker()
 
     def _on_sample(self, event) -> None:
         with self.lock:
             self.next_seq += 1
             self.row_count += 1
+            self.elapsed = float(event.elapsed_s)
             self.events.append(
                 {"seq": self.next_seq, "rows": self.row_count, "elapsed": event.elapsed_s, "row": event.row}
             )
@@ -62,24 +67,36 @@ class RecordManager:
             self.events.clear()
             self.next_seq = 0
             self.row_count = 0
+            self.elapsed = 0.0
             self.status = "recording"
             self.label = cfg.name
             self.duration = cfg.duration
             self.profile = cfg.profile
             self.recorder = recorder
 
+        self.recording.start(cfg.name)
+
         def _run() -> None:
+            status = "error"
             try:
                 recorder.run()
-                with self.lock:
-                    self.status = "done"
+                status = "done"
             except Exception:
                 log.exception("recording failed")
+            finally:
                 with self.lock:
-                    self.status = "error"
+                    self.elapsed = max(self.elapsed, float(getattr(recorder, "recording_elapsed_s", 0.0) or 0.0))
+                    self.status = status
+                self.recording.stop(status=status)
 
-        self.thread = threading.Thread(target=_run, name="recorder", daemon=True)
-        self.thread.start()
+        try:
+            self.thread = threading.Thread(target=_run, name="recorder", daemon=True)
+            self.thread.start()
+        except Exception:
+            self.recording.stop(status="error", error="could not start recording thread")
+            with self.lock:
+                self.status = "error"
+            raise
 
     def stop(self) -> None:
         if self.recorder:
@@ -90,6 +107,7 @@ class RecordManager:
         thread = self.thread
         if thread is not None and thread.is_alive():
             thread.join(timeout=timeout)
+        self.recording.stop(status="shutdown")
 
     def state(self) -> dict:
         with self.lock:
@@ -97,6 +115,7 @@ class RecordManager:
                 "status": self.status,
                 "label": self.label,
                 "rows": self.row_count,
+                "elapsed": self.elapsed,
                 "duration": self.duration,
                 "profile": self.profile,
                 "running": self.thread is not None and self.thread.is_alive(),

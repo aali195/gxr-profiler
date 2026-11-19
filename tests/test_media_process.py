@@ -1,12 +1,12 @@
 import csv
 from pathlib import Path
 
+from gxr_core.parsers.media import parse_media_resources, visible_sf_lines
 from gxr_profiler.capture.media import MediaSampler
 from gxr_profiler.capture.meta import build_meta
 from gxr_profiler.capture.processes import ProcessSampler
 from gxr_profiler.capture.writer import RunWriter
 from gxr_profiler.core.models import RunConfig
-from gxr_profiler.core.parsers.media import parse_media_resources, visible_sf_lines
 from tests.fake_adb import FakeAdb
 
 MEDIA_RESPONSE = """###MEDIA

@@ -1,6 +1,7 @@
 import pytest
 
-from gxr_profiler.core.apps import (
+from gxr_core.parsers.util import split_sections
+from gxr_manager.core.apps import (
     APP_ACTION_SPECS,
     APP_ACTIONS,
     GAME_DOWNSCALE_VALUES,
@@ -21,7 +22,6 @@ from gxr_profiler.core.apps import (
     summarize,
     validate_package_name,
 )
-from gxr_profiler.core.parsers.util import split_sections
 from tests.apps_fixtures import APP_LIST, DETAIL
 
 

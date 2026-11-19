@@ -2,22 +2,15 @@ import re
 
 from fastapi.testclient import TestClient
 
-from gxr_profiler.core.adb import AdbError
-from gxr_profiler.server.app import create_app
-from gxr_profiler.server.deps import get_apps_service, get_manager
+from gxr_core.adb import AdbError
+from gxr_core.recording_state import write_state
+from gxr_manager.server.app import create_manager_app
+from gxr_manager.server.deps import get_apps_service
 
 
 def _token(client):
     html = client.get("/").text
     return re.search(r'name="gxr-profiler-token" content="([^"]+)"', html).group(1)
-
-
-class FakeManager:
-    def __init__(self, status="idle"):
-        self.status = status
-
-    def state(self):
-        return {"status": self.status}
 
 
 class FakeApps:
@@ -82,18 +75,15 @@ class FakeApps:
         }
 
 
-def _client(tmp_path, status="idle"):
-    app = create_app(str(tmp_path / "runs"))
+def _client(tmp_path):
+    app = create_manager_app(serial="fake")
     fake_apps = FakeApps()
-    fake_manager = FakeManager(status)
     app.dependency_overrides[get_apps_service] = lambda: fake_apps
-    app.dependency_overrides[get_manager] = lambda: fake_manager
-    client = TestClient(app)
-    return client, fake_apps, fake_manager
+    return TestClient(app), fake_apps
 
 
 def test_app_list_and_detail_routes(tmp_path):
-    client, fake, _ = _client(tmp_path)
+    client, fake = _client(tmp_path)
     listing = client.get("/api/apps")
     assert listing.status_code == 200
     assert listing.json()["packages"][0]["package"] == "com.example.app"
@@ -113,7 +103,7 @@ def test_app_list_and_detail_routes(tmp_path):
 
 
 def test_app_actions_require_token_and_confirmation(tmp_path):
-    client, fake, _ = _client(tmp_path)
+    client, fake = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
 
     assert client.post("/api/apps/com.example.app/action", json={"action": "disable"}).status_code == 403
@@ -138,7 +128,7 @@ def test_app_actions_require_token_and_confirmation(tmp_path):
 
 
 def test_app_actions_reject_unknown_action_and_recording(tmp_path):
-    client, _, manager = _client(tmp_path)
+    client, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
 
     assert (
@@ -149,7 +139,7 @@ def test_app_actions_reject_unknown_action_and_recording(tmp_path):
         ).status_code
         == 422
     )
-    manager.status = "recording"
+    write_state(True, label="test run")
     response = client.post(
         "/api/apps/com.example.app/action",
         json={"action": "disable", "confirm": True},
@@ -159,7 +149,7 @@ def test_app_actions_reject_unknown_action_and_recording(tmp_path):
 
 
 def test_app_actions_block_critical_packages(tmp_path):
-    client, fake, _ = _client(tmp_path)
+    client, fake = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     fake.fail_action = "critical"
     response = client.post(
@@ -172,7 +162,7 @@ def test_app_actions_block_critical_packages(tmp_path):
 
 
 def test_app_performance_requires_token_and_confirmation(tmp_path):
-    client, fake, _ = _client(tmp_path)
+    client, fake = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
 
     assert (
@@ -201,7 +191,7 @@ def test_app_performance_requires_token_and_confirmation(tmp_path):
 
 
 def test_app_performance_rejects_invalid_values_and_recording(tmp_path):
-    client, _, manager = _client(tmp_path)
+    client, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
 
     response = client.post(
@@ -217,7 +207,7 @@ def test_app_performance_rejects_invalid_values_and_recording(tmp_path):
     )
     assert response.status_code == 422
 
-    manager.status = "recording"
+    write_state(True, label="test run")
     response = client.post(
         "/api/apps/com.example.app/performance",
         json={"fps": "90", "downscale": "0.8", "confirm": True},
@@ -227,7 +217,7 @@ def test_app_performance_rejects_invalid_values_and_recording(tmp_path):
 
 
 def test_app_performance_blocks_critical_packages(tmp_path):
-    client, fake, _ = _client(tmp_path)
+    client, fake = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     fake.fail_action = "critical"
     response = client.post(
@@ -240,7 +230,7 @@ def test_app_performance_blocks_critical_packages(tmp_path):
 
 
 def test_app_routes_map_adb_errors_to_503(tmp_path):
-    client, fake, _ = _client(tmp_path)
+    client, fake = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
 
     fake.list_packages = lambda: (_ for _ in ()).throw(AdbError("no adb device"))

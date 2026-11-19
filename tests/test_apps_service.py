@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from gxr_profiler.core.apps import PACKAGE_FALLBACK_SCRIPT
-from gxr_profiler.server.apps import AppsService
+from gxr_manager.core.apps import PACKAGE_FALLBACK_SCRIPT
+from gxr_manager.server.apps import AppsService
 from tests.apps_fixtures import APP_LIST, DETAIL
 
 

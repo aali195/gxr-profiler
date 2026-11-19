@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .columns import COOLDOWN_SENSORS
-from .paths import default_runs_dir
+from gxr_core.columns import COOLDOWN_SENSORS
+from gxr_core.paths import default_runs_dir
 
 
 @dataclass

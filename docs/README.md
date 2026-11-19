@@ -1,20 +1,19 @@
-# GXR Profiler - detailed guide & findings
+# GXR Profiler - capture, output & safety
 
-Detailed notes for **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2 (`SXR2230P`) and Adreno 740. All investigation and capture uses read-only commands.
+Capture, output and safety reference for **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2 (`SXR2230P`) and Adreno 740. Investigation and capture use read-only commands, only confirmed **GXR Manager** actions change device state.
 
-Quick start, screenshots and the packaged UI are in the root [README](../README.md). CLI usage is in [CLI.md](CLI.md), the user-facing crash/reboot workflow is in [DIAGNOSTICS.md](DIAGNOSTICS.md), the package-management workflow is in [APPS.md](APPS.md), the device-settings workflow is in [SETTINGS.md](SETTINGS.md), hidden/experimental settings research in [HIDDEN_ADB_SETTINGS.md](HIDDEN_ADB_SETTINGS.md), developer setup in [DEVELOPMENT.md](DEVELOPMENT.md), and every headset command in [COMMANDS.md](COMMANDS.md).
+Quick start, screenshots and the packaged UI are in the root [README](../README.md). CLI usage is in [CLI.md](CLI.md), the manager overview in [MANAGER.md](MANAGER.md), the crash/reboot workflow in [DIAGNOSTICS.md](DIAGNOSTICS.md), package management in [APPS.md](APPS.md), device settings in [SETTINGS.md](SETTINGS.md), hidden-key research in [HIDDEN_ADB_SETTINGS.md](HIDDEN_ADB_SETTINGS.md), developer setup in [DEVELOPMENT.md](DEVELOPMENT.md), every capture command in [COMMANDS.md](COMMANDS.md), and measurement findings in the [research & findings hub](gxr-findings/README.md).
 
 ## Contents
 
 - [Device support](#device-support)
 - [Capture profiles & overhead](#capture-profiles--overhead)
 - [Output & schema](#output--schema)
+- [Data sources](#data-sources)
 - [Safety & fair runs](#safety--fair-runs)
 - [Apps & services](#apps--services)
+- [Settings](#settings)
 - [Research & findings](#research--findings)
-- [Data sources](#data-sources)
-- [Findings index](#findings-index)
-- [Key findings](#key-findings)
 
 ## Device support
 
@@ -68,13 +67,11 @@ runs/<label>/meta.json      manifest: schema/tool version, features, start/end s
 reports/<a>_vs_<b>.html     self-contained offline viewer (data + CSS/JS + ECharts inlined)
 ```
 
-Runs are always stored in per-run directories.
-
 Run names may use Unicode letters/digits plus spaces, `.`, `_` and `-` (max 100 characters). Path separators, Windows-invalid characters, reserved device names and trailing dots/spaces are rejected. Recording refuses to overwrite an existing run name.
 
 **Why wide CSV.** One row per second loads trivially in pandas and plots directly; event-derived values are forward-filled into the row (last known). Raw parsed events stay in `.events.csv`.
 
-**Columns (231).** Groups:
+**Columns (235, schema 12).** Groups:
 
 - `meta`: `ts_host` (epoch), `ts_dev`, `elapsed_s`, `poll_ok` (0/1 - did the poll succeed).
 - `thermal`: `t_*` temps (C), `thermal_status`, `thermal_max_sev`, `sec_*` (C), `ddr_temp` (C), `video_temp`, `camera0/1_temp`, plus `aoss*`, `cpuss*` and `rawcpu_*` extras.
@@ -155,38 +152,7 @@ device_info   # one-time device/build/region/manufacture/setup/panel/display/aud
 
 **Run format.** Runs are stored only in the `runs/<label>/` directory layout. Existing results are not rewritten; deleting or renaming a run is an explicit user action.
 
-## Safety & fair runs
-
-- Recording, preview, diagnostics and report export are read-only: `cat`, `getprop`, `dumpsys`, `cmd wifi status`, `logcat`, `ps`.
-- `--root` only runs read-only `su -c` reads (fan RPM/PWM, active panel, measured IPD/calibration mtimes, approximate first-setup mtime, `/proc/<pid>/io`, app data/cache size); it may trigger a root prompt. There are no `push`/`setprop`/sysfs writes and no thermalservice inject/override. The separate Settings tool has two rooted writes: **Disable performance optimization policy** and **Disable fixed Home Space Mode display rate**.
-- `Tools > Apps` and `Tools > Settings` are the mutating workflows. Package actions, including Game Mode performance overrides, require an explicit confirmation in the local UI; package and setting changes require the local API token, are blocked during recording, and are logged under `reports/apps/` and `reports/settings/`. Stock packages are removed for user 0 only; the system image is not edited.
-- Raw device captures are not stored in the repository. Add only sanitized excerpts under `docs/examples/`; never commit serials, account names, or Wi-Fi identifiers.
-- Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; full values remain only in local run files. Offline reports do not include Apps management.
-
-For fair runs: unplug AC (charging adds heat), keep identical workload/duration, and use `--cooldown` so both runs start from the same temperature.
-
-## Apps & services
-
-See the [Apps & services guide](APPS.md) for the package list, sortable one-shot CPU/RSS/GPU/threads
-usage, OOM and size columns, system vs user/stock package distinction, reversible per-user removal,
-full uninstall of user apps, confirmation rules, critical-package protection and optional root storage details.
-
-## Settings
-
-See the [Settings guide](SETTINGS.md) for the XR controls, display/UI settings, green recording
-indicator, update controls, advanced package/key toggles, testing-only entries, persistence rules and
-safety notes. The read-only discovery notes and commands for hidden keys are in
-[Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
-
-## Research & findings
-
-- [`gxr-findings/`](gxr-findings/) - topic files. Each starts with **Tests & results**, then a short **Findings** summary, then the full **Details**.
-- [`COMMANDS.md`](COMMANDS.md) - every headset command, polling cadence and root requirement.
-- [`examples/`](examples/) - curated, sanitized snippets and device quirks worth citing.
-
-Raw captures are deliberately not stored in the repository. Add only small, sanitized, read-only outputs (or the command plus a short excerpt). Do not add serial numbers, account names, Wi-Fi identifiers, or other personal data.
-
-### Data sources
+## Data sources
 
 Read-only sources: a **logcat stream** + a **1 Hz poll**. Full command and cadence reference: [COMMANDS.md](COMMANDS.md).
 
@@ -228,52 +194,39 @@ Read-only sources: a **logcat stream** + a **1 Hz poll**. Full command and caden
 | Guardian/boundary state | secure `guardian_*` + system `guardian_*` / `toggle_guardian` settings |
 | Approximate first setup date | earliest mtime of user settings markers (root, read-only) |
 
-### Findings index
+## Safety & fair runs
 
-Each topic links to tests/results first, then the digestible findings and full details.
+- Recording, preview, diagnostics and report export are read-only: `cat`, `getprop`, `dumpsys`, `cmd wifi status`, `logcat`, `ps`.
+- `--root` only runs read-only `su -c` reads (fan RPM/PWM, active panel, measured IPD/calibration mtimes, approximate first-setup mtime, `/proc/<pid>/io`, app data/cache size); it may trigger a root prompt. There are no `push`/`setprop`/sysfs writes and no thermalservice inject/override. GXR Manager > Settings has two rooted writes: **Disable performance optimization policy** and **Disable fixed Home Space Mode display rate**.
+- `GXR Manager > Apps`, `Installer` and `Settings` are the mutating workflows. Package, install and setting actions require an explicit confirmation in the local UI and the local API token; they are blocked during recording and logged under `reports/apps/` and `reports/settings/`. Stock packages are removed for user 0 only; the system image is not edited.
+- Raw device captures are not stored in the repository. Add only sanitized excerpts under `docs/examples/`; never commit serials, account names, or Wi-Fi identifiers.
+- Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; full values remain only in local run files. Offline reports do not include GXR Manager tools.
 
-> **Hardware state cutoff:** Runs before **2026-11-01** are from the **stock, unmodified** SM-I610. Runs from **2026-11-01 onward** (the in-between and after runs) are from the **SoC thermal-modded** headset (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit. Every topic page repeats its own `Hardware state` label at the top.
+For fair runs: unplug AC (charging adds heat), keep identical workload/duration, and use `--cooldown` so both runs start from the same temperature.
 
-| Topic | Covers |
-|---|---|
-| [Device identity & boundary](gxr-findings/device.md) | build, region/CSC, manufacture, first setup, IPD/calibration, guardian |
-| [Thermal, throttling & fan](gxr-findings/thermal.md) | temperature sources, CPU caps, GPU clock, fan, throttle ladder |
-| [Thermal mod before/after](gxr-findings/thermal-mod.md) | phase-change pads + copper shims on the SoC: 7 paired tests, status-4 removal, performance gains and limits |
-| [Thermal caps & fan steps](gxr-findings/thermal-caps-fan.md) | AP/LRP/CPU/GPU roles, status thresholds, CPU/camera caps, fan curve, where limits were hit |
-| [Power rails & battery drain](gxr-findings/power.md) | rail voltage/current/power/energy, battery rate |
-| [Cameras, perception & controllers](gxr-findings/tracking.md) | CIB streams, service rates, hand tracking, controller state |
-| [Display, media & passthrough](gxr-findings/display-media.md) | decoders, HDR/color/bit depth, panel, passthrough |
-| [Audio](gxr-findings/audio.md) | speaker/mic paths, latency, spatializer, codecs |
-| [Bluetooth & location](gxr-findings/radios.md) | BLE-on quirk, A2DP, location modes |
-| [Wi-Fi & standby](gxr-findings/wifi.md) | throughput, link rate, RSSI and retries after standby |
-| [Storage I/O](gxr-findings/storage.md) | diskstats, pressure, per-process I/O |
-| [CPU & memory](gxr-findings/cpu-memory.md) | meminfo, zram/swap, per-core utilisation |
-| [Power modes & battery](gxr-findings/modes.md) | Battery Saver, hand tracking, battery/AC A/B |
-| [Standby & wake](gxr-findings/standby.md) | rest/standby recovery, short vs long gap, status-3 re-entry |
-| [Root](gxr-findings/root.md) | KernelSU reads, fan, calibration, limits |
-| [Crash & soft-reboot logs](gxr-findings/crash-logs.md) | crash/events/system buffers, dropbox, tombstones, exit-info, rescue/boot props, root/SELinux limits |
-| [Measurement coverage](gxr-findings/coverage.md) | captured, opt-in, available, unavailable |
-| [Cross-run analysis](gxr-findings/cross-run.md) | 35-run correlations: thermal stages, fan curve, HDR, Wi-Fi, passthrough, process load |
-| [Process offenders](gxr-findings/processes.md) | idle/active CPU, camera/perception cost, WiFi test client, YouTube/Chronolink, profiler overhead |
-| [Background processes & debloat](gxr-findings/debloat.md) | controller HAL, hand tracking, profiler overhead, package cleanup |
+## Apps & services
 
-### Key findings
+See the [Apps & services guide](APPS.md) for the package list, sortable one-shot CPU/RSS/GPU/threads
+usage, OOM and size columns, system vs user/stock package distinction, reversible per-user removal,
+full uninstall of user apps, confirmation rules, critical-package protection and optional root storage details.
 
-- **The GPU clock is workload/display-state dependent, not fixed at 421 MHz.** Normal 72 Hz SRGB loads cluster at 421 MHz, but 8K/HDR at 90 Hz used 492-640 MHz, and after that session idle stayed at 545 MHz until a later run returned to 421 ([cross-run](gxr-findings/cross-run.md)). `gpu_clock_stats` still explains why ordinary 72 Hz loads look static at 421.
-- **Thermal status 3 halves head/hand camera rates** (60 -> 30, raw 480/360 -> 240/180) after a 3-18 s lag, with `psm=0` and unchanged display rate ([cross-run](gxr-findings/cross-run.md)).
-- **Thermal stage and fan step are separate ladders.** The stage tracked LRP (status 4 at LRP
->= 65 C); the fan tracked AP/GPU across steps 1-7 (~3.6k-5.9k RPM). Status 3 also correlates with the 1.92 GHz CPU cap. See [thermal caps & fan steps](gxr-findings/thermal-caps-fan.md).
-- **The SoC thermal mod removed status 4 and cut CPU/GPU temperatures by 5-15 C.** Loaded CPU mean fell 7.8-14.9 C and GPU mean 5.3-10.1 C; AP fell 3.1-7.9 C and the power-path (LRP) sensor 0.7-6.7 C. The idle floor was essentially unchanged. 8K HDR still reaches status 3 and fan 7, and the untouched WIFI/DDR sensors remain the hottest under streaming/HDR (75-78 C / 69-74 C). See [thermal mod before/after](gxr-findings/thermal-mod.md).
-- **No Wi-Fi thermal throttle is exposed at status 4.** WIFI has no HAL hot-throttling thresholds and status 4 tracked the LRP power-path trip (65 C); the only status-4 network-throughput run held ~498 Mbps with zero drops/errors. See [thermal mod before/after](gxr-findings/thermal-mod.md#status-4-and-wi-fi).
-- **8K HDR at 90 Hz is GPU-bound**: 92-99% busy, ~70 fps against 90, fan step 7, CPU capped to 1.65-1.92 GHz ([cross-run](gxr-findings/cross-run.md)).
-- **Process offenders**: SystemUI and SurfaceFlinger are the active-XR baseline; camera provider and perceptionhost dominate passthrough; `adbd` is profiler overhead, not a device workload ([processes](gxr-findings/processes.md)).
-- **Throttling ladder** (idle -> OS -> OS+controllers -> VRChat): `thermal_status` 0->1->2, `fan_step` 1->3->6->7, and CPU `scaling_max_freq` only caps under the heaviest load (controllers briefly to 1.65 GHz; VRChat pinned both clusters at 1.92 GHz for 100% of the run). GPU clock stayed on the 421 MHz floor throughout that 72 Hz ladder.
-- **Power saving does not reduce CPU frequency caps**; it mainly reduces display/XR to 60 Hz and halves the head/hand camera pipeline. See [Power modes & battery](gxr-findings/modes.md). Thermal status 3 can produce a similar camera halving without `psm`.
-- **Low/critical battery did not add a battery-specific throttle.** Down to 3%, VRChat ran at the same thermal status-3 caps, `psm=0`, 72 Hz and 421 MHz GPU, with no shutdown. See [the battery follow-up](gxr-findings/modes.md#low--critical-battery-follow-up-2026-10-31).
-- **An immediate standby wake is genuinely cold.** Straight from desk to head after ~18 min, the device started at status 0, AP 45 C, fan 1 and the 2.36 GHz CPU cap, with CPU utilisation starting low (core0 53%) and ramping as the workload loaded. It reached status 3 only after 277 s. Earlier after-standby recordings had already warmed during 1-2 min of use; a 3.7 min gap plus use re-entered status 3 within 35 s. See [standby & wake](gxr-findings/standby.md).
-- **Wi-Fi throughput did not collapse after standby.** Two 60 s standby runs and a 5 min immediate-wake run sustained ~1.27 Gbps Rx with zero drops/errors and normal link-rate adaptation. The early "42.5% retry" in the immediate-wake run is a low-TX denominator artifact (3 pps TX), settling to ~5% once TX ramped. Latency/jitter was not measured. See [Wi-Fi & standby](gxr-findings/wifi.md).
-- **Max Wi-Fi throughput reached ~2.17 Gbps** on a 2.5 GbE speedtest, about 87% of line rate, with the camera already thermally halved. The earlier 900 Mbps test was not link-limited: link rate was slightly higher there, so the old client/server path was the ceiling. 1.6 Gbps is a plausible upper cap at good orientation; 1.3-1.4 Gbps is safer with movement/body blocking. See [Wi-Fi & standby](gxr-findings/wifi.md).
-- **The power-rail monitor adds a shell-readable 15 V rail, not battery power.** Rail 1 read about 15 V and 0.6-1.0 W while idle/unplugged; rail 2 was zero. Battery voltage/current/power remain `0`, and the rail labels are not exposed. See [power rails](gxr-findings/power.md).
-- **The controller HAL is the biggest reducible background CPU cost.** With controllers active, `vendor.samsung.hardware.secxrcontroller@1.0-service` averaged ~27-35% CPU in Chronolink runs and dropped to 0 in controller-idle runs. Hand tracking costs ~5-10 CPU points in perception/camera and ~2 GPU points; most Samsung/Google app bloat was not actually running. See [background processes & debloat](gxr-findings/debloat.md).
-- **Two Beat Saber soft reboots were SystemUI HWUI animation races, not thermal/hardware.** Both were `com.android.systemui` native crashes in `libhwui` (`sp<> assignment detected data race` on the main thread, then `PropertyValuesAnimatorSet`/`AnimationContextBridge` SIGSEGV on RenderThread), followed by framework restarts with continuous kernel uptime. The headset was hot (AP ~74-75 C, WIFI ~78 C, status 3, fan 7) but did not reach status 4 or thermally shut down. See [crash & soft-reboot logs](gxr-findings/crash-logs.md) and the [2026-11-17 report](gxr-findings/reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md).
-- **Disabling hand tracking is a suspend, not a teardown** - small thermal benefit. See [Power modes & battery](gxr-findings/modes.md).
+## Settings
+
+See the [Settings guide](SETTINGS.md) for the XR controls, display/UI settings, green recording
+indicator, update controls, advanced package/key toggles, testing-only entries, persistence rules and
+safety notes. The read-only discovery notes and commands for hidden keys are in
+[Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
+
+## Research & findings
+
+Measurement findings, before/after thermal-mod comparisons and crash investigations are in the
+[research & findings hub](gxr-findings/README.md). It defines the hardware-state labels, indexes
+every topic and summarises the key results.
+
+- [`gxr-findings/`](gxr-findings/README.md) - topic pages: plain-language summary, tests, findings, details.
+- [`COMMANDS.md`](COMMANDS.md) - every capture command, polling cadence and root requirement.
+- [`examples/`](examples/) - curated, sanitized snippets and device quirks worth citing.
+
+Raw captures are deliberately not stored in the repository. Add only small, sanitized, read-only
+outputs (or the command plus a short excerpt). Do not add serial numbers, account names, Wi-Fi
+identifiers, or other personal data.

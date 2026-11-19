@@ -2,9 +2,10 @@
 
 [Back to README](../README.md) | [Commands](COMMANDS.md) | [Hidden/experimental research](HIDDEN_ADB_SETTINGS.md) | [Apps & services](APPS.md) | [Diagnostics](DIAGNOSTICS.md)
 
-The **Tools > Settings** tab contains grouped, reversible device settings that are not tied to a run.
+The **GXR Manager > Settings** tab contains grouped, reversible device settings that are not tied to a run.
 Every row shows its current status, default label, persistence and any warning. Advanced and testing
-sections are always shown.
+sections are always shown. Press **Load settings** when ADB is ready; after the first load the button
+becomes **Refresh**.
 
 > Settings changes are optional writes to the headset. Recording, preview, diagnostics and report
 > export remain read-only.
@@ -134,7 +135,7 @@ boot. Disable or remove that module before relying on this toggle.
 Android shows a green dot when an app is using the microphone or camera. This setting hides that
 indicator and keeps the change across reboots by disabling DeviceConfig syncing.
 
-Status is read from the headset when the tab opens, after each change, and when you press
+Status is read when you press **Load settings**, after each change, and when you press
 **Refresh**. It is not polled continuously.
 
 | Status | Meaning |
@@ -201,34 +202,6 @@ Package settings show **On**, **Off**, **Not installed**, or **Unknown**.
 
 ## Advanced
 
-### Disable performance optimization policy
-
-Turns off Android XR's SurfaceFlinger app dynamic policy. The policy watches for jank, limits how many
-apps stay open, and can background or close apps to recover performance. Disabling it removes that
-intervention; it is not a guaranteed FPS boost and may let apps run past the system limit.
-
-**Root required.** The `shell` ADB user cannot perform the SurfaceFlinger transaction or set the
-persistent property.
-
-Read:
-```sh
-getprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy
-```
-
-Disable policy:
-```sh
-su -c 'service call SurfaceFlinger 1044 i32 0'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy false'
-```
-
-Re-enable policy:
-```sh
-su -c 'service call SurfaceFlinger 1044 i32 1'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy true'
-```
-
-`false` means the policy is disabled and the Settings row shows **On**.
-
 ### Disable child-process restrictions
 
 ```sh
@@ -283,6 +256,34 @@ restore its defaults.
 
 These controls are exposed for local testing. Some may have no effect or unverified behavior on this
 build.
+
+### Disable performance optimization policy
+
+Turns off Android XR's SurfaceFlinger app dynamic policy. The policy watches for jank, limits how many
+apps stay open, and can background or close apps to recover performance. Disabling it removes that
+intervention; it is not a guaranteed FPS boost and may let apps run past the system limit.
+
+**Root required.** The `shell` ADB user cannot perform the SurfaceFlinger transaction or set the
+persistent property.
+
+Read:
+```sh
+getprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy
+```
+
+Disable policy:
+```sh
+su -c 'service call SurfaceFlinger 1044 i32 0'
+su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy false'
+```
+
+Re-enable policy:
+```sh
+su -c 'service call SurfaceFlinger 1044 i32 1'
+su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy true'
+```
+
+`false` means the policy is disabled and the Settings row shows **On**.
 
 ### Disable UI animations
 
@@ -417,12 +418,12 @@ These local KernelSU modules are not suitable replacements for Settings toggles:
 
 ## Safety
 
-- Changes are blocked while a recording is running.
+- Changes are blocked while a recording runs, require the local API token, and are appended to
+  `reports/settings/setting-actions.jsonl`. Settings are not available in offline HTML reports.
+  See [safety & fair runs](README.md#safety--fair-runs).
 - Settings use normal shell commands; only the performance-policy and fixed Home Space Mode rate
   toggles require root, through `su -c`.
 - Setting IDs are validated against built-in definitions; there are no free-form commands.
-- Every change is appended to `reports/settings/setting-actions.jsonl`.
-- Settings are not available in offline HTML reports.
 - Hiding the indicator does not change which apps can use the microphone or camera. It only hides
   the indicator.
 - The performance overlay warning is not optional: turn it off when finished to avoid OLED burn-in.
@@ -434,7 +435,7 @@ These local KernelSU modules are not suitable replacements for Settings toggles:
 
 | Symptom | What to try |
 |---|---|
-| `no adb device` | Reconnect wireless ADB, or pass `--serial`. |
+| `no adb device` | Reconnect wireless ADB; see [device selection](CLI.md#device-selection). |
 | Status is **Unknown** | Press **Refresh**. Check that the matching `settings get` command works in `adb shell`. |
 | Status is **Needs reapply** | Press **Reapply** to set all required keys. |
 | Dot returns after a reboot or update | Open Settings, check the status and reapply. |

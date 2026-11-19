@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from gxr_profiler.server.settings import SettingsService
+from gxr_manager.server.settings import SettingsService
 
 
 class FakeSettingsAdb:

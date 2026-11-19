@@ -1,8 +1,8 @@
 # Thermal caps, fan steps & throttle conditions
 
-[Findings index](../README.md) | [Thermal, throttling & fan](thermal.md) | [Thermal mod before/after](thermal-mod.md)
+[Findings index](README.md#findings-index) | [Thermal, throttling & fan](thermal.md) | [Thermal mod before/after](thermal-mod.md)
 
-> **Hardware state: MIXED - STOCK BEFORE 2026-11-01, MODDED AFTER.** Runs before 2026-11-01 are from the unmodified headset. Runs from 2026-11-01 onward, including the in-between and after runs, are from the SoC thermal-modded headset (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit.
+> **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 
 This page collects the sensor roles, global thermal status ladder, CPU/camera caps and fan-step mapping in one place, then shows where those limits were hit before the SoC thermal mod and where the mod reduced or failed to reduce them.
 

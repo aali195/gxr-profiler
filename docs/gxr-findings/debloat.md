@@ -1,12 +1,12 @@
 # Background processes & debloat
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md) | [Process offenders](processes.md) | [Power modes](modes.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Process offenders](processes.md) | [Power modes](modes.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Reducing CPU/GPU load while using Chronolink/SteamVR is not about typical Samsung bloat. The expensive work is the **XR compositor, camera/perception pipeline, controller HAL and the streaming client itself**.
 
-> Debloat actions are optional operations that modify the headset. They are not part of the read-only capture path; use **Tools > Apps** (with confirmation) or the commands below.
+> Debloat actions are optional operations that modify the headset. They are not part of the read-only capture path; use **GXR Manager > Apps** (with confirmation) or the commands below.
 
 ## In plain terms
 
@@ -95,7 +95,7 @@ Bixby, Samsung account/cloud, Galaxy Store, browser, Notes, messaging, Samsung P
 
 ## Debloat commands
 
-The same operations are available in the app under **Tools > Apps**, with package metadata,
+The same operations are available in the app under **GXR Manager > Apps**, with package metadata,
 system/user/stock filtering, confirmation dialogs and a local action log. See the
 [Apps & services guide](../APPS.md).
 

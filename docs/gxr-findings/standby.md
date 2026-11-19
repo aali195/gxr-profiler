@@ -1,8 +1,8 @@
 # Standby, wake & thermal recovery
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md) | [Power modes & battery](modes.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Power modes & battery](modes.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Three plugged VRChat-on-SteamVR ASTC runs immediately followed the low/critical battery session, with hand tracking off/no active media. Two were 60 s runs after the headset had been worn for a minute or two; the third was a 5 min run started right from the desk to the head.
 

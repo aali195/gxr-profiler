@@ -8,15 +8,16 @@ import os
 import shutil
 import threading
 
-from ..core.fs import atomic_write_json
-from ..core.naming import validate_run_name
-from ..core.paths import (
+from gxr_core.fs import atomic_write_json
+from gxr_core.naming import validate_run_name
+from gxr_core.paths import (
     RUN_DATA_FILE,
     RUN_EVENTS_FILE,
     RUN_META_FILE,
     RUN_PROCS_FILE,
     ensure_writable_dir,
 )
+
 from .columns import EVENT_COLUMNS, NON_REPORT_STATE_KEYS, PROC_COLUMNS, REPORT_COLUMNS
 
 log = logging.getLogger(__name__)

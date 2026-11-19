@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import typer
 
-from ..core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, RunNotFound, list_devices, resolve_serial
-from ..core.columns import COOLDOWN_SENSORS
+from gxr_core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, RunNotFound, list_devices, resolve_serial
+from gxr_core.columns import COOLDOWN_SENSORS
+from gxr_core.paths import default_runs_dir
+from gxr_core.recording_state import RecordingMarker
+
 from ..core.models import RunConfig
-from ..core.paths import default_runs_dir
 
 app = typer.Typer(
     add_completion=False,
@@ -108,14 +110,27 @@ def record(
     except (ValueError, OSError) as exc:
         _fail(str(exc))
     tui.say(f"GXR Profiler recording '{name}' on {serial}")
+    marker = RecordingMarker()
+    status = "done"
+    failure: AdbError | None = None
+    marker.start(name)
     try:
-        rec.run()
-    except KeyboardInterrupt:
-        tui.say("Stopping...")
-    except AdbError as exc:
-        _fail(str(exc))
+        try:
+            rec.run()
+        except KeyboardInterrupt:
+            status = "stopped"
+            tui.say("Stopping...")
+        except AdbError as exc:
+            status = "error"
+            failure = exc
+        except Exception:
+            status = "error"
+            raise
     finally:
+        marker.stop(status=status)
         tui.stop()
+    if failure is not None:
+        _fail(str(failure))
     typer.secho(f"Saved {rec.row_count} rows -> {rec.writer.csv_path}", fg="green")
 
 

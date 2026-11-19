@@ -15,7 +15,6 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "pywebview>=5.0",
-    "orjson>=3.9",
 ]
 
 [project.optional-dependencies]
@@ -24,12 +23,15 @@ packaging = ["pyinstaller>=6"]
 
 [project.scripts]
 gxr-profiler = "gxr_profiler.cli.app:main"
+gxr-manager = "gxr_manager.cli.app:main"
 
 [tool.setuptools.packages.find]
-include = ["gxr_profiler*"]
+include = ["gxr_profiler*", "gxr_core*", "gxr_manager*"]
 
 [tool.setuptools.package-data]
+"gxr_core" = ["web_common/*"]
 "gxr_profiler.server" = ["web/*", "web/vendor/*"]
+"gxr_manager.server" = ["web/*"]
 
 [tool.setuptools.dynamic]
 version = { attr = "gxr_profiler.__version__" }
@@ -39,8 +41,9 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B"]
 # Defensive read-only tooling: broad excepts and NaN self-compare are intentional.
-ignore = ["BLE001", "S110", "PLR0124", "B008", "PLW1510", "SIM115"]
+ignore = ["B008", "BLE001", "S110", "PLR0124", "PLW1510", "SIM115"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

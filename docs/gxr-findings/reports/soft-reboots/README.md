@@ -1,5 +1,7 @@
 # Soft-reboot and crash investigation reports
 
+[Findings index](../../README.md#findings-index) | [Crash & soft-reboot logs](../../crash-logs.md)
+
 Dated, sanitized investigations of unexpected headset restarts. Start with the log-format reference:
 [crash, soft-reboot & error logs](../../crash-logs.md).
 

@@ -12,10 +12,10 @@ import shutil
 from dataclasses import dataclass
 from typing import Any
 
-from ..core.adb import RunNotFound
-from ..core.fs import atomic_write_json
-from ..core.naming import base_label, validate_run_name
-from ..core.paths import (
+from gxr_core.adb import RunNotFound
+from gxr_core.fs import atomic_write_json
+from gxr_core.naming import base_label, validate_run_name
+from gxr_core.paths import (
     RUN_DATA_FILE,
     RUN_EVENTS_FILE,
     RUN_META_FILE,

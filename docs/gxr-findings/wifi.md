@@ -1,8 +1,8 @@
 # Wi-Fi performance & standby
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md) | [Standby & wake](standby.md) | [Thermal mod before/after](thermal-mod.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Standby & wake](standby.md) | [Thermal mod before/after](thermal-mod.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 The recent low/critical battery and post-battery runs used the same position and session. Seven were normal hot runs; three followed a desk standby: ~31.5 min (60 s run), ~3.7 min (60 s run), and ~18 min with the 5 min recording started **immediately** after putting the headset on. All three standby runs were plugged in and used the same VRChat/SteamVR ASTC workload.
 

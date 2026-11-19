@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from ..core import parsers as P
-from ..core.adb import AdbClient
-from ..core.process_snapshot import PROCESS_SNAPSHOT_WITH_NET_SCRIPT
+from gxr_core import parsers as P
+from gxr_core.adb import AdbClient
+from gxr_core.process_snapshot import PROCESS_SNAPSHOT_WITH_NET_SCRIPT
+
 from .logcat import DEV_BASE
 from .writer import RunWriter
 

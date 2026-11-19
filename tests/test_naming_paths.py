@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from gxr_profiler.core import naming, paths
+from gxr_core import naming, paths
 
 
 def test_unicode_names_are_allowed():
@@ -52,7 +52,7 @@ def test_source_defaults_use_cwd(monkeypatch, tmp_path):
 def test_run_name_rejects_reserved_suffixes():
     import pytest
 
-    from gxr_profiler.core.naming import validate_run_name
+    from gxr_core.naming import validate_run_name
 
     for name in ("foo.csv", "foo.CSV", "foo.events.csv", "foo.json"):
         with pytest.raises(ValueError):

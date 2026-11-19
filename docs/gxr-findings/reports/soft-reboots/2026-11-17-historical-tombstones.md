@@ -1,6 +1,6 @@
 # 2026-10-18 to 2026-11-17 - historical tombstone sweep
 
-[Findings index](../../../README.md) | [Diagnostics guide](../../../DIAGNOSTICS.md) | [Crash & soft-reboot logs](../../crash-logs.md) | [SystemUI HWUI report](2026-11-17-systemui-hwui-beatsaber.md)
+[Findings index](../../README.md#findings-index) | [Diagnostics guide](../../../DIAGNOSTICS.md) | [Crash & soft-reboot logs](../../crash-logs.md) | [SystemUI HWUI report](2026-11-17-systemui-hwui-beatsaber.md)
 
 > **Hardware state: MIXED.** This sweep spans the stock unit (2026-10-18 and 2026-10-28) and the
 > thermal-modded unit (2026-11-06 onward). The dates matter: the SystemUI HWUI and perceptionhost
@@ -171,5 +171,5 @@ the app/system and trying different content or foveation settings.
    recur.
 2. Update/re-test Immersive View XR with and without foveation.
 3. Keep the SystemUI HWUI report and this historical sweep separate: they are different signatures.
-4. After the planned factory reset, collect a new Tools > Diagnostics snapshot and compare whether
+4. After the planned factory reset, collect a new GXR Manager > Diagnostics snapshot and compare whether
    any of these signatures return.

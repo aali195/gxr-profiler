@@ -1,6 +1,6 @@
 # 2026-11-17 - two Beat Saber soft reboots: SystemUI HWUI animation race
 
-[Findings index](../../../README.md) | [Crash & soft-reboot logs](../../crash-logs.md) | [Thermal mod before/after](../../thermal-mod.md)
+[Findings index](../../README.md#findings-index) | [Crash & soft-reboot logs](../../crash-logs.md) | [Thermal mod before/after](../../thermal-mod.md)
 
 > **Hardware state: MODDED.** SoC thermal-modded SM-I610 (phase-change pads + copper shims,
 > post-2026-11-01). This page covers two unexpected soft reboots observed while running the

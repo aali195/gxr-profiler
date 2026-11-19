@@ -1,5 +1,7 @@
 # Thermal mod comparison reports
 
+[Findings index](../../README.md#findings-index) | [Thermal mod before/after](../../thermal-mod.md)
+
 Self-contained `gxr-profiler` HTML reports for the seven before/after tests in
 [thermal mod before/after](../../thermal-mod.md).
 

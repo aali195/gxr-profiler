@@ -18,3 +18,4 @@ htmlcov/
 .mypy_cache/
 .idea/
 .vscode/
+/recording.json

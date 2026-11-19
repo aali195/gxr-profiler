@@ -13,8 +13,9 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from ..core import parsers as P
-from ..core.adb import AdbClient
+from gxr_core import parsers as P
+from gxr_core.adb import AdbClient
+
 from .state import MetricState
 
 TAG_PREFIXES = (

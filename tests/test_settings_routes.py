@@ -2,22 +2,15 @@ import re
 
 from fastapi.testclient import TestClient
 
-from gxr_profiler.core.adb import AdbError
-from gxr_profiler.server.app import create_app
-from gxr_profiler.server.deps import get_manager, get_settings_service
+from gxr_core.adb import AdbError
+from gxr_core.recording_state import write_state
+from gxr_manager.server.app import create_manager_app
+from gxr_manager.server.deps import get_settings_service
 
 
 def _token(client):
     html = client.get("/").text
     return re.search(r'name="gxr-profiler-token" content="([^"]+)"', html).group(1)
-
-
-class FakeManager:
-    def __init__(self, status="idle"):
-        self.status = status
-
-    def state(self):
-        return {"status": self.status}
 
 
 class FakeSettings:
@@ -48,16 +41,14 @@ class FakeSettings:
 
 
 def _client(tmp_path):
-    app = create_app(str(tmp_path / "runs"))
+    app = create_manager_app(serial="fake")
     settings = FakeSettings()
-    manager = FakeManager()
     app.dependency_overrides[get_settings_service] = lambda: settings
-    app.dependency_overrides[get_manager] = lambda: manager
-    return TestClient(app), settings, manager
+    return TestClient(app), settings
 
 
 def test_settings_routes_and_token_guard(tmp_path):
-    client, settings, _ = _client(tmp_path)
+    client, settings = _client(tmp_path)
     assert client.get("/api/settings").status_code == 200
 
     assert client.post("/api/settings/hide_recording_indicator", json={"enabled": True}).status_code == 403
@@ -72,7 +63,7 @@ def test_settings_routes_and_token_guard(tmp_path):
 
 
 def test_settings_routes_accept_choice_values(tmp_path):
-    client, settings, _ = _client(tmp_path)
+    client, settings = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     response = client.post("/api/settings/guardian_radius", json={"value": "1"}, headers=headers)
     assert response.status_code == 200
@@ -80,7 +71,7 @@ def test_settings_routes_accept_choice_values(tmp_path):
 
 
 def test_settings_routes_reject_invalid_and_recording(tmp_path):
-    client, _settings, manager = _client(tmp_path)
+    client, _settings = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     assert client.post("/api/settings/missing", json={"enabled": True}, headers=headers).status_code == 400
     assert client.post("/api/settings/hide_recording_indicator", json={}, headers=headers).status_code == 422
@@ -93,7 +84,7 @@ def test_settings_routes_reject_invalid_and_recording(tmp_path):
         == 422
     )
 
-    manager.status = "recording"
+    write_state(True, label="test run")
     assert (
         client.post(
             "/api/settings/hide_recording_indicator",
@@ -105,7 +96,7 @@ def test_settings_routes_reject_invalid_and_recording(tmp_path):
 
 
 def test_settings_routes_map_adb_errors(tmp_path):
-    client, settings, _ = _client(tmp_path)
+    client, settings = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     settings.fail = "adb"
     assert client.get("/api/settings").status_code == 503

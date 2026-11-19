@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from ..core.columns import EXTRA_SERIES, TEXT_SERIES
-from ..core.parsers.process import is_kernel_process
+from gxr_core.columns import EXTRA_SERIES, TEXT_SERIES
+from gxr_core.parsers.process import is_kernel_process
+
 from . import charts
 
 MAX_POINTS = 1500

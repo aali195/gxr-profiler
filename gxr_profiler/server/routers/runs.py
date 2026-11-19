@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from ...core.adb import RunNotFound
-from ...core.naming import base_label
+from gxr_core.adb import RunNotFound
+from gxr_core.naming import base_label
+
 from ...report.data import downsample, process_series_for, procs_for
 from ...report.data import series as build_series
 from ..deps import ManagerDep, StoreDep
@@ -24,11 +25,11 @@ def run_detail(label: str, store: StoreDep):
     try:
         meta, df = store.load(label)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (FileNotFoundError, OSError):
-        raise HTTPException(status_code=404, detail=f"run not found: {label}")
+        raise HTTPException(status_code=404, detail=f"run not found: {label}") from None
     except (KeyError, TypeError) as exc:
-        raise HTTPException(status_code=400, detail=f"invalid run data: {exc}")
+        raise HTTPException(status_code=400, detail=f"invalid run data: {exc}") from exc
     import pandas as pd
 
     if "elapsed_s" in df.columns:
@@ -47,9 +48,9 @@ def run_proc_series(label: str, store: StoreDep):
             raise HTTPException(status_code=404, detail=f"run not found: {label}")
         return process_series_for(store, label)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (KeyError, TypeError, OSError) as exc:
-        raise HTTPException(status_code=400, detail=f"invalid process data: {exc}")
+        raise HTTPException(status_code=400, detail=f"invalid process data: {exc}") from exc
 
 
 @router.get("/api/runs/{label}/procs")
@@ -59,9 +60,9 @@ def run_procs(label: str, store: StoreDep):
             raise HTTPException(status_code=404, detail=f"run not found: {label}")
         return procs_for(store, label)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (KeyError, TypeError, OSError) as exc:
-        raise HTTPException(status_code=400, detail=f"invalid process data: {exc}")
+        raise HTTPException(status_code=400, detail=f"invalid process data: {exc}") from exc
 
 
 def _same_run(a: str, b: str) -> bool:
@@ -78,11 +79,11 @@ def edit_run(label: str, body: RunEdit, store: StoreDep, manager: ManagerDep):
     try:
         new_label = store.update(label, name=body.name, notes=body.notes)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"run not found: {label}")
+        raise HTTPException(status_code=404, detail=f"run not found: {label}") from None
     except FileExistsError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (ValueError, TypeError, OSError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"label": new_label, "notes": store.read_meta(new_label).get("notes", "")}
 
 
@@ -93,9 +94,9 @@ def delete_run(label: str, store: StoreDep, manager: ManagerDep):
     try:
         store.delete(label)
     except RunNotFound:
-        raise HTTPException(status_code=404, detail=f"run not found: {label}")
+        raise HTTPException(status_code=404, detail=f"run not found: {label}") from None
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except OSError as exc:
-        raise HTTPException(status_code=409, detail=f"could not delete run: {exc}")
+        raise HTTPException(status_code=409, detail=f"could not delete run: {exc}") from exc
     return {"ok": True}

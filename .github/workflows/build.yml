@@ -14,12 +14,16 @@ permissions:
 jobs:
   build-test:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
 
@@ -27,6 +31,20 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - run: python -m ruff format --check .
       - run: python -m ruff check .
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check gxr_core/web_common/common.js
+          node --check gxr_profiler/server/web/app.core.js
+          node --check gxr_profiler/server/web/app.compare.js
+          node --check gxr_profiler/server/web/app.record.js
+          node --check gxr_profiler/server/web/app.find.js
+          node --check gxr_profiler/server/web/app.js
+          node --check gxr_manager/server/web/app.core.js
+          node --check gxr_manager/server/web/diagnostics.js
+          node --check gxr_manager/server/web/apps.js
+          node --check gxr_manager/server/web/installer.js
+          node --check gxr_manager/server/web/settings.js
+          node --check gxr_manager/server/web/app.js
       - run: python -m pytest -q
 
   release:
@@ -45,24 +63,32 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[packaging]"
 
-      - name: Build GUI and CLI one-file executables
-        run: python -m PyInstaller packaging/gxr-profiler.spec --noconfirm
+      - name: Build profiler and manager executables
+        run: |
+          python -m PyInstaller packaging/gxr-profiler.spec --noconfirm
+          python -m PyInstaller packaging/gxr-manager.spec --noconfirm
 
-      - name: Verify both executables
+      - name: Verify all executables
         shell: pwsh
         run: |
-          $paths = @("dist/gxr-profiler.exe", "dist/gxr-profiler-cli.exe")
+          $paths = @(
+            "dist/gxr-profiler.exe",
+            "dist/gxr-profiler-cli.exe",
+            "dist/gxr-manager.exe",
+            "dist/gxr-manager-cli.exe"
+          )
           foreach ($path in $paths) {
             if (-not (Test-Path -LiteralPath $path)) {
               throw "Missing build output: $path"
             }
           }
           & "dist/gxr-profiler-cli.exe" --help | Out-Null
+          & "dist/gxr-manager-cli.exe" --help | Out-Null
 
       - name: Generate SHA256 checksums
         shell: pwsh
         run: |
-          Get-FileHash -Algorithm SHA256 -LiteralPath "dist/gxr-profiler.exe", "dist/gxr-profiler-cli.exe" |
+          Get-FileHash -Algorithm SHA256 -LiteralPath "dist/gxr-profiler.exe", "dist/gxr-profiler-cli.exe", "dist/gxr-manager.exe", "dist/gxr-manager-cli.exe" |
             ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" } |
             Set-Content -LiteralPath "dist/SHA256SUMS.txt" -Encoding ascii
 
@@ -72,6 +98,8 @@ jobs:
           path: |
             dist/gxr-profiler.exe
             dist/gxr-profiler-cli.exe
+            dist/gxr-manager.exe
+            dist/gxr-manager-cli.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
 
@@ -79,9 +107,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: GXR Profiler ${{ github.ref_name }}
+          name: GXR Suite ${{ github.ref_name }}
           generate_release_notes: true
           files: |
             dist/gxr-profiler.exe
             dist/gxr-profiler-cli.exe
+            dist/gxr-manager.exe
+            dist/gxr-manager-cli.exe
             dist/SHA256SUMS.txt

@@ -1,8 +1,8 @@
 # Power modes & battery
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Power-saving, hand-tracking and battery/AC A/B tests. All runs were 60 s, hot-started and idle unless noted; the battery tests used ASTC.
 

@@ -1,8 +1,8 @@
 # Cameras, perception & controllers
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 All camera/tracking attribution is by named CIB stream or perception service, not by a physical sensor ID. Controllers are delivered through Samsung XR services, not Linux joystick devices.
 

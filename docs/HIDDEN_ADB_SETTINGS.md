@@ -3,7 +3,7 @@
 [Back to README](../README.md) | [Settings guide](SETTINGS.md) | [Commands](COMMANDS.md)
 
 This page records hidden Android XR settings found on the **Samsung Galaxy XR (SM-I610)**, including
-settings exposed in **Tools > Settings** and candidates that are deliberately not exposed. It is a
+settings exposed in **GXR Manager > Settings** and candidates that are deliberately not exposed. It is a
 research document, not a promise that every key works on every firmware.
 
 > **Status:** most values here are **untested**. The only operations performed while compiling this
@@ -36,7 +36,7 @@ here.
 
 | Label | Meaning |
 |---|---|
-| **Exposed** | Appears in **Tools > Settings**. |
+| **Exposed** | Appears in **GXR Manager > Settings**. |
 | **Documented only** | Recorded here but not exposed in the app. |
 | **Observed** | Value read from this build during the read-only pass. |
 | **Inferred** | Behavior or numeric mapping inferred from labels/code, not verified by changing it. |
@@ -46,286 +46,60 @@ here.
 The generic manual form is `adb shell settings --user 0 <get|put|delete> <namespace> <key> [value]`.
 The app uses the same command without the leading `adb shell`.
 
-## Exposed in Tools > Settings
+## Exposed in GXR Manager > Settings
+
+This page records the research behind each exposed key: what the firmware calls it, what value was
+observed on this build, and what remains inferred. Behaviour, warnings, defaults and the exact
+commands are in the [Settings guide](SETTINGS.md).
 
 ### XR controls
 
-| Setting | Key | Observed | Status |
+| Setting | Key(s) | Observed | Research note |
 |---|---|---:|---|
-| Android XR performance metrics | `toggle_xr_perf_metrics` | `0` | Documented by Google; write untested |
-| Hands breakthrough | `toggle_hands_breakthrough` | `0` | Small GPU cost |
-| Touch on everything | `enable_touch_on_everything` | `1` | Direct touch/poke |
-| Guardian safety boundary | `toggle_guardian` | `0` | Inferred/untested; safety-critical |
-| Boundary size | `guardian_radius` | `1` | Inferred/untested; `1` appears to mean Large |
-| Auto-spatialization preference | `auto_spatialization_settings` | `0` | Existing setting |
-
-#### Android XR performance metrics
-
-```sh
-settings --user 0 get system toggle_xr_perf_metrics
-settings --user 0 put system toggle_xr_perf_metrics 1
-settings --user 0 put system toggle_xr_perf_metrics 0
-```
-
-Google's Android XR Engine Hub documents this key as the remote “Show XR performance data overlay”
-control. The firmware labels are “Android XR Performance Metrics” and “Enable Android XR Performance
-Metrics”; the summary says the metrics are overlaid on top.
-
-**Warning:** the overlay is static. Leave it off when you are not profiling; long sessions can cause
-OLED burn-in. Reverting is a normal settings write and does not require root.
-
-#### Hands breakthrough
-
-```sh
-settings --user 0 get system toggle_hands_breakthrough
-settings --user 0 put system toggle_hands_breakthrough 1
-settings --user 0 put system toggle_hands_breakthrough 0
-```
-
-Shows your hands through content instead of only their outlines. The feature adds a small GPU cost
-while it is active.
-
-#### Touch on everything
-
-```sh
-settings --user 0 get system enable_touch_on_everything
-settings --user 0 put system enable_touch_on_everything 1
-settings --user 0 put system enable_touch_on_everything 0
-```
-
-The firmware label is “Enable touch on everything”. It likely enables direct hand touch/poke
-interaction with UI elements instead of requiring a pinch/gesture. The exact interaction behavior is
-inferred, not verified.
-
-#### Guardian safety boundary
-
-```sh
-settings --user 0 get system toggle_guardian
-settings --user 0 put system toggle_guardian 1
-settings --user 0 put system toggle_guardian 0
-```
-
-`1` enables the boundary; `0` disables it. AndroidX/SystemUI use this key as the “boundary enabled in
-developer options” flag. The observed value was `0`, so the boundary is currently disabled on this
-headset.
-
-**Safety:** disabling the boundary removes a collision warning. Use it only in a clear, safe space.
-The app shows a confirmation modal before turning it off.
-
-#### Boundary size
-
-```sh
-settings --user 0 get system guardian_radius
-settings --user 0 put system guardian_radius 0
-settings --user 0 put system guardian_radius 1
-```
-
-Firmware labels are “Boundary size”, “Small” and “Large”; `guardian_toggle_radius_available=1`.
-The observed value `1` appears to mean **Large**. The `0/1` mapping is inferred and untested.
-
-#### Auto-spatialization preference
-
-```sh
-settings --user 0 get system auto_spatialization_settings
-settings --user 0 put system auto_spatialization_settings 1
-settings --user 0 put system auto_spatialization_settings 0
-```
-
-This is the saved Labs preference. It does not force every window into 3D or bypass thermal/content
-restrictions. If the KernelSU auto-spatialization module is installed, it will set the value back to
-`1` at boot.
-
-#### Aiming method (`natural_input_mode`)
-
-```sh
-settings --user 0 get system natural_input_mode
-settings --user 0 get system input_pointer
-settings --user 0 put system natural_input_mode <value>
-settings --user 0 put system input_pointer <value>
-```
-
-The firmware UI exposes 6 = hand and eye aiming, 5 = eye aiming only, and 1 = hand aiming only.
-
-Mode `3` is head direction + finger gesture click; hand tracking stays on, so it is not exposed.
-Hidden mode `7` is HMD fallback: head direction + touchpad click with no hand tracking. Enable it
-with Volume Down + Volume Up + the headset action button. Set both `natural_input_mode` and
-`input_pointer`.
-
-`natural_input_mode` indexes the `ComputerEvents.InputModeType` enum; `input_pointer` maps to
-`android.graphics.CPM.InputMode`:
-
-| Value | Input mode type | CPM enum |
-|---:|---|---|
-| `0` | `UNKNOWN` | `INVALID` |
-| `1` | `RAYCAST_HANDS` | `HAND` |
-| `2` | `CONTROLLER` | `CONTROLLER` |
-| `3` | `HEAD_WITH_HANDS` | `HEAD` |
-| `4` | `MOUSE` | `MOUSE` |
-| `5` | `EYE_WITH_HANDS` | `EYE` |
-| `6` | `AUTO` | `AUTO` |
-| `7` | `HMD_FALLBACK` | `HMD_FALLBACK` |
-| `8` | `DWELL_WITH_HEAD` | `DWELL_WITH_HEAD` |
-| `9` | `DWELL_WITH_EYE` | `DWELL_WITH_EYE` |
-| `10` | `HAND_GESTURE_CONTROL` | `HAND_GESTURE_CONTROL` |
-| `11` | `DIRECT_HANDS` | `DIRECT_HAND` |
-
-Only `1`, `5`, `6` and `7` are exposed here.
-
-The separate Labs switch "Eyes only" is not part of this enum. Its app key is
-`toggle_experimental_eyes_only_input`; observed behavior is head aiming with hand clicks for
-selection.
-
-### UI settings (moved to Testing — untested)
-
-| Setting | Keys | Observed | Notes |
-|---|---|---:|---|
-| Disable UI animations | `window_animation_scale`, `transition_animation_scale`, `animator_duration_scale` | `0.0`, `0.0`, `0.0` | Already disabled on this headset |
-| Reduce transparency/window blur | `accessibility_reduce_transparency`, `disable_window_blurs` | unset | Support varies |
-
-#### Disable UI animations
-
-```sh
-settings --user 0 get global window_animation_scale
-settings --user 0 get global transition_animation_scale
-settings --user 0 get global animator_duration_scale
-
-settings --user 0 put global window_animation_scale 0
-settings --user 0 put global transition_animation_scale 0
-settings --user 0 put global animator_duration_scale 0
-
-settings --user 0 delete global window_animation_scale
-settings --user 0 delete global transition_animation_scale
-settings --user 0 delete global animator_duration_scale
-```
-
-Reverting deletes the keys rather than assuming `1.0`; this lets Android restore its configured
-defaults. The current `0.0` values were already present before this work.
-
-#### Reduce transparency and window blur
-
-```sh
-settings --user 0 get global accessibility_reduce_transparency
-settings --user 0 get global disable_window_blurs
-
-settings --user 0 put global accessibility_reduce_transparency 1
-settings --user 0 put global disable_window_blurs 1
-
-settings --user 0 delete global accessibility_reduce_transparency
-settings --user 0 delete global disable_window_blurs
-```
-
-Both keys were unset on this build. Either may be ignored by a particular app or OEM build. These
-settings are exposed under **Testing — untested** because they may have no visible effect.
+| Android XR performance metrics | `toggle_xr_perf_metrics` | `0` | Google-documented overlay control. The overlay is static, so it can cause OLED burn-in if left on. |
+| Aiming method | `natural_input_mode`, `input_pointer` | `6` | `6` hand + eye, `5` eye only, `1` hand only. Hidden `7` is HMD fallback (head + touchpad, no hand tracking). |
+| Hands breakthrough | `toggle_hands_breakthrough` | `0` | Shows hands through content; adds a small GPU cost. |
+| Touch on everything | `enable_touch_on_everything` | `1` | Enables direct touch/poke instead of a gesture. |
+| Guardian safety boundary | `toggle_guardian` | `0` | Disabling removes a collision warning; the app asks for confirmation. |
+| Boundary size | `guardian_radius` | `1` | `0/1` mapping is inferred: `0` Small, `1` Large. |
+| Auto-spatialization preference | `auto_spatialization_settings` | `0` | Saved Labs preference only; it does not force windows into 3D. |
 
 ### Advanced
 
-#### Disable performance optimization policy
+| Setting | Key(s) | Observed | Research note |
+|---|---|---:|---|
+| Disable child-process restrictions | `settings_enable_monitor_phantom_procs` | unset | Global resource-limit change, not an FPS tweak. |
+| Stay awake while charging | `stay_on_while_plugged_in` | `0` | Bitmask: `1` AC, `2` USB, `4` wireless; `7` covers all. |
+| Disable heads-up notifications | `heads_up_notifications_enabled` | `1` | Hides pop-ups; the notification shade still works. |
+| Disable always-on Wi-Fi/BLE scanning | `wifi_scan_always_enabled`, `ble_scan_always_enabled` | `0`, `0` | May affect location accuracy and nearby-device features. |
 
-```sh
-getprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy
-su -c 'service call SurfaceFlinger 1044 i32 0'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy false'
-su -c 'service call SurfaceFlinger 1044 i32 1'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy true'
-```
+### Testing - untested
 
-This is the developer-option string `disable_application_dynamic_policy_title` ("Disable performance
-optimization policy"). The Settings controller is
-`com.android.settings.xr.development.DisableAppDynamicPolicyPreferenceController`; it checks the
-`com.android.xr.flags.enable_dynamic_policy` flag, calls SurfaceFlinger transaction `1044`, and writes
-the DeviceConfig property above.
+| Setting | Key(s) | Observed | Research note |
+|---|---|---:|---|
+| Disable performance optimization policy | `enable_dynamic_policy` | `false` | Root required; SurfaceFlinger transaction `1044` plus a DeviceConfig property. |
+| Disable UI animations | `window_animation_scale`, `transition_animation_scale`, `animator_duration_scale` | `0.0` | Already disabled on this headset before the research pass. |
+| Reduce transparency/window blur | `accessibility_reduce_transparency`, `disable_window_blurs` | unset | Support varies; may have no visible effect. |
+| Disable Samsung Game Optimizing Service | `com.samsung.android.game.gos` | enabled | Reversible, but unverified on Galaxy XR. |
+| Disable fixed Home Space Mode display rate | `fixed_hsm_display_rate` | `true` | Root required; SurfaceFlinger transaction `1043` plus a DeviceConfig property. |
 
-The policy is not a CPU/GPU boost. Framework strings describe jank detection and an open-app limit:
-"Too many apps are open", apps "placed in the background due to poor performance", and apps "closed
-due to poor performance". Disabling it removes those interventions.
+### Research notes
 
-Observed: `false`, meaning the policy is already disabled and the Settings row shows **On**. The `shell`
-ADB user gets `Operation not permitted` for transaction `1044` and cannot set the persistent property;
-rooted `su` succeeds. Requires root. Re-enabling writes `true` and transaction `1044 i32 1`.
-
-#### Disable child-process restrictions
-
-```sh
-settings --user 0 get global settings_enable_monitor_phantom_procs
-settings --user 0 put global settings_enable_monitor_phantom_procs false
-settings --user 0 delete global settings_enable_monitor_phantom_procs
-```
-
-Observed unset, so Android uses its default monitoring. Setting `false` disables the phantom-process
-monitor's limits on child processes; useful for Termux, emulators and similar apps that spawn many
-children. It is a global resource-limit change, not a general FPS tweak. Persistent and no root;
-deleting the key restores the default.
-
-#### Stay awake while charging
-
-```sh
-settings --user 0 get global stay_on_while_plugged_in
-settings --user 0 put global stay_on_while_plugged_in 7
-settings --user 0 put global stay_on_while_plugged_in 0
-```
-
-Observed: `0`. The value is a bitmask: `1` AC, `2` USB, `4` wireless; `7` covers all. This matches the
-Android XR Engine Hub's "Stay awake while charging (even when doffed)" option. Persistent and no root.
-
-#### Disable heads-up notifications
-
-```sh
-settings --user 0 get global heads_up_notifications_enabled
-settings --user 0 put global heads_up_notifications_enabled 0
-settings --user 0 put global heads_up_notifications_enabled 1
-```
-
-Observed: `1`. Setting it to `0` hides pop-up alerts but leaves notifications in the shade. Persistent
-and no root.
-
-#### Disable always-on Wi-Fi/BLE scanning
-
-```sh
-settings --user 0 get global wifi_scan_always_enabled
-settings --user 0 get global ble_scan_always_enabled
-
-settings --user 0 put global wifi_scan_always_enabled 0
-settings --user 0 put global ble_scan_always_enabled 0
-
-settings --user 0 delete global wifi_scan_always_enabled
-settings --user 0 delete global ble_scan_always_enabled
-```
-
-Observed: both `0`, so always-on scanning is already disabled. Reverting deletes the keys so the
-platform can restore defaults. May affect location accuracy and nearby-device features.
-
-### Testing — untested
-
-These entries are exposed in the testing section.
-
-#### Disable Samsung Game Optimizing Service
-
-```sh
-pm list packages com.samsung.android.game.gos
-pm list packages -d com.samsung.android.game.gos
-pm disable-user --user 0 com.samsung.android.game.gos
-pm enable --user 0 com.samsung.android.game.gos
-```
-
-Observed: installed and enabled. Disabling it is reversible, but it may affect Samsung game/thermal
-behavior. This is not verified on Galaxy XR and is not the same as a thermal override.
-
-#### Disable fixed Home Space Mode display rate
-
-```sh
-getprop persist.device_config.com_android_xr.com.android.xr.flags.fixed_hsm_display_rate
-su -c 'service call SurfaceFlinger 1043 i32 0'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.fixed_hsm_display_rate false'
-su -c 'service call SurfaceFlinger 1043 i32 1'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.fixed_hsm_display_rate true'
-```
-
-This is the developer option `disable_fixed_hsm_display_rate_title`. The controller is
-`com.android.settings.xr.development.DisableFixedHSMDisplayRatePreferenceController`; it checks the
-`com.android.xr.flags.fixed_hsm_display_rate` flag, calls SurfaceFlinger transaction `1043`, and writes
-the DeviceConfig property above. Observed `true`, meaning the fixed Home Space Mode rate is enabled and
-the Settings row shows **Off**. Requires root; unverified on this build.
-
+- **Disable performance optimization policy** is the string
+  `disable_application_dynamic_policy_title`. The Settings controller is
+  `com.android.settings.xr.development.DisableAppDynamicPolicyPreferenceController`; it checks
+  `com.android.xr.flags.enable_dynamic_policy`, calls SurfaceFlinger transaction `1044`, and writes
+  the matching DeviceConfig property. Framework strings describe jank detection and an open-app
+  limit ("Too many apps are open", apps "placed in the background due to poor performance"). It is
+  not a CPU/GPU boost. The `shell` ADB user gets `Operation not permitted`; rooted `su` succeeds.
+- **Disable fixed Home Space Mode display rate** is the string
+  `disable_fixed_hsm_display_rate_title`. The controller is
+  `com.android.settings.xr.development.DisableFixedHSMDisplayRatePreferenceController`; it checks
+  `com.android.xr.flags.fixed_hsm_display_rate`, calls SurfaceFlinger transaction `1043`, and writes
+  the matching DeviceConfig property.
+- **Aiming method** is also set by the firmware gesture Volume Down + Volume Up + the headset
+  action button, which switches to hidden mode `7`. Set both `natural_input_mode` and
+  `input_pointer` to the same value.
 
 ## Documented but not exposed
 
@@ -371,7 +145,7 @@ AOSP defines `MUTE_WHEN_OFF_BODY_ENABLED` as “If the device should be muted wh
 ## Additional candidates not exposed
 
 These are useful or interesting but were not fully added to the app. The per-app Game Mode entry is
-partially exposed through **Tools > Apps**; the rest are documented for future work.
+partially exposed through **GXR Manager > Apps**; the rest are documented for future work.
 
 ### Private DNS
 
@@ -410,7 +184,7 @@ settings --user 0 put system pointer_location 0
 
 Useful for demos/debugging; visual clutter only.
 
-### Per-app Game Mode interventions (partially exposed in Tools > Apps)
+### Per-app Game Mode interventions (partially exposed in GXR Manager > Apps)
 
 ```sh
 device_config get game_overlay <PACKAGE_NAME>

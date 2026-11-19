@@ -1,14 +1,14 @@
 # Root
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
 
-> **Hardware state: MIXED - STOCK BEFORE 2026-11-01, MODDED AFTER.** Runs before 2026-11-01 are from the unmodified headset. Runs from 2026-11-01 onward, including the in-between and after runs, are from the SoC thermal-modded headset (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit.
+> **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 
 What read-only KernelSU access unlocks, and what it still cannot see.
 
 ## In plain terms
 
-- Optional root access adds fan speed, per-app disk activity, calibration dates, an estimated first-setup date and app data/cache size in **Tools > Apps**.
+- Optional root access adds fan speed, per-app disk activity, calibration dates, an estimated first-setup date and app data/cache size in **GXR Manager > Apps**.
 - Root does not unlock real battery/chip power use, AI/DSP load or per-camera rates.
 - All root reads are read-only and do not change the headset.
 - Using root may show a permission prompt.
@@ -46,7 +46,7 @@ Root works via **KernelSU** (`su -c id` -> `uid=0`, `context=u:r.ksu:s0`). Probe
 - **Regulator rails** (`/sys/class/regulator/*/microvolts`): the class exposes ~129 rails, but the selected rails were constant setpoints with no current data, so they are not recorded.
 - **OpenPX calibration metadata**: measured IPD textproto plus eye/face calibration file mtimes.
 - **User-settings mtimes**: used only for the approximate first-setup date.
-- **App data/cache size** (`Tools > Apps` root detail): `du -sk /data/user/0/<pkg> /data/user_de/0/<pkg> /data/user/0/<pkg>/cache`; read-only and opt-in per package.
+- **App data/cache size** (`GXR Manager > Apps` root detail): `du -sk /data/user/0/<pkg> /data/user_de/0/<pkg> /data/user/0/<pkg>/cache`; read-only and opt-in per package.
 
 **Still not available even with root:**
 - `/sys/kernel/debug` is **not mounted** (empty); no `msm_npu`/CDSP/kgsl debug counters.

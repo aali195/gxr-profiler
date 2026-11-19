@@ -6,8 +6,8 @@ import zipfile
 
 import pytest
 
-from gxr_profiler.core.apps import format_adb_command
-from gxr_profiler.server.app_install import InstallManager
+from gxr_manager.core.apps import format_adb_command
+from gxr_manager.server.app_install import InstallManager
 
 from .install_fixtures import FakeInstallAdb, build_apk, build_xapk
 
@@ -203,6 +203,15 @@ def test_xapk_stages_bundle_and_obb(tmp_path):
     assert plan["obb"][0]["name"] == obb_name
 
     manager.discard(result[0]["id"])
+    assert manager.list_staged() == []
+
+
+def test_xapk_bundle_can_be_discarded_by_bundle_id(tmp_path):
+    adb = FakeInstallAdb()
+    manager = _manager(tmp_path, adb)
+    path = build_xapk(tmp_path / "game.xapk", "com.example.game")
+    result = _stage(manager, "game.xapk", path.read_bytes())
+    manager.discard(result[0]["bundle_id"])
     assert manager.list_staged() == []
 
 

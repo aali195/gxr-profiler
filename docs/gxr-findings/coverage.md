@@ -1,8 +1,8 @@
 # Measurement coverage
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
 
-> **Hardware state: REFERENCE.** This page describes measurement coverage, not one run. See each findings page for its STOCK/MODDED label.
+> **Hardware state: REFERENCE.** Coverage/format reference; see each topic page for its label.
 
 What gxr-profiler records, what is opt-in, and what remains unavailable.
 

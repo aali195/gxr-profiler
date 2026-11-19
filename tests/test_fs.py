@@ -1,6 +1,6 @@
 import json
 
-from gxr_profiler.core.fs import atomic_write_json, atomic_write_text
+from gxr_core.fs import atomic_write_json, atomic_write_text
 
 
 def test_atomic_writes(tmp_path):

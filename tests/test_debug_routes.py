@@ -3,8 +3,8 @@ import threading
 
 from fastapi.testclient import TestClient
 
-from gxr_profiler.server.app import create_app
-from gxr_profiler.server.deps import get_debug_manager
+from gxr_manager.server.app import create_manager_app
+from gxr_manager.server.deps import get_debug_manager
 
 
 class FakeDebugManager:
@@ -46,7 +46,7 @@ def _token(client):
 
 
 def test_debug_routes(tmp_path):
-    app = create_app(str(tmp_path / "runs"))
+    app = create_manager_app(serial="fake")
     fake = FakeDebugManager()
     app.dependency_overrides[get_debug_manager] = lambda: fake
     client = TestClient(app)
@@ -79,7 +79,7 @@ def test_debug_routes(tmp_path):
 
 
 def test_debug_request_validation(tmp_path):
-    app = create_app(str(tmp_path / "runs"))
+    app = create_manager_app(serial="fake")
     fake = FakeDebugManager()
     app.dependency_overrides[get_debug_manager] = lambda: fake
     client = TestClient(app)

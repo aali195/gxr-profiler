@@ -11,18 +11,21 @@ from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = Path(SPECPATH).parent  # noqa: F821
 
-datas = [(str(ROOT / "gxr_profiler" / "server" / "web"), "gxr_profiler/server/web")]
+datas = [
+    (str(ROOT / "gxr_profiler" / "server" / "web"), "gxr_profiler/server/web"),
+    (str(ROOT / "gxr_core" / "web_common"), "gxr_core/web_common"),
+]
 
 hiddenimports = [
     "pandas",
     "numpy",
     "fastapi",
-    "orjson",
     "rich",
     "webview",
     "webview.platforms.winforms",
     "webview.platforms.edgechromium",
     *collect_submodules("uvicorn"),
+    *collect_submodules("gxr_core"),
     *collect_submodules("gxr_profiler"),
 ]
 

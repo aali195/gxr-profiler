@@ -14,15 +14,16 @@ from collections import deque
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from ..core import parsers as P
-from ..core.adb import AdbClient
-from ..core.columns import POLL_TEMP_SENSORS, cooldown_column
-from ..core.device import collect_device_info
+from gxr_core import parsers as P
+from gxr_core.adb import AdbClient
+from gxr_core.columns import POLL_TEMP_SENSORS, cooldown_column
+from gxr_core.device import collect_device_info
+from gxr_core.poller import Poller
+
 from ..core.models import RunConfig, SampleEvent
 from .logcat import DEV_BASE, LogcatStream
 from .media import MediaSampler
 from .meta import build_meta
-from .poller import Poller
 from .processes import ProcessSampler
 from .session import capture_state, read_dev_baseline
 from .state import MetricState
@@ -70,12 +71,18 @@ class Recorder:
         self._recording_started_iso: str | None = None
         self._ended_iso: str | None = None
         self._duration_actual_s: float | None = None
+        self._recording_elapsed_s: float = 0.0
         self._dev_info: dict = {}
         self._start_state: dict = {}
         self._end_state: dict = {}
         self._batt_hist: deque[tuple[float, float]] = deque()
 
     # -- lifecycle -------------------------------------------------------
+    @property
+    def recording_elapsed_s(self) -> float:
+        """Elapsed capture time at loop exit, excluding shutdown/finalization work."""
+        return self._recording_elapsed_s
+
     def stop(self) -> None:
         self._stop.set()
         self._aux_stop.set()
@@ -136,6 +143,8 @@ class Recorder:
         finally:
             self._stop.set()
             self._aux_stop.set()
+            if self._t0 is not None and self._recording_elapsed_s <= 0.0:
+                self._recording_elapsed_s = max(0.0, time.time() - self._t0)
             if self._logcat is not None:
                 self._logcat.stop_stream()
                 self._logcat.join(timeout=3.0)

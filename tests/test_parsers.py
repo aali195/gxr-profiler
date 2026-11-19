@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from gxr_profiler.capture.poller import FAST_SCRIPT, POLL_SCRIPT, PREVIEW_SCRIPT, parse_poll
-from gxr_profiler.core import parsers as P
+from gxr_core import parsers as P
+from gxr_core.poller import FAST_SCRIPT, POLL_SCRIPT, PREVIEW_SCRIPT, parse_poll
 from tests.fake_adb import POLL_RESPONSE
 
 

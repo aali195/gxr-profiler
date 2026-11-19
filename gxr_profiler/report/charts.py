@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from ..core.columns import (
+from gxr_core.columns import (
     BANDS,
     COLUMN_BY_NAME,
     THERMAL_ZONE_AUX_COLS,

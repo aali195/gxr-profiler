@@ -1,8 +1,8 @@
 # Power rails & battery drain
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md) | [Thermal](thermal.md) | [Root](root.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Thermal](thermal.md) | [Root](root.md)
 
-> **Hardware state: MODDED.** These measurements are from the SoC thermal-modded headset (phase-change pads + copper shims), taken from 2026-11-01 onward. There is no stock baseline on this page.
+> **Hardware state: MODDED.** SoC thermal-modded headset; 2026-11-01 onward, no stock baseline.
 
 The headset exposes a two-channel current/voltage/power monitor through Samsung sysfs (Maxim MAX34427 hardware). Only channel 1 produces meaningful measurements; the UI calls it **Power rail 1**. It is shell-readable and adds a real electrical measurement that the battery power-supply nodes do not provide. Channel 2 is effectively dead on this unit.
 

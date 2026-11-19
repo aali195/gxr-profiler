@@ -1,18 +1,15 @@
 # Headset commands, sources & polling
 
-Recording, preview, diagnostics and report export use **read-only** commands. The only
-privileged commands use `su -c` to read root-only files; there are no writes, pushes,
-`setprop`, sysfs writes, logcat clears, or thermalservice overrides.
-
-The one exception is **Tools > Apps**, where the user can explicitly confirm package
-disable/remove/restore/uninstall actions. Those commands are listed in
-[Tools > Apps](#tools--apps-package-management) and are never part of a recording.
+Recording, preview, diagnostics and report export use **read-only** commands; the only privileged
+reads use `su -c` for root-only files. **GXR Manager > Apps**, **Installer** and **Settings** are
+the only writes, and only after an explicit confirmation. See
+[safety & fair runs](README.md#safety--fair-runs).
 
 Device: **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2
 (`SXR2230P`), Adreno 740.
 
-Related: [README](../README.md) for columns/usage, [research notes](README.md)
-for findings and device quirks.
+Related: [capture & schema guide](README.md) for columns/usage, and the
+[research & findings hub](gxr-findings/README.md) for results and device quirks.
 
 ## Cadence at a glance
 
@@ -38,7 +35,7 @@ run. The sensor defaults to `AP` and is selectable in the UI / via `--sensor`.
 ## 1 Hz poll (`--interval` seconds)
 
 The exact poll script is built in
-[`gxr_profiler/capture/poller.py`](../gxr_profiler/capture/poller.py):
+[`gxr_core/poller.py`](../gxr_core/poller.py):
 
 ```sh
 echo '###FREQ'
@@ -226,11 +223,11 @@ gxr-profiler filters in Python because `logcat -s` misses colon tags such as
 Logcat is **event-driven**, not a fixed poll. Thermal/fan events are also
 written to `<run>.events.csv`; other values are folded into the next 1 Hz row.
 
-## Tools > Diagnostics (one-click snapshot, separate from runs)
+## GXR Manager > Diagnostics (one-click snapshot, separate from runs)
 
 See the [Diagnostics guide](DIAGNOSTICS.md) for the normal-user workflow and how to read the results.
 
-The **Tools > Diagnostics** view collects a read-only snapshot of crash and boot state. It does not create a
+The **GXR Manager > Diagnostics** view collects a read-only snapshot of crash and boot state. It does not create a
 run and does not record continuously. The snapshot is shown in the UI and saved as JSON + Markdown
 under `reports/debug/` next to the exe. Nothing is written, cleared or changed on the headset.
 
@@ -276,7 +273,7 @@ The tab parses native `F DEBUG` blocks, Java `FATAL EXCEPTION` / ANR records, `r
 animation-race signature and explains it as a software issue while keeping thermal/power readings
 separate. See [crash & soft-reboot logs](gxr-findings/crash-logs.md).
 
-## Tools > Apps (package management)
+## GXR Manager > Apps (package management)
 
 The Apps tool first reads package state, then optionally runs one confirmed action. The list
 read is read-only; actions are explicit user changes and are blocked while a recording is in
@@ -349,146 +346,24 @@ su -c 'du -sk /data/user/0/<package> /data/user_de/0/<package> /data/user/0/<pac
 Root is not required for the actions and does not unlock protected system-APK deletion. The
 system image is never edited.
 
-## Tools > Settings
+## GXR Manager > Settings
 
-The Settings tool reads the current value of each supported setting, then applies or reverts a
-toggle or selects a value. Reads and writes are blocked during a recording. See the
-[Settings guide](SETTINGS.md) and [Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
+Settings reads and writes are blocked during a recording. Behaviour, warnings, defaults and the exact
+per-setting commands are in the [Settings guide](SETTINGS.md). Hidden-key provenance and keys that
+are not exposed are in [Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
 
-Privacy indicator reads/writes:
+| Group | Keys | Commands |
+|---|---|---|
+| XR controls | `toggle_xr_perf_metrics`, `natural_input_mode`, `input_pointer`, `toggle_hands_breakthrough`, `enable_touch_on_everything`, `toggle_guardian`, `guardian_radius`, `auto_spatialization_settings` | [XR controls](SETTINGS.md#xr-controls) |
+| Privacy indicators | `camera_mic_icons_enabled`, DeviceConfig sync | [Hide recording indicator](SETTINGS.md#hide-recording-indicator-green-dot) |
+| Software updates | `com.wssyncmldm`, `com.sec.android.soagent`, `ota_disable_automatic_update` | [Software updates](SETTINGS.md#software-updates) |
+| Advanced | `settings_enable_monitor_phantom_procs`, `stay_on_while_plugged_in`, `heads_up_notifications_enabled`, `wifi_scan_always_enabled`, `ble_scan_always_enabled` | [Advanced](SETTINGS.md#advanced) |
+| Testing - untested | `enable_dynamic_policy`, animation scales, `accessibility_reduce_transparency`, `disable_window_blurs`, `com.samsung.android.game.gos`, `fixed_hsm_display_rate` | [Testing - untested](SETTINGS.md#testing---untested) |
 
-```sh
-cmd device_config get privacy camera_mic_icons_enabled
-cmd device_config get_sync_disabled_for_tests
-cmd device_config put privacy camera_mic_icons_enabled false default
-cmd device_config set_sync_disabled_for_tests persistent
-cmd device_config put privacy camera_mic_icons_enabled true default
-cmd device_config set_sync_disabled_for_tests none
-```
-
-Software update reads/writes:
-
-```sh
-pm list packages com.wssyncmldm
-pm list packages -d com.wssyncmldm
-pm disable-user --user 0 com.wssyncmldm
-pm enable --user 0 com.wssyncmldm
-
-pm list packages com.sec.android.soagent
-pm list packages -d com.sec.android.soagent
-pm disable-user --user 0 com.sec.android.soagent
-pm enable --user 0 com.sec.android.soagent
-
-settings get global ota_disable_automatic_update
-settings put global ota_disable_automatic_update 1
-settings delete global ota_disable_automatic_update
-```
-
-XR control reads/writes (experimental; all untested unless noted):
-
-```sh
-settings --user 0 get system toggle_xr_perf_metrics
-settings --user 0 put system toggle_xr_perf_metrics 1
-settings --user 0 put system toggle_xr_perf_metrics 0
-
-settings --user 0 get system toggle_hands_breakthrough
-settings --user 0 put system toggle_hands_breakthrough 1
-settings --user 0 put system toggle_hands_breakthrough 0
-
-settings --user 0 get system enable_touch_on_everything
-settings --user 0 put system enable_touch_on_everything 1
-settings --user 0 put system enable_touch_on_everything 0
-
-settings --user 0 get system toggle_guardian
-settings --user 0 put system toggle_guardian 1
-settings --user 0 put system toggle_guardian 0
-
-settings --user 0 get system guardian_radius
-settings --user 0 put system guardian_radius 0
-settings --user 0 put system guardian_radius 1
-```
-
-`toggle_xr_perf_metrics` is the performance overlay; turn it off when finished to avoid OLED
-burn-in. `guardian_radius` values are inferred: `0` Small, `1` Large.
-
-Display, advanced and testing reads/writes:
-
-```sh
-getprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy
-su -c 'service call SurfaceFlinger 1044 i32 0'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy false'
-su -c 'service call SurfaceFlinger 1044 i32 1'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.enable_dynamic_policy true'
-
-settings --user 0 get global settings_enable_monitor_phantom_procs
-settings --user 0 put global settings_enable_monitor_phantom_procs false
-settings --user 0 delete global settings_enable_monitor_phantom_procs
-
-getprop persist.device_config.com_android_xr.com.android.xr.flags.fixed_hsm_display_rate
-su -c 'service call SurfaceFlinger 1043 i32 0'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.fixed_hsm_display_rate false'
-su -c 'service call SurfaceFlinger 1043 i32 1'
-su -c 'setprop persist.device_config.com_android_xr.com.android.xr.flags.fixed_hsm_display_rate true'
-
-settings --user 0 get global stay_on_while_plugged_in
-settings --user 0 put global stay_on_while_plugged_in 7
-settings --user 0 put global stay_on_while_plugged_in 0
-
-settings --user 0 get global heads_up_notifications_enabled
-settings --user 0 put global heads_up_notifications_enabled 0
-settings --user 0 put global heads_up_notifications_enabled 1
-
-settings --user 0 get global window_animation_scale
-settings --user 0 get global transition_animation_scale
-settings --user 0 get global animator_duration_scale
-settings --user 0 put global window_animation_scale 0
-settings --user 0 put global transition_animation_scale 0
-settings --user 0 put global animator_duration_scale 0
-settings --user 0 delete global window_animation_scale
-settings --user 0 delete global transition_animation_scale
-settings --user 0 delete global animator_duration_scale
-
-settings --user 0 get global accessibility_reduce_transparency
-settings --user 0 get global disable_window_blurs
-settings --user 0 put global accessibility_reduce_transparency 1
-settings --user 0 put global disable_window_blurs 1
-settings --user 0 delete global accessibility_reduce_transparency
-settings --user 0 delete global disable_window_blurs
-
-settings --user 0 get global wifi_scan_always_enabled
-settings --user 0 get global ble_scan_always_enabled
-settings --user 0 put global wifi_scan_always_enabled 0
-settings --user 0 put global ble_scan_always_enabled 0
-settings --user 0 delete global wifi_scan_always_enabled
-settings --user 0 delete global ble_scan_always_enabled
-
-pm list packages com.samsung.android.game.gos
-pm list packages -d com.samsung.android.game.gos
-pm disable-user --user 0 com.samsung.android.game.gos
-pm enable --user 0 com.samsung.android.game.gos
-
-settings --user 0 get system natural_input_mode
-settings --user 0 get system input_pointer
-settings --user 0 put system natural_input_mode 6
-settings --user 0 put system input_pointer 6
-settings --user 0 put system natural_input_mode 5
-settings --user 0 put system input_pointer 5
-settings --user 0 put system natural_input_mode 1
-settings --user 0 put system input_pointer 1
-settings --user 0 put system natural_input_mode 7
-settings --user 0 put system input_pointer 7
-```
-
-`natural_input_mode` defines 6 = hand and eye aiming, 5 = eye aiming only, and 1 = hand aiming only.
-Hidden mode 7 = HMD fallback (head + touchpad, no hand tracking). Set `input_pointer` to the same
-value. The full hidden-key research is in
-[Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
-
-Settings changes require the local API token and are appended to
-`reports/settings/setting-actions.jsonl`. No root is required except for **Disable performance
-optimization policy** and **Disable fixed Home Space Mode display rate**, which use `su` for the
-SurfaceFlinger transaction and persistent property. Disabling updates also stops security patches,
-and an update that is already downloaded or prepared may still apply.
+Only **Disable performance optimization policy** and **Disable fixed Home Space Mode display rate**
+use `su` for a SurfaceFlinger transaction and a persistent property. Every other setting is a normal
+`settings`, `pm` or `cmd device_config` write. Changes require the local API token and are appended
+to `reports/settings/setting-actions.jsonl`.
 
 ## Media/display/audio (every 10 s, always on)
 
@@ -519,7 +394,7 @@ dumpsys media.audio_flinger 2>/dev/null | grep -E '^(Output|Input) thread|^[[:sp
 
 Timeout: 25 s. No root.
 
-## Recording cadence (schema 11)
+## Recording cadence
 
 The recorder uses a **fast 1 Hz** shell containing only cheap sysfs and `/proc`
 reads. Slow sections run separately and are merged into every 1 Hz row:
@@ -709,11 +584,11 @@ first-setup date.
 | Active panel / LCD type / EDID | Yes, `--root` |
 | Measured IPD + eye/face calibration file dates | Yes, `--root` |
 | Approximate first setup date (user-settings mtimes) | Yes, `--root` |
-| App data/cache size (Tools > Apps detail) | Yes, opt-in per package |
+| App data/cache size (GXR Manager > Apps detail) | Yes, opt-in per package |
 | `su -c id` manager confirmation | Yes, `--root` |
 | Manufacture date, region/CSC/locale, boundary, current IPD/cal status | No |
 | All other device/build/panel variants | No |
 
 `su -c` reads may trigger a KernelSU/Magisk prompt once. Recording, preview,
-diagnostics and export do not change device state. Tools > Apps actions are the
-only exception; they require an explicit confirmation in the local UI.
+diagnostics and export do not change device state. GXR Manager > Apps and Settings are the
+only exceptions; they require an explicit confirmation in the local UI.

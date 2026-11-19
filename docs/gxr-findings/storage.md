@@ -1,8 +1,8 @@
 # Storage I/O
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
 
-> **Hardware state: MIXED - STOCK BEFORE 2026-11-01, MODDED AFTER.** Runs before 2026-11-01 are from the unmodified headset. Runs from 2026-11-01 onward, including the in-between and after runs, are from the SoC thermal-modded headset (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit.
+> **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 
 Disk capacity, whole-device counters, pressure and per-process I/O.
 

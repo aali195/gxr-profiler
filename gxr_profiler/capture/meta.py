@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from gxr_core import schema
+
 from .. import __version__
-from ..core import schema
 from ..core.models import RunConfig
 from .columns import REPORT_COLUMNS
 

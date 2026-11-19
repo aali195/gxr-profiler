@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from ..core import parsers as P
-from ..core.adb import AdbClient
+from gxr_core import parsers as P
+from gxr_core.adb import AdbClient
+from gxr_core.poller import Poller
+
 from .logcat import dev_seconds
-from .poller import Poller
 
 log = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 import pytest
 
-from gxr_profiler.capture import poller
+from gxr_core import poller
 
 
 class _SequencedAdb:

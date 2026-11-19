@@ -2,11 +2,10 @@
 
 [Back to README](../README.md) | [Commands](COMMANDS.md) | [Diagnostics](DIAGNOSTICS.md) | [Background processes & debloat](gxr-findings/debloat.md)
 
-The **Tools > Apps** tab lists the packages installed on the headset and lets you disable or
-remove them after an explicit confirmation. The separate **Tools > Installer** tab stages and
-installs APK/OBB/XAPK files. Apps, Installer and **Tools > Settings** are the only parts of
-gxr-profiler that can change the headset; recording, preview, diagnostics and report export
-remain read-only.
+The **GXR Manager > Apps** tab lists the packages installed on the headset and lets you disable or
+remove them after an explicit confirmation. The separate **GXR Manager > Installer** tab stages and
+installs APK/OBB/XAPK files. GXR Manager also provides Diagnostics and Settings. GXR Profiler itself
+remains read-only for recording, preview and report export.
 
 > The tool uses Android's package manager (`pm`) through ADB. It does **not** delete files
 > from the system image. Stock/system packages are removed for user 0 only and can normally
@@ -14,14 +13,15 @@ remain read-only.
 
 ## Quick start
 
-1. Connect the headset over ADB and open **Tools > Apps**.
-2. Use the filters or search box to find a package.
-3. Select a package to open its details in a dialog.
-4. Press **Disable**, **Enable**, **Remove for user 0**, **Restore** or **Uninstall** in that dialog.
-5. Read the confirmation dialog and tick any required data-loss acknowledgement box.
-6. Press the confirmation button.
+1. Connect the headset over ADB and open **GXR Manager > Apps**.
+2. Press **Load apps** when ADB is ready; after the first load the button becomes **Refresh**.
+3. Use the filters or search box to find a package.
+4. Select a package to open its details in a dialog.
+5. Press **Disable**, **Enable**, **Remove for user 0**, **Restore** or **Uninstall** in that dialog.
+6. Read the confirmation dialog and tick any required data-loss acknowledgement box.
+7. Press the confirmation button.
 
-To install software, open **Tools > Installer**, choose or drop the files, review the plan, and
+To install software, open **GXR Manager > Installer**, choose or drop the files, review the plan, and
 confirm. See [Installing APKs and OBB data](#installing-apks-and-obb-data).
 
 After an action the list refreshes and the raw package-manager result is shown under
@@ -30,7 +30,7 @@ the executable.
 
 ## Installing APKs and OBB data
 
-The **Tools > Installer** tab stages files locally and shows a review before anything is sent to the
+The **GXR Manager > Installer** tab stages files locally and shows a review before anything is sent to the
 headset. Nothing is installed until you review the plan and tick the confirmation box.
 
 ### Supported inputs
@@ -48,7 +48,7 @@ tab.
 
 ### Workflow
 
-1. Open **Tools > Installer**.
+1. Open **GXR Manager > Installer**.
 2. Add files with **Choose files**, **Choose folder**, or drag and drop.
 3. Check the staged list. Each row shows the detected package, version, size and SHA-256. OBB
    rows show the target package and the destination path.
@@ -258,7 +258,8 @@ or modify the system image.
 
 ## Safety
 
-- Recording, live preview, diagnostics and exported reports remain read-only.
+- Recording, live preview, diagnostics and exported reports remain read-only. See
+  [safety & fair runs](README.md#safety--fair-runs).
 - Apps and Installer actions only run after a local UI action with the local API token and a
   confirmation flag in the request. Critical packages cannot be installed over, disabled, removed
   for user 0 or uninstalled.
@@ -266,15 +267,14 @@ or modify the system image.
   uploaded bytes are stored under the tool's staging folder; client-supplied paths are never
   executed.
 - There are no free-form shell commands in the UI or API.
-- Actions and installs are appended to `reports/apps/app-actions.jsonl`. That file is local and is
-  not included in exported HTML reports.
-- Apps management is not available in offline HTML reports.
+- Actions and installs are appended to `reports/apps/app-actions.jsonl`, a local file that is not
+  included in exported HTML reports. Apps management is not available in offline reports.
 
 ## Troubleshooting
 
 | Symptom | What to try |
 |---|---|
-| `no adb device` | Reconnect wireless ADB, or pass `--serial`. |
+| `no adb device` | Reconnect wireless ADB; see [device selection](CLI.md#device-selection). |
 | `could not list packages` | Reconnect ADB and press **Refresh**. Check that `pm list packages` works in `adb shell`. |
 | Action says `Failure [...]` | Android rejected the change. The package may be protected, already removed, or not support the action in its current state. |
 | Package disappeared after removal | Switch the filter to **Removed** and press **Restore** (system packages only). |

@@ -2,19 +2,12 @@ import re
 
 from fastapi.testclient import TestClient
 
-from gxr_profiler.server.app import create_app
-from gxr_profiler.server.apps import AppsService
-from gxr_profiler.server.deps import get_apps_service, get_manager
+from gxr_core.recording_state import write_state
+from gxr_manager.server.app import create_manager_app
+from gxr_manager.server.apps import AppsService
+from gxr_manager.server.deps import get_apps_service
 
 from .install_fixtures import FakeInstallAdb, build_apk
-
-
-class FakeManager:
-    def __init__(self, status="idle"):
-        self.status = status
-
-    def state(self):
-        return {"status": self.status}
 
 
 def _token(client):
@@ -22,8 +15,8 @@ def _token(client):
     return re.search(r'name="gxr-profiler-token" content="([^"]+)"', html).group(1)
 
 
-def _client(tmp_path, status="idle"):
-    app = create_app(str(tmp_path / "runs"))
+def _client(tmp_path):
+    app = create_manager_app(serial="fake")
     adb = FakeInstallAdb()
     service = AppsService(
         serial="fake",
@@ -31,14 +24,12 @@ def _client(tmp_path, status="idle"):
         staging_dir=str(tmp_path / "staging"),
         adb_factory=lambda serial=None: adb,
     )
-    manager = FakeManager(status)
     app.dependency_overrides[get_apps_service] = lambda: service
-    app.dependency_overrides[get_manager] = lambda: manager
-    return TestClient(app), service, manager, adb
+    return TestClient(app), service
 
 
 def test_install_stage_preview_and_discard(tmp_path):
-    client, service, _, _ = _client(tmp_path)
+    client, service = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     apk = build_apk(tmp_path / "game.apk", "com.example.game").read_bytes()
 
@@ -87,7 +78,7 @@ def test_install_stage_preview_and_discard(tmp_path):
 
 
 def test_install_stage_rejects_bad_names_and_bodies(tmp_path):
-    client, _, _, _ = _client(tmp_path)
+    client, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client), "Content-Type": "application/octet-stream"}
     response = client.post(
         "/api/apps/install/stage",
@@ -106,7 +97,7 @@ def test_install_stage_rejects_bad_names_and_bodies(tmp_path):
 
 
 def test_install_start_requires_confirmation_and_blocks_recording(tmp_path):
-    client, _, manager, _ = _client(tmp_path)
+    client, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     apk = build_apk(tmp_path / "game.apk", "com.example.game").read_bytes()
     staged = client.post(
@@ -123,7 +114,7 @@ def test_install_start_requires_confirmation_and_blocks_recording(tmp_path):
     )
     assert response.status_code == 400
 
-    manager.status = "recording"
+    write_state(True, label="test run")
     response = client.post(
         "/api/apps/install",
         json={"items": [staged["id"]], "confirm": True},
@@ -133,13 +124,13 @@ def test_install_start_requires_confirmation_and_blocks_recording(tmp_path):
 
 
 def test_install_status_unknown_job(tmp_path):
-    client, _, _, _ = _client(tmp_path)
+    client, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     assert client.get("/api/apps/install/missing", headers=headers).status_code == 404
 
 
 def test_install_preview_validation_errors(tmp_path):
-    client, _, _, _ = _client(tmp_path)
+    client, _ = _client(tmp_path)
     headers = {"X-GXR-Profiler-Token": _token(client)}
     response = client.post(
         "/api/apps/install/preview",

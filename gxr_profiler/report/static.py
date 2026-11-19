@@ -6,21 +6,23 @@ import copy
 import json
 import math
 import os
-import re
 from datetime import UTC, datetime
 
-from ..core.adb import RunNotFound
-from ..core.columns import temp_sensor_options
-from ..core.fs import atomic_write_text
+from gxr_core.adb import RunNotFound
+from gxr_core.columns import temp_sensor_options
+from gxr_core.fs import atomic_write_text
+from gxr_core.naming import safe_filename
+from gxr_core.paths import default_reports_dir, default_runs_dir, ensure_writable_dir
+
 from ..core.models import CAPTURE_PROFILES
-from ..core.naming import safe_filename
-from ..core.paths import default_reports_dir, default_runs_dir, ensure_writable_dir
 from ..runs.store import RunStore
+from ..server.web_modules import PROFILER_JS_FILES
 from . import charts
 from .data import downsample, process_series_for, procs_for
 from .data import series as build_series
 
 _WEB = os.path.join(os.path.dirname(__file__), "..", "server", "web")
+_COMMON = os.path.join(os.path.dirname(__file__), "..", "..", "gxr_core", "web_common")
 MAX_COMPARE_RUNS = 6
 _PIN_LIMITS = {"table": 20, "graph": 12, "process": 6}
 _PIN_TEXT_FIELDS = ("label", "unit", "section", "groupSection", "groupId", "name", "package", "kind")
@@ -59,6 +61,11 @@ def _web(rel: str) -> str:
         return fh.read()
 
 
+def _common(rel: str) -> str:
+    with open(os.path.join(_COMMON, rel), encoding="utf-8") as fh:
+        return fh.read()
+
+
 def _inline_block(html: str, name: str, content: str) -> str:
     start = f"<!-- gxr-profiler:{name}:start -->"
     end = f"<!-- gxr-profiler:{name}:end -->"
@@ -82,17 +89,6 @@ def _redact_meta(meta: dict) -> dict:
             for key in ("ssid", "bssid", "ip", "mac", "guid"):
                 wifi.pop(key, None)
     return clean
-
-
-def _strip_tools_ui(html: str) -> str:
-    """Offline reports keep run analysis only; remove Tools markup entirely."""
-    html = re.sub(r'\s*<span class="tabseparator" id="tools-separator"[^>]*></span>', "", html)
-    html = re.sub(
-        r'\s*<button class="tab tab-utility"[^>]*data-tab="tools"[^>]*>Tools</button>',
-        "",
-        html,
-    )
-    return html
 
 
 def _dataset(label: str, meta: dict, df) -> dict:
@@ -139,10 +135,11 @@ def build(labels_list: list[str], runs_dir: str | None = None, pins=None) -> str
         "exported": datetime.now(UTC).isoformat(),
     }
 
-    html = _strip_tools_ui(_web("index.html"))
-    css = _web("styles.css")
+    html = _web("index.html")
+    css = _common("common.css") + "\n" + _web("styles.css")
     echarts = _web(os.path.join("vendor", "echarts.min.js")).replace("</script", "<\\/script")
-    appjs = _web("app.js").replace("</script", "<\\/script")
+    commonjs = _common("common.js").replace("</script", "<\\/script")
+    appjs = "\n".join(_web(name) for name in PROFILER_JS_FILES).replace("</script", "<\\/script")
     data = json.dumps(payload, separators=(",", ":"))
     data = (
         data.replace("<", "\\u003c")
@@ -155,7 +152,11 @@ def build(labels_list: list[str], runs_dir: str | None = None, pins=None) -> str
 
     html = _inline_block(html, "styles", f"<style>{css}</style>")
     html = _inline_block(html, "echarts", f"<script>{echarts}</script>")
-    html = _inline_block(html, "app", f"<script>{data_js}</script>\n<script>{appjs}</script>")
+    html = _inline_block(
+        html,
+        "app",
+        f"<script>{data_js}</script>\n<script>{commonjs}</script>\n<script>{appjs}</script>",
+    )
     return html.replace("<title>gxr_profiler</title>", "<title>gxr_profiler report</title>")
 
 

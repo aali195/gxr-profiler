@@ -8,8 +8,9 @@ import json
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
-from ...capture.poller import Poller
-from ...core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, resolve_serial
+from gxr_core.adb import CONNECT_POLL_S, CONNECT_WAIT_S, AdbError, RealAdb, resolve_serial
+from gxr_core.poller import Poller
+
 from ..deps import ManagerDep
 from ..models import RecordRequest
 
@@ -38,11 +39,11 @@ def record_start(body: RecordRequest, manager: ManagerDep):
     try:
         manager.start(body.to_config(manager.runs_dir))
     except FileExistsError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (ValueError, OSError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"ok": True}
 
 
@@ -71,11 +72,12 @@ async def stream(manager: ManagerDep, last_event_id: str | None = Header(default
                 pending = [ev for ev in manager.events if int(ev.get("seq", 0)) > last_seq]
                 status = manager.status
                 total_rows = manager.row_count
+                elapsed = manager.elapsed
             for ev in pending:
                 last_seq = max(last_seq, int(ev.get("seq", 0)))
                 yield f"id: {last_seq}\ndata: {json.dumps(ev)}\n\n"
             if not pending:
-                yield f"event: status\ndata: {json.dumps({'status': status, 'rows': total_rows})}\n\n"
+                yield f"event: status\ndata: {json.dumps({'status': status, 'rows': total_rows, 'elapsed': elapsed})}\n\n"
             if status in ("done", "error") and not pending:
                 break
             await asyncio.sleep(0.5)

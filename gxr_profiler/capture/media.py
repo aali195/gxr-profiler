@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from ..core import parsers as P
-from ..core.adb import AdbClient
+from gxr_core import parsers as P
+from gxr_core.adb import AdbClient
 
 log = logging.getLogger(__name__)
 

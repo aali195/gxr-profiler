@@ -1,1 +1,1 @@
-"""Core domain: adb access, parsers, schema, labels, device info, models."""
+"""Profiler domain models: run configuration and capture profiles."""

@@ -14,6 +14,7 @@
     } catch (e) {}
   </script>
   <!-- gxr-profiler:styles:start -->
+  <link rel="stylesheet" href="/common/common.css?v=__GXR_ASSET_VERSION__" />
   <link rel="stylesheet" href="/static/styles.css?v=__GXR_ASSET_VERSION__" />
   <!-- gxr-profiler:styles:end -->
 </head>
@@ -40,8 +41,6 @@
         <button class="tab active" data-tab="live">Record</button>
         <button class="tab" data-tab="run">Run</button>
         <button class="tab" data-tab="compare">Compare</button>
-        <span class="tabseparator" id="tools-separator" aria-hidden="true"></span>
-        <button class="tab tab-utility" data-tab="tools" id="tools-tab">Tools</button>
         <div class="toolgroup" id="viewtools">
           <button class="toolbtn" id="btn-find" title="Find in page (Ctrl+F)">Find</button>
           <button class="toolbtn view-only" id="btn-collapse" title="Collapse all sections">Collapse all</button>
@@ -67,6 +66,11 @@
   <script src="/static/vendor/echarts.min.js"></script>
   <!-- gxr-profiler:echarts:end -->
   <!-- gxr-profiler:app:start -->
+  <script src="/common/common.js?v=__GXR_ASSET_VERSION__"></script>
+  <script src="/static/app.core.js?v=__GXR_ASSET_VERSION__"></script>
+  <script src="/static/app.compare.js?v=__GXR_ASSET_VERSION__"></script>
+  <script src="/static/app.record.js?v=__GXR_ASSET_VERSION__"></script>
+  <script src="/static/app.find.js?v=__GXR_ASSET_VERSION__"></script>
   <script src="/static/app.js?v=__GXR_ASSET_VERSION__"></script>
   <!-- gxr-profiler:app:end -->
 </body>

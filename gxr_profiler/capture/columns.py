@@ -1,12 +1,12 @@
 """Column re-exports.
 
-The canonical definitions live in :mod:`gxr_profiler.core.columns`; this module keeps
+The canonical definitions live in :mod:`gxr_core.columns`; this module keeps
 the historical import path used by the capture layer and tests.
 """
 
 from __future__ import annotations
 
-from ..core.columns import (
+from gxr_core.columns import (
     AUDIO_COLUMNS,
     CIB_COLUMNS,
     CIB_STREAMS,

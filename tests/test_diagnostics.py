@@ -1,12 +1,12 @@
-from gxr_profiler.capture.diagnostics import DiagnosticsCollector
-from gxr_profiler.core.diagnostics import analyze_report, classify_crash, format_markdown, is_systemui_hwui_race
-from gxr_profiler.core.parsers.crash import (
+from gxr_core.parsers.crash import (
     parse_crashes,
     parse_dropbox,
     parse_events,
     parse_exit_info,
     parse_tombstone_text,
 )
+from gxr_manager.core.collector import DiagnosticsCollector
+from gxr_manager.core.diagnostics import analyze_report, classify_crash, format_markdown, is_systemui_hwui_race
 from tests.fake_adb import POLL_RESPONSE, FakeAdb
 
 
@@ -233,6 +233,7 @@ def test_collector_snapshot_shape():
     assert "logcat -d -b crash" in "\n".join(adb.shell_calls)
     assert report["sections"]["crash"].startswith("11-17 00:41:48.881")
 
+
 PLAIN_TOMBSTONE = """*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 Timestamp: 2026-11-17 00:41:47.751068593+0000
 Process uptime: 1860s
@@ -251,6 +252,7 @@ def test_parse_plain_tombstone_body():
     assert crash["signal"] == "SIGABRT"
     assert crash["abort"] == "sp<> assignment detected data race"
     assert is_systemui_hwui_race(crash)
+
 
 PERCEPTION_TOMBSTONE = """*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
 Timestamp: 2026-11-06 23:17:47.000000000+0000
@@ -297,7 +299,10 @@ def test_historical_tombstone_and_silent_records_are_reported():
     assert "ActivityManager ANR event: com.example.app" in titles
     assert "Recent abnormal app exits" in titles
     assert "System log fault indicators" in titles
-    assert any("WATCHDOG" in line for line in next(i for i in issues if i["title"] == "System log fault indicators")["evidence"])
+    assert any(
+        "WATCHDOG" in line
+        for line in next(i for i in issues if i["title"] == "System log fault indicators")["evidence"]
+    )
 
 
 IMMERSIVE_TOMBSTONE = """*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***

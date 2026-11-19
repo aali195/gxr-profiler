@@ -46,9 +46,7 @@ def test_logcat_ir_led_updates_state():
     )
     assert st.snapshot()["irled_on"] == 0.0
     stream.process_line("11-16 03:28:00.000 D/SXR/QVRIRLedWriter(11315): QVRIRLedWriter::stop")
-    stream.process_line(
-        "11-16 03:22:37.993 I/SXR/PerceptionStateMachine(11315): handleSuspend, mName: IRLedController"
-    )
+    stream.process_line("11-16 03:22:37.993 I/SXR/PerceptionStateMachine(11315): handleSuspend, mName: IRLedController")
     snap = st.snapshot()
     assert snap["irled_fps"] == 25.6
     assert snap["irled_brightness"] == 0.0
@@ -57,9 +55,7 @@ def test_logcat_ir_led_updates_state():
     assert snap["irled_state"] == 0.0
 
     stream.process_line("11-16 03:28:01.000 D/SXR/QVRIRLedWriter(11315): QVRIRLedWriter::start")
-    stream.process_line(
-        "11-16 03:28:02.000 I/SXR/PerceptionStateMachine(11315): handleResume, mName: IRLedController"
-    )
+    stream.process_line("11-16 03:28:02.000 I/SXR/PerceptionStateMachine(11315): handleResume, mName: IRLedController")
     snap = st.snapshot()
     assert snap["irled_on"] == 1.0
     assert snap["irled_state"] == 1.0

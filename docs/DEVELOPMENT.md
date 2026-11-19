@@ -1,5 +1,7 @@
 # Development, testing & packaging
 
+[Back to README](../README.md) | [CLI](CLI.md) | [Commands](COMMANDS.md)
+
 Quick use of the packaged UI is covered in the root [README](../README.md). This page is for
 running from source, understanding the layout, testing changes and building executables.
 
@@ -21,17 +23,20 @@ Without installing, run `python -m gxr_profiler ...`.
 ## Architecture
 
 ```text
+gxr_core/      shared ADB, device/parsers, paths/fs/schema, recording-state marker, server/web primitives
 gxr_profiler/
-  cli/       Typer commands (record, runs, report, ui, devices)
-  core/      column registry, schema/labels derived from it, adb client, models, fs/paths, apps helpers, shared process snapshot
-    parsers/ logcat, thermal, media, audio, radios, cameras, sensors, process, system, display
-    device/  props, system, display/panel, audio, root snapshot
-  capture/   Recorder lifecycle, logcat stream, pollers, media/process samplers, meta/writer
-  runs/      RunStore: list/load/rename/delete runs
-  report/    chart spec, series shaping, self-contained offline app export
-  server/    app factory, deps, recording manager, diagnostics/apps/settings services, export service, routers/, ECharts SPA
-packaging/   PyInstaller onefile spec + entry point
-tests/       pytest suite with a FakeAdb
+  cli/         Typer commands (record, runs, report, ui, devices)
+  core/        run models
+  capture/     Recorder lifecycle, logcat stream, media/process samplers, meta/writer
+  runs/        RunStore: list/load/rename/delete runs
+  report/      chart spec, series shaping, self-contained offline app export
+  server/      profiler app factory, recording manager, export service, routers/, ECharts SPA modules
+gxr_manager/
+  cli/         manager UI/status commands
+  core/        package/APK/settings/diagnostics helpers
+  server/      manager app factory, apps/installer/settings/diagnostics services, routers, manager SPA modules
+packaging/     PyInstaller specs + entry points for both apps
+tests/         pytest suite with FakeAdb
 ```
 
 ## Tests and linting
@@ -43,30 +48,36 @@ python -m pytest -q
 ```
 
 The tests use a fake ADB device and do not require a connected headset. `pytest` covers parsers,
-recording/storage, the web routes, export behaviour, package parsing/actions and UI asset checks.
-The Apps and Settings tests use fake `pm`/`dumpsys`/`device_config` output and never touch a real device.
+recording/storage, both web route surfaces, export behaviour, package parsing/actions and UI asset
+checks. The Apps/Installer/Settings tests use fake `pm`/`dumpsys`/`device_config` output and never
+touch a real device.
 
 ## Building the executables
 
 ```powershell
 pip install -e ".[packaging]"
 pyinstaller packaging/gxr-profiler.spec --noconfirm
+pyinstaller packaging/gxr-manager.spec --noconfirm
 ```
 
 This produces:
 
 ```text
-dist/gxr-profiler.exe       windowed UI build
-dist/gxr-profiler-cli.exe   terminal/CLI build
+dist/gxr-profiler.exe       profiler windowed UI
+dist/gxr-profiler-cli.exe   profiler terminal/CLI
+dist/gxr-manager.exe        manager windowed UI
+dist/gxr-manager-cli.exe    manager terminal/CLI
 ```
 
-The onefile build bundles Python, pandas, FastAPI, pywebview, the web app and ECharts. It still
-needs `adb` on PATH and the WebView2 runtime for the native window (`--browser` is a fallback).
+The onefile builds bundle Python, FastAPI, pywebview and their web assets. The profiler also bundles
+pandas/ECharts. Both need `adb` on PATH and the WebView2 runtime for the native window (`--browser`
+is a fallback). Keep both apps in the same folder so they share `recording.json` and the manager can
+block device changes while the profiler records. The profiler also marks CLI recordings, so
+`gxr-profiler-cli.exe record` blocks manager actions the same way.
 
-When invoked from a terminal with arguments, `gxr-profiler.exe` attaches to the parent console, so
-`--help`, `record`, `report`, `runs` and `devices` work like the console build. `runs/` and
-`reports/` are created next to the exe; when running from source they stay relative to the current
-working directory. The exe folder must be writable, or pass `--runs-dir` / `--out`.
+When invoked from a terminal with arguments, the windowed exes attach to the parent console.
+`runs/` and `reports/` are created next to the profiler exe; manager staging/logs are next to the
+manager exe. The exe folder must be writable, or pass `--runs-dir` / `--out`.
 
 ## CI and releases
 
@@ -77,14 +88,14 @@ working directory. The exe folder must be writable, or pass `--runs-dir` / `--ou
 - manual dispatch
 - `v*` tag pushes
 
-The `build-test` job runs Ruff formatting/linting and pytest on Python 3.11, 3.12 and 3.13.
+The `build-test` job runs Ruff formatting/linting, JavaScript syntax checks and pytest on Python 3.11 and 3.13.
 
 The `release` job runs only for `v*` tags after tests pass. It:
 
-1. Builds both `gxr-profiler.exe` and `gxr-profiler-cli.exe`.
-2. Verifies both files and runs the CLI help as a smoke test.
+1. Builds both profiler executables and both manager executables.
+2. Verifies all four files and runs both CLI help commands as a smoke test.
 3. Writes `dist/SHA256SUMS.txt`.
 4. Uploads a workflow artifact.
 5. Creates or updates the GitHub release using the tag name.
 
-Create a release by pushing a tag such as `v0.3.0`.
+Create a release by pushing a tag such as `v2.0.0`.

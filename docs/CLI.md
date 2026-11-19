@@ -1,5 +1,7 @@
 # CLI reference
 
+[Back to README](../README.md) | [Development](DEVELOPMENT.md) | [Commands](COMMANDS.md)
+
 The CLI is available as `gxr-profiler-cli.exe` in the release, as `gxr-profiler` after
 `pip install -e .`, or as `python -m gxr_profiler` from a source checkout.
 
@@ -26,6 +28,18 @@ gxr-profiler devices
 
 With an editable install use `gxr-profiler`; without installing use
 `python -m gxr_profiler ...`.
+
+## Manager CLI
+
+The device-tools app has its own small CLI:
+
+```powershell
+gxr-manager-cli.exe ui        # open the manager UI
+gxr-manager-cli.exe status    # devices + whether the profiler is recording
+```
+
+The manager UI commands are intentionally not exposed as terminal actions; device changes
+still require the local UI confirmation flow.
 
 ## Device selection
 

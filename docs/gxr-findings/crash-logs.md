@@ -1,13 +1,12 @@
 # Crash, soft-reboot & error logs
 
-[Findings index](../README.md) | [Diagnostics guide](../DIAGNOSTICS.md) | [Commands](../COMMANDS.md) | [Thermal, throttling & fan](thermal.md) | [Soft-reboot report](reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md)
+[Findings index](README.md#findings-index) | [Diagnostics guide](../DIAGNOSTICS.md) | [Commands](../COMMANDS.md) | [Thermal, throttling & fan](thermal.md) | [Soft-reboot report](reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md)
 
-> **Hardware state: MIXED.** The log format is device-wide. The first recorded crash/soft-reboot
-> investigation (2026-11-17) was on the **SoC thermal-modded** headset (phase-change pads + copper
-> shims). It was not a thermal event.
+> **Hardware state: MIXED.** Log format is device-wide. The first recorded crash investigation
+> (2026-11-17) was on the SoC thermal-modded headset; it was not a thermal event.
 
 How the SM-I610 reports native crashes, Java crashes, ANRs, framework soft reboots and Android
-RescueParty state. This is the reference page for the **Tools > Diagnostics** view and for reading a capture
+RescueParty state. This is the reference page for the **GXR Manager > Diagnostics** view and for reading a capture
 after a reboot.
 
 ## In plain terms
@@ -230,7 +229,7 @@ The 2026-11-17 Diagnostics sweep of the 15 retained tombstones (2026-10-18 to 20
   `Head tracking failed to initialize the internal MotionTrackingAdapter component.`
 - 1 `com.google.android.apps.immersiveviewxr` SIGSEGV.
 
-The perceptionhost and immersiveviewxr crashes are separate signatures. Tools > Diagnostics now
+The perceptionhost and immersiveviewxr crashes are separate signatures. GXR Manager > Diagnostics now
 gives each one a dedicated title, explanation and next step, and still falls back to a generic
 native crash entry for unknown processes. See the
 [historical tombstone sweep](reports/soft-reboots/2026-11-17-historical-tombstones.md).
@@ -238,7 +237,7 @@ native crash entry for unknown processes. See the
 ## Caveats
 
 - The logcat buffers are ring buffers. A busy device can rotate the crash out quickly. Collect
-  immediately after a reboot; Tools > Diagnostics is a snapshot, not a permanent recorder.
+  immediately after a reboot; GXR Manager > Diagnostics is a snapshot, not a permanent recorder.
 - The `crash` buffer can contain duplicate blocks after a logcat reconnect because a new `-b all`
   dump starts from the whole buffer.
 - `dumpsys dropbox` may be empty or incomplete. `exit-info` may not include system-process native

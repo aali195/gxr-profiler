@@ -1,8 +1,8 @@
 # Cross-run analysis
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Analysis of the full local run library: **35 unique recordings** from 43 files (8 duplicate copies), recorded 2026-10-19 to 2026-10-25 on the same SM-I610. This file separates observed results from interpretation and from the caveats that limit both.
 

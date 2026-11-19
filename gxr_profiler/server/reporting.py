@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from ..core.adb import RunNotFound
-from ..core.naming import safe_filename
+from gxr_core.adb import RunNotFound
+from gxr_core.naming import safe_filename
+
 from ..report.static import MAX_COMPARE_RUNS, build
 from ..runs.store import RunStore
 

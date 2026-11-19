@@ -5,8 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from ..core.fs import atomic_write_text
-from ..core.paths import default_reports_dir
+from gxr_core.fs import atomic_write_text
+from gxr_core.paths import default_reports_dir
+
 from ..runs.store import RunStore
 from .reporting import build_report, dedupe_labels, missing_labels, report_filename, validate_selection
 
