@@ -1,8 +1,8 @@
 # Thermal mod: phase-change pads + copper shims (SoC only)
 
-[Findings index](../README.md) | [Thermal, throttling & fan](thermal.md) | [Thermal caps & fan steps](thermal-caps-fan.md) | [Wi-Fi & standby](wifi.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Thermal, throttling & fan](thermal.md) | [Thermal caps & fan steps](thermal-caps-fan.md) | [Wi-Fi & standby](wifi.md)
 
-> **Hardware state: MIXED - STOCK BEFORE 2026-11-01, MODDED AFTER.** Runs before 2026-11-01 are from the unmodified headset. Runs from 2026-11-01 onward, including the in-between and after runs, are from the SoC thermal-modded headset (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit.
+> **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 
 The original SoC thermal solution was replaced with phase-change pads and copper shims on the SoC. The DRAM and Wi-Fi chips were deliberately left untouched. Seven numbered scenarios were recorded before and after the mod on the same SM-I610 (build `I610UEU2AZF3`), plus a set of in-between runs while the assembly settled.
 
@@ -23,7 +23,9 @@ This page separates what the run data shows from what it cannot show. The short 
 - **Idle is unchanged**, and the untouched Wi-Fi/DRAM chips still get hot. This is a SoC cooling upgrade, not a whole-headset fix.
 - The before/after tests were not perfectly matched (some after runs used 90 Hz due to lack of thermal throttling), so treat the exact deltas as directional, not laboratory-controlled.
 
-## Runs used
+## Tests & results
+
+### Runs used
 
 | Test | Before run | After run |
 |---:|---|---|
@@ -37,78 +39,24 @@ This page separates what the run data shows from what it cannot show. The short 
 
 The in-between runs are not used in the before/after tables. For test 6 the table uses the final clean 500 Mbps repeat (the directory name contains the `vrcjat` typo); the other Virtual Desktop after-run variants are compared in [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
 
-## Exported reports
+### Exported reports
 
-Each test has a self-contained `gxr-profiler` HTML report with both runs embedded. GitHub shows the
+Each test has a self-contained GXR Profiler HTML report with both runs embedded. GitHub shows the
 HTML source in its file viewer rather than rendering it; use **Preview** for a rendered view or
 **HTML** to download/open locally. The report index and labels are in
 [reports/thermal-mod/README.md](reports/thermal-mod/README.md).
 
 | Test | Scenario | Report |
 |---:|---|---|
-| 1 | idle + passthrough + hands | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) |
-| 2 | idle on desk | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) |
-| 3 | idle + hands, VR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) |
-| 4 | YouTube 4K SDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) |
-| 5 | YouTube 8K HDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) |
-| 6 | Virtual Desktop H.264, ~500 Mbps | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) |
-| 7 | Chronolink/SteamVR ASTC | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) |
+| 1 | idle + passthrough + hands | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) |
+| 2 | idle on desk | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) |
+| 3 | idle + hands, VR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) |
+| 4 | YouTube 4K SDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) |
+| 5 | YouTube 8K HDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) |
+| 6 | Virtual Desktop H.264, ~500 Mbps | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) |
+| 7 | Chronolink/SteamVR ASTC | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) |
 
-## Headline findings
-
-- **The SoC itself is substantially cooler under load.** Across loaded tests 1 and 3-7, the CPU sensor mean fell **7.8-14.9 C** and the GPU mean fell **5.3-10.1 C**. CPU peak fell 8.8-15.2 C and GPU peak fell 7.7-12.1 C. The idle-on-desk baseline was unchanged (CPU 47.0 -> 44.7 C, GPU 45.0 -> 44.0 C, AP 43.3 -> 42.6 C), which is exactly what a cooling mod should look like.
-- **Board/power-path sensors improved less than the SoC.** AP fell 3.1-7.9 C and LRP fell 0.7-6.7 C (2.7-6.7 C in the heavier tests 3-7). The CPU/GPU data is the direct measure of the mod; AP/LRP are secondary board-level indicators.
-- **Global thermal status dropped in every loaded test.** Test 4 went from 1->2 to 1, test 5 from 4 to 3, test 6 from 4 to 2, and test 7 from 3 to 2. **Status 4 was not observed at all after the mod.**
-- **It buys performance, not just lower temperatures.** Test 5 went from 53.1 fps against a 72 Hz target to 73.2 fps against 90 Hz, with the CPU cap rising from 1.38 to 1.92 GHz. Test 6 went 79.4 -> 85.3 fps, test 7 went 87.6 -> 90.4 fps, and the head camera stayed at 60 fps in tests 6/7 instead of being halved to 30 fps by status 3.
-- **The fan is lower only in light/moderate workloads.** It dropped in tests 1, 3, 4 and 7, but still reached step 7 in 8K HDR and Virtual Desktop.
-- **It did not fix the other hotspots.** In streaming/HDR workloads the WIFI sensor remained the hottest named sensor at 75-78 C, DDR sat at 69-74 C, and 8K HDR still hit status 3, fan 7, ~99% GPU busy and ~73 fps against 90.
-- **There is no evidence that status 4 limits Wi-Fi speed.** The Wi-Fi sensor has no HAL hot-throttling thresholds. Status 4 lined up with the LRP power-path threshold (65 C), and the only status-4 streaming run held ~498 Mbps with zero drops/errors. See [status 4 and Wi-Fi](#status-4-and-wi-fi).
-
-## Summary
-
-All temperatures are C. CPU mean is the average of the six HAL CPU sensors over the run; CPU peak is the hottest single CPU sensor. GPU mean/peak use the eight HAL GPU sensors the same way.
-
-### SoC thermal summary
-
-| Test | Scenario                   | Status before (start -> end; peak) | Status after (start -> end; peak) | CPU mean before -> after (delta) | CPU peak before -> after | GPU mean before -> after (delta) | GPU peak before -> after |
-| ---: | -------------------------- | ---------------------------------- | --------------------------------- | -------------------------------- | ------------------------ | -------------------------------- | ------------------------ |
-|    1 | idle + passthrough + hands | 1 -> 1 (1)                         | 1 -> 1 (1)                        | 70.9 -> 63.1 (-7.8)              | 75.7 -> 66.9             | 66.6 -> 61.2 (-5.3)              | 70.7 -> 63.0             |
-|    2 | idle on desk               | 0 -> 0 (0)                         | 0 -> 0 (0)                        | 47.0 -> 44.7 (-2.3)              | 53.8 -> 52.1             | 45.0 -> 44.0 (-0.9)              | 48.2 -> 47.1             |
-|    3 | idle + hands, VR           | 0 -> 1 (1)                         | 0 -> 0 (0)                        | 64.9 -> 53.7 (-11.2)             | 68.0 -> 57.1             | 61.3 -> 52.4 (-8.9)              | 63.7 -> 54.2             |
-|    4 | YouTube 4K SDR             | 1 -> 2 (2)                         | 1 -> 1 (1)                        | 74.8 -> 65.7 (-9.1)              | 80.8 -> 69.7             | 71.3 -> 64.1 (-7.1)              | 74.8 -> 65.7             |
-|    5 | YouTube 8K HDR             | 4 -> 4 (4)                         | 3 -> 3 (3)                        | 84.3 -> 74.6 (-9.7)              | 87.6 -> 77.1             | 81.9 -> 73.3 (-8.6)              | 84.6 -> 74.8             |
-|    6 | Virtual Desktop H.264      | 4 -> 4 (4)                         | 1 -> 2 (2)                        | 86.4 -> 71.5 (-14.9)             | 88.6 -> 73.4             | 79.2 -> 69.1 (-10.1)             | 82.2 -> 70.1             |
-|    7 | Chronolink/SteamVR ASTC    | 3 -> 3 (3)                         | 2 -> 2 (2)                        | 81.2 -> 70.6 (-10.6)             | 84.2 -> 72.0             | 76.3 -> 68.6 (-7.7)              | 79.2 -> 69.7             |
-
-### Power and performance summary
-
-| Test | Scenario | AP mean before -> after (delta) | LRP mean before -> after (delta) | Fan step before -> after | XR fps / target before -> after |
-|---:|---|---|---|---|---|
-| 1 | idle + passthrough + hands | 64.1 -> 61.0 C (-3.1) | 53.1 -> 52.4 C (-0.7) | 3.5 -> 2.9 | 72.0 / 72 -> 72.0 / 72 |
-| 2 | idle on desk | 43.3 -> 42.6 C (-0.7) | 42.4 -> 42.5 C (+0.1) | 1.0 -> 1.0 | 72.0 / 72 -> 71.9 / 72 |
-| 3 | idle + hands, VR | 59.8 -> 51.9 C (-7.9) | 50.8 -> 44.1 C (-6.7) | 2.7 -> 1.0 | 72.0 / 72 -> 72.0 / 72 |
-| 4 | YouTube 4K SDR | 68.2 -> 63.9 C (-4.3) | 57.6 -> 54.4 C (-3.2) | 4.3 -> 3.4 | 72.0 / 72 -> 90.0 / 90* |
-| 5 | YouTube 8K HDR | 77.6 -> 73.6 C (-4.0) | 65.5 -> 61.6 C (-3.9) | 7.0 -> 7.0 | 53.1 / 72 -> 73.2 / 90* |
-| 6 | Virtual Desktop H.264 | 76.9 -> 70.1 C (-6.9) | 65.0 -> 61.0 C (-4.0) | 7.0 -> 7.0 | 79.4 / 72 -> 85.3 / 90* |
-| 7 | Chronolink/SteamVR ASTC | 74.4 -> 69.9 C (-4.5) | 62.0 -> 59.2 C (-2.7) | 7.0 -> 5.0 | 87.6 / 90 -> 90.4 / 90 |
-
-\* Tests 4-6 recorded 90 Hz after the mod. Before the mod, tests 4 and 5 recorded 72 Hz. Test 6 was requested at 90 Hz in Virtual Desktop for both runs, but its before run recorded a 72 Hz target while status 4 was already active, so that 72 may be a status-4 clamp rather than a setting. Test 5 also changed media format; see the per-test notes.
-
-### Wi-Fi and memory summary
-
-| Test | Scenario | WIFI mean before -> after | DDR mean after (before not recorded) | Wi-Fi Rx mean before -> after (p5-p95) | Retry before -> after |
-|---:|---|---:|---:|---|---:|
-| 1 | idle + passthrough + hands | 66.2 -> 64.0 C | 62.1 C | 0.3 -> 0.2 Mbps (0.2-0.3) | 5.33 -> 5.86% |
-| 2 | idle on desk | 45.5 -> 45.6 C | 44.3 C | 0.1 -> 0.1 Mbps (0.1-0.2) | 9.11 -> 14.91% |
-| 3 | idle + hands, VR | 61.3 -> 54.9 C | 53.1 C | 0.2 -> 0.2 Mbps (0.2-0.3) | 6.72 -> 5.31% |
-| 4 | YouTube 4K SDR | 70.0 -> 67.3 C | 64.9 C | 3.6 -> 8.1 Mbps (0.3-54.4) | 4.22 -> 5.01% |
-| 5 | YouTube 8K HDR | 79.7 -> 78.3 C | 73.8 C | 51.0 -> 55.5 Mbps (19.3-75.7) | 4.17 -> 4.66% |
-| 6 | Virtual Desktop H.264 | 79.0 -> 75.0 C | 70.2 C | 497.6 -> 495.4 Mbps (467.0-516.7) | 1.72 -> 2.04% |
-| 7 | Chronolink/SteamVR ASTC | 78.3 -> 76.4 C | 69.3 C | 1,138.7 -> 1,217.0 Mbps (1,149.0-1,263.9) | 7.46 -> 5.25% |
-
-Tests 1-5 are not network-throughput tests, so their Wi-Fi Rx is mostly idle/video traffic. Test 6 is a ~500 Mbps stream and test 7 a ~1.2 Gbps stream. Retry % is unreliable at very low TX pps; all runs had zero drops/errors.
-
-## Test 1 - idle + passthrough + hands
+### Test 1 - idle + passthrough + hands
 
 Both 120 s, 72 Hz, unplugged, hands and passthrough active.
 
@@ -130,11 +78,11 @@ Both 120 s, 72 Hz, unplugged, hands and passthrough active.
 | Wi-Fi retry mean; drops/errors             | 5.33%; 0           | 5.86%; 0           | 0 drops/errors      |
 | Battery / AC                               | 96% / off          | 94% / off          | -                   |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html)
 
 The after run was slightly busier on the GPU but the CPU was 7.8 C and the GPU 5.3 C cooler, and it stayed at fan step 3 instead of touching step 4.
 
-## Test 2 - idle on desk
+### Test 2 - idle on desk
 
 Both 120 s, 72 Hz, unplugged, device on the desk. This is the ambient/cold baseline, not a load test.
 
@@ -156,11 +104,11 @@ Both 120 s, 72 Hz, unplugged, device on the desk. This is the ambient/cold basel
 | Wi-Fi retry mean; drops/errors | 9.11%; 0 | 14.91%; 0 | 0 drops/errors |
 | Battery / AC | 94% / off | 92% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html)
 
 The before run carried a `passthrough=1` event while on the desk, but GPU stayed at 0% and no camera streams were active, so it is treated as the same no-load baseline. CPU/GPU barely moved, which is the useful result: the mod does not lower the cold/idle floor.
 
-## Test 3 - idle + hands, VR
+### Test 3 - idle + hands, VR
 
 Both 120 s, 72 Hz, unplugged, hands on, no passthrough.
 
@@ -182,11 +130,11 @@ Both 120 s, 72 Hz, unplugged, hands on, no passthrough.
 | Wi-Fi retry mean; drops/errors | 6.72%; 0 | 5.31%; 0 | 0 drops/errors |
 | Battery / AC | 89% / off | 91% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html)
 
 The before run started warmer (AP 56.7 vs 49.0 C), so the size of the delta is not a controlled measurement, but the after run stayed at status 0 and fan step 1 for the whole run. The CPU mean was still 11.2 C lower and the GPU 8.9 C lower.
 
-## Test 4 - YouTube 4K SDR + hands, VR
+### Test 4 - YouTube 4K SDR + hands, VR
 
 Both 120 s, unplugged, 4K AV1 8-bit YouTube. The before run was 72 Hz; the after run was 90 Hz.
 
@@ -208,11 +156,11 @@ Both 120 s, unplugged, 4K AV1 8-bit YouTube. The before run was 72 Hz; the after
 | Wi-Fi retry mean; drops/errors | 4.22%; 0 | 5.01%; 0 | 0 drops/errors |
 | Battery / AC | 80% / off | 82% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html)
 
 This is a clean media comparison (same 4K AV1 8-bit stream) except for refresh rate. The after run did ~9 GPU-busy points more work at 90 Hz and still ran 9.1 C cooler on CPU and 7.1 C cooler on GPU. The before run crossed to status 2 and fan step 5; the after run stayed at status 1 and fan step 4, so both limits were avoided.
 
-## Test 5 - YouTube 8K HDR + hands, VR
+### Test 5 - YouTube 8K HDR + hands, VR
 
 Both 120 s, unplugged. **This is not a clean content comparison.** The before run recorded 7680x4320 10-bit media at 72 Hz; the after run recorded 7680x4320 8-bit media at 90 Hz. GPU busy was ~99% in both.
 
@@ -234,11 +182,11 @@ Both 120 s, unplugged. **This is not a clean content comparison.** The before ru
 | Wi-Fi retry mean; drops/errors             | 4.17%; 0                  | 4.66%; 0                    | 0 drops/errors           |
 | Battery / AC                               | 71% / off                 | 78% / off                   | -                        |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html)
 
 The mod moved HDR from status 4 to status 3 and cut CPU mean by 9.7 C and GPU mean by 8.6 C, but HDR still sits at status 3, fan 7, ~99% GPU busy and 73 fps against 90. The fan remained pinned at step 7 and the camera remained halved at 30 fps, so this is only a partial cap reduction. The media format difference means the delta should not be read as a pure mod effect.
 
-## Test 6 - Virtual Desktop H.264 -> VRChat, controllers, night
+### Test 6 - Virtual Desktop H.264 -> VRChat, controllers, night
 
 The after column uses the final clean night run at a locked 500 Mbps. Virtual Desktop was set to **90 Hz for every VD run, including before**. The before recording still shows a **72 Hz XR/display target for the whole run while status 4 was already active**; the after run shows 90 Hz. That is consistent with status 4 clamping the target, but because status 4 was present from the first sample, causality is not proven. The before run was unplugged and the after run was plugged. The six VD variants are compared under [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
 
@@ -260,11 +208,11 @@ The after column uses the final clean night run at a locked 500 Mbps. Virtual De
 | Wi-Fi retry mean; drops/errors | 1.72%; 0 | 2.04%; 0 | 0 drops/errors |
 | Battery / AC | 53% / off | 87% / on | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html)
 
 The head camera staying at 60 fps is the clearest functional win: the before run was already status 4 with the camera halved, while the after run stayed at status 2 and full camera rate. The CPU mean was 14.9 C lower and the GPU 10.1 C lower. The fan still reached step 7. The XR target row is the system-recorded target, not the Virtual Desktop setting: VD was set to 90 Hz in both runs, but the before run recorded 72 Hz under status 4. The after run was plugged, so the battery/charging difference is not attributable to the mod. An unplugged after run at the default 600 Mbps also gave status 2 and AP 71.1 C, so the result is not a plugged-run artifact. Wi-Fi throughput and the labelled latency issue are covered in [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
 
-## Test 7 - Chronolink/SteamVR ASTC -> VRChat, controllers, night
+### Test 7 - Chronolink/SteamVR ASTC -> VRChat, controllers, night
 
 Both 120 s, 90 Hz, unplugged, no active media, identical VRChat/Chronolink workload. This is the cleanest performance comparison because refresh rate and workload match.
 
@@ -286,11 +234,69 @@ Both 120 s, 90 Hz, unplugged, no active media, identical VRChat/Chronolink workl
 | Wi-Fi retry mean; drops/errors | 7.46%; 0 | 5.25%; 0 | 0 drops/errors |
 | Battery / AC | 92% / off | 90% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html)
 
 The after run is 10.6 C cooler on CPU and 7.7 C cooler on GPU, two fan steps lower, holds the 90 fps target instead of 87.6, and keeps the head camera at 60 fps. Wi-Fi was also stable: 1,139 -> 1,217 Mbps mean, retry 7.46 -> 5.25%, zero drops/errors. This is the strongest evidence that the mod changed the sustained thermal/performance state rather than just moving a number.
 
-## Where the caps and fan steps were hit and reduced
+## Findings
+
+### Headline findings
+
+- **The SoC itself is substantially cooler under load.** Across loaded tests 1 and 3-7, the CPU sensor mean fell **7.8-14.9 C** and the GPU mean fell **5.3-10.1 C**. CPU peak fell 8.8-15.2 C and GPU peak fell 7.7-12.1 C. The idle-on-desk baseline was unchanged (CPU 47.0 -> 44.7 C, GPU 45.0 -> 44.0 C, AP 43.3 -> 42.6 C), which is exactly what a cooling mod should look like.
+- **Board/power-path sensors improved less than the SoC.** AP fell 3.1-7.9 C and LRP fell 0.7-6.7 C (2.7-6.7 C in the heavier tests 3-7). The CPU/GPU data is the direct measure of the mod; AP/LRP are secondary board-level indicators.
+- **Global thermal status dropped in every loaded test.** Test 4 went from 1->2 to 1, test 5 from 4 to 3, test 6 from 4 to 2, and test 7 from 3 to 2. **Status 4 was not observed at all after the mod.**
+- **It buys performance, not just lower temperatures.** Test 5 went from 53.1 fps against a 72 Hz target to 73.2 fps against 90 Hz, with the CPU cap rising from 1.38 to 1.92 GHz. Test 6 went 79.4 -> 85.3 fps, test 7 went 87.6 -> 90.4 fps, and the head camera stayed at 60 fps in tests 6/7 instead of being halved to 30 fps by status 3.
+- **The fan is lower only in light/moderate workloads.** It dropped in tests 1, 3, 4 and 7, but still reached step 7 in 8K HDR and Virtual Desktop.
+- **It did not fix the other hotspots.** In streaming/HDR workloads the WIFI sensor remained the hottest named sensor at 75-78 C, DDR sat at 69-74 C, and 8K HDR still hit status 3, fan 7, ~99% GPU busy and ~73 fps against 90.
+- **There is no evidence that status 4 limits Wi-Fi speed.** The Wi-Fi sensor has no HAL hot-throttling thresholds. Status 4 lined up with the LRP power-path threshold (65 C), and the only status-4 streaming run held ~498 Mbps with zero drops/errors. See [status 4 and Wi-Fi](#status-4-and-wi-fi).
+
+### Summary
+
+All temperatures are C. CPU mean is the average of the six HAL CPU sensors over the run; CPU peak is the hottest single CPU sensor. GPU mean/peak use the eight HAL GPU sensors the same way.
+
+#### SoC thermal summary
+
+| Test | Scenario                   | Status before (start -> end; peak) | Status after (start -> end; peak) | CPU mean before -> after (delta) | CPU peak before -> after | GPU mean before -> after (delta) | GPU peak before -> after |
+| ---: | -------------------------- | ---------------------------------- | --------------------------------- | -------------------------------- | ------------------------ | -------------------------------- | ------------------------ |
+|    1 | idle + passthrough + hands | 1 -> 1 (1)                         | 1 -> 1 (1)                        | 70.9 -> 63.1 (-7.8)              | 75.7 -> 66.9             | 66.6 -> 61.2 (-5.3)              | 70.7 -> 63.0             |
+|    2 | idle on desk               | 0 -> 0 (0)                         | 0 -> 0 (0)                        | 47.0 -> 44.7 (-2.3)              | 53.8 -> 52.1             | 45.0 -> 44.0 (-0.9)              | 48.2 -> 47.1             |
+|    3 | idle + hands, VR           | 0 -> 1 (1)                         | 0 -> 0 (0)                        | 64.9 -> 53.7 (-11.2)             | 68.0 -> 57.1             | 61.3 -> 52.4 (-8.9)              | 63.7 -> 54.2             |
+|    4 | YouTube 4K SDR             | 1 -> 2 (2)                         | 1 -> 1 (1)                        | 74.8 -> 65.7 (-9.1)              | 80.8 -> 69.7             | 71.3 -> 64.1 (-7.1)              | 74.8 -> 65.7             |
+|    5 | YouTube 8K HDR             | 4 -> 4 (4)                         | 3 -> 3 (3)                        | 84.3 -> 74.6 (-9.7)              | 87.6 -> 77.1             | 81.9 -> 73.3 (-8.6)              | 84.6 -> 74.8             |
+|    6 | Virtual Desktop H.264      | 4 -> 4 (4)                         | 1 -> 2 (2)                        | 86.4 -> 71.5 (-14.9)             | 88.6 -> 73.4             | 79.2 -> 69.1 (-10.1)             | 82.2 -> 70.1             |
+|    7 | Chronolink/SteamVR ASTC    | 3 -> 3 (3)                         | 2 -> 2 (2)                        | 81.2 -> 70.6 (-10.6)             | 84.2 -> 72.0             | 76.3 -> 68.6 (-7.7)              | 79.2 -> 69.7             |
+
+#### Power and performance summary
+
+| Test | Scenario | AP mean before -> after (delta) | LRP mean before -> after (delta) | Fan step before -> after | XR fps / target before -> after |
+|---:|---|---|---|---|---|
+| 1 | idle + passthrough + hands | 64.1 -> 61.0 C (-3.1) | 53.1 -> 52.4 C (-0.7) | 3.5 -> 2.9 | 72.0 / 72 -> 72.0 / 72 |
+| 2 | idle on desk | 43.3 -> 42.6 C (-0.7) | 42.4 -> 42.5 C (+0.1) | 1.0 -> 1.0 | 72.0 / 72 -> 71.9 / 72 |
+| 3 | idle + hands, VR | 59.8 -> 51.9 C (-7.9) | 50.8 -> 44.1 C (-6.7) | 2.7 -> 1.0 | 72.0 / 72 -> 72.0 / 72 |
+| 4 | YouTube 4K SDR | 68.2 -> 63.9 C (-4.3) | 57.6 -> 54.4 C (-3.2) | 4.3 -> 3.4 | 72.0 / 72 -> 90.0 / 90* |
+| 5 | YouTube 8K HDR | 77.6 -> 73.6 C (-4.0) | 65.5 -> 61.6 C (-3.9) | 7.0 -> 7.0 | 53.1 / 72 -> 73.2 / 90* |
+| 6 | Virtual Desktop H.264 | 76.9 -> 70.1 C (-6.9) | 65.0 -> 61.0 C (-4.0) | 7.0 -> 7.0 | 79.4 / 72 -> 85.3 / 90* |
+| 7 | Chronolink/SteamVR ASTC | 74.4 -> 69.9 C (-4.5) | 62.0 -> 59.2 C (-2.7) | 7.0 -> 5.0 | 87.6 / 90 -> 90.4 / 90 |
+
+\* Tests 4-6 recorded 90 Hz after the mod. Before the mod, tests 4 and 5 recorded 72 Hz. Test 6 was requested at 90 Hz in Virtual Desktop for both runs, but its before run recorded a 72 Hz target while status 4 was already active, so that 72 may be a status-4 clamp rather than a setting. Test 5 also changed media format; see the per-test notes.
+
+#### Wi-Fi and memory summary
+
+| Test | Scenario | WIFI mean before -> after | DDR mean after (before not recorded) | Wi-Fi Rx mean before -> after (p5-p95) | Retry before -> after |
+|---:|---|---:|---:|---|---:|
+| 1 | idle + passthrough + hands | 66.2 -> 64.0 C | 62.1 C | 0.3 -> 0.2 Mbps (0.2-0.3) | 5.33 -> 5.86% |
+| 2 | idle on desk | 45.5 -> 45.6 C | 44.3 C | 0.1 -> 0.1 Mbps (0.1-0.2) | 9.11 -> 14.91% |
+| 3 | idle + hands, VR | 61.3 -> 54.9 C | 53.1 C | 0.2 -> 0.2 Mbps (0.2-0.3) | 6.72 -> 5.31% |
+| 4 | YouTube 4K SDR | 70.0 -> 67.3 C | 64.9 C | 3.6 -> 8.1 Mbps (0.3-54.4) | 4.22 -> 5.01% |
+| 5 | YouTube 8K HDR | 79.7 -> 78.3 C | 73.8 C | 51.0 -> 55.5 Mbps (19.3-75.7) | 4.17 -> 4.66% |
+| 6 | Virtual Desktop H.264 | 79.0 -> 75.0 C | 70.2 C | 497.6 -> 495.4 Mbps (467.0-516.7) | 1.72 -> 2.04% |
+| 7 | Chronolink/SteamVR ASTC | 78.3 -> 76.4 C | 69.3 C | 1,138.7 -> 1,217.0 Mbps (1,149.0-1,263.9) | 7.46 -> 5.25% |
+
+Tests 1-5 are not network-throughput tests, so their Wi-Fi Rx is mostly idle/video traffic. Test 6 is a ~500 Mbps stream and test 7 a ~1.2 Gbps stream. Retry % is unreliable at very low TX pps; all runs had zero drops/errors.
+
+## Details
+
+### Where the caps and fan steps were hit and reduced
 
 | Test | Before: stage / fan mean (max) / CPU cap / camera | After: stage / fan mean (max) / CPU cap / camera | Result |
 |---:|---|---|---|
@@ -304,7 +310,7 @@ The after run is 10.6 C cooler on CPU and 7.7 C cooler on GPU, two fan steps low
 
 The full sensor/status/fan reference is in [thermal caps, fan steps & throttle conditions](thermal-caps-fan.md).
 
-## In-between (settle) runs
+### In-between (settle) runs
 
 The in-between recordings were made while the assembly was settling. They are not part of the main tables, but they show no large drift relative to the final after state.
 
@@ -322,13 +328,13 @@ There was no temporary "wearing in" improvement followed by a regression. The HD
 
 The out-of-order `after-3-idle-hands-vr-wrong-order-did-first` run is excluded from the main comparison. It was test 3 recorded first in the sequence and matched the real after-3 result (CPU 54.2 C mean, status 0, fan 1), so it does not change the conclusion.
 
-## Status 4 and Wi-Fi
+### Status 4 and Wi-Fi
 
 Status 4 was an **LRP/power-path** stage, not a Wi-Fi stage. Every status-4 sample had LRP >= 65 C while AP stayed at 76.9-78.7 C, below its 80 C stage-4 threshold. WIFI has no HAL hot-throttling thresholds, the WLAN temperature node is not a thermal zone, and `thermal-engine.conf` is empty. The full threshold/status tables are in [thermal caps & fan steps](thermal-caps-fan.md).
 
 No Wi-Fi speed lock was observed. The only status-4 network-throughput run (`before-6`) held **497.6 Mbps mean** (p5 474, p95 523), 1.72% retry and zero drops/errors, with a ~3.0 Gbps link. The max-throughput test also sustained ~2.19 Gbps at status 3. Status 4 disappeared after the mod, so a controlled status-4 stress plus iperf/ping was not possible here.
 
-## Virtual Desktop and day/night runs
+### Virtual Desktop and day/night runs
 
 Test 6 produced several runs because of the labelled problems. They are all 120 s, 90 Hz, same H.264 1408x1536 stream, same VRChat world, controllers active. All had zero drops/errors.
 
@@ -350,7 +356,7 @@ What the labelled runs show:
 - **Day vs night is a small ambient/content effect.** Comparing the two plugged 500 Mbps runs, the daytime run was ~1.5-1.8 C warmer on AP, DDR and WIFI, and ~1.3 GPU-busy points higher. The display brightness fields read 1.0 in both, so the brighter daytime scene is not captured as a display-setting change. It is not evidence of a mod regression.
 - **Wi-Fi was not faster after the mod in this test.** 495-510 Mbps after versus 498 Mbps before, with retry 1.9-2.2% versus 1.7%. The value is in the thermal/performance state, not throughput.
 
-## What the mod did not fix
+### What the mod did not fix
 
 After-mod residual temperatures show where the remaining heat is. These zones are after-only: the before runs use schema 6 and do not record DDR/video/camera/CPUSS.
 
@@ -372,7 +378,7 @@ After-mod residual temperatures show where the remaining heat is. These zones ar
 - **The untouched hotspots remain hot.** WIFI is 75-78 C and DDR 69-74 C in streaming/HDR; WIFI is the hottest named sensor in tests 6/7. The DRAM and Wi-Fi chips were not touched.
 - **The idle floor is unchanged.** Test 2 was ~43 C AP, CPU 47.0 -> 44.7 C, GPU 45.0 -> 44.0 C. The 15 V rail is after-only, so it cannot show an efficiency gain.
 
-## Caveats
+### Caveats
 
 - No ambient temperature, controlled cool-down or matched starting temperature. The before and after sessions were different days; several runs were sequential and carried heat forward.
 - Tests 4-6 used 90 Hz after the mod but 72 Hz before. That makes the after workload heavier, so the thermal improvement is not a like-for-like magnitude.
@@ -383,7 +389,7 @@ After-mod residual temperatures show where the remaining heat is. These zones ar
 - Wi-Fi latency/jitter was not recorded. The profiler records throughput, retries, RSSI and packet counters, so it cannot prove or disprove the labelled "jumping to 120" latency events.
 - The global thermal stage is a platform stage, not the maximum per-sensor severity. The LRP table above is a strong correlation, not a confirmed code path.
 
-## Useful next experiments
+### Useful next experiments
 
 1. Cool-start, temperature-matched before/after runs would turn the CPU/GPU deltas into controlled measurements.
 2. Repeat tests 4-6 at the same refresh rate and same content/bitrate.

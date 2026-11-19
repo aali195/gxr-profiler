@@ -1,12 +1,22 @@
-# GXR Profiler
+# GXR Tools
 
-Read-only thermal / performance profiler for a **Samsung Galaxy XR (SM-I610)** over wireless ADB. Record a run, then explore or compare runs in a local web app (native window or browser) or a self-contained HTML report. Built for before/after thermal-mod benchmarking.
+Two local Windows apps for a **Samsung Galaxy XR (SM-I610)** over wireless ADB:
+
+| App | Executable | Use it to | Changes the headset? |
+|---|---|---|---|
+| **GXR Profiler** | `gxr-profiler.exe` | Record a run, preview telemetry, compare runs and export HTML reports. | No |
+| **GXR Manager** | `gxr-manager.exe` | Collect Diagnostics, manage Apps, install packages and change Settings. | Only after explicit confirmation |
+
+Each app also ships a terminal build: `gxr-profiler-cli.exe` and `gxr-manager-cli.exe`.
 
 NOTE: Written with heavy LLM assistance - this grew in size way beyond what I originally had in mind.
 
-Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd wifi status`, `logcat`, `ps`. Nothing is written to the device.
+Keep both executables in the same folder so the recording lock is shared. While GXR Profiler records,
+GXR Manager blocks every device-changing action.
 
 ## Features
+
+### GXR Profiler
 
 - Read-only 1 Hz recording over wireless ADB.
 - Thermal, CPU/GPU/NPU, fan, XR, display, battery, power rail, memory, storage, network, media/audio and controller telemetry.
@@ -14,14 +24,23 @@ Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd 
 - Run and compare views with tables, overlaid graphs and per-process timelines, plus All/CPU/GPU/Extra section sub-tabs for graphs and tables.
 - Session-wide pinned metrics/processes plus lowest/highest-average highlighting.
 - Self-contained HTML export with common Wi-Fi/device identifiers redacted.
-- Optional root extras for fan RPM/PWM, active panel, calibration and per-process disk I/O.
+- Optional root extras for fan RPM/PWM, active panel, calibration, per-process disk I/O and app data/cache size.
+
+### GXR Manager
+
+- **Diagnostics** - one-click crash, boot/rescue, Dropbox, exit-info and thermal snapshot; saves JSON + Markdown under `reports/debug/`.
+- **Apps** - list installed apps/system packages with sortable one-shot process CPU/RSS/GPU/threads, OOM and install-size columns; inspect metadata; disable, enable, remove for user 0, restore or fully uninstall after confirmation; apply Game Mode FPS/render-scale overrides on supported titles. Critical system packages are protected.
+- **Installer** - stage and install APK, OBB and XAPK files after a command review and confirmation. Groups split APKs by package, infers OBB targets, verifies installed packages and pushed files, and logs each install with file hashes.
+- **Settings** - grouped, reversible device settings: XR performance metrics, hands breakthrough, touch input, guardian/boundary controls, auto-spatialization, animation/transparency tweaks, testing-only performance policy, child-process, stay-awake and heads-up controls, plus Game Optimizing Service. Each row labels persistence and warns about burn-in, safety or untested behavior.
 
 ## Screenshots
+
+### GXR Profiler
 
 ![Record page](docs/screenshots/run-page.png)
 
 <details>
-<summary>More screenshots</summary>
+<summary>More GXR Profiler screenshots</summary>
 
 **Full table**
 
@@ -41,19 +60,40 @@ Everything it sends to the headset is a read: `cat`, `getprop`, `dumpsys`, `cmd 
 
 </details>
 
+### GXR Manager
+
+![Diagnostics](docs/screenshots/manager/diagnostics.png)
+
+<details>
+<summary>More GXR Manager screenshots</summary>
+
+**Apps**
+
+![Apps](docs/screenshots/manager/apps.png)
+
+**Installer**
+
+![Installer](docs/screenshots/manager/installer.png)
+
+**Settings**
+
+![Settings](docs/screenshots/manager/settings.png)
+
+</details>
+
 ## Requirements
 
 - Windows 10/11
-- `adb` on PATH (or set `ADB`)
+- `adb` on PATH, set via `ADB`, or placed next to either executable (a `platform-tools` subfolder also works)
 - Headset paired over wireless ADB
-- Microsoft Edge WebView2 runtime for the native window (included with current Win10/Win11)
-- **No Python installation is needed for the packaged `.exe`**
+- Microsoft Edge WebView2 runtime for the native windows (included with current Win10/Win11)
+- **No Python installation is needed for the packaged `.exe` files**
 
-Building from source or running the CLI from Python requires Python 3.11+; see [development setup](docs/DEVELOPMENT.md).
+Building from source or running either CLI from Python requires Python 3.11+; see [development setup](docs/DEVELOPMENT.md).
 
 ## Quick start
 
-1. Download `gxr-profiler.exe` from the GitHub releases.
+1. Download the two GUI executables (`gxr-profiler.exe` and `gxr-manager.exe`) from the GitHub releases. The release also includes `gxr-profiler-cli.exe` and `gxr-manager-cli.exe`.
 2. Pair and connect the headset using the IP address and ports shown in its wireless-debugging settings:
 
    ```powershell
@@ -62,44 +102,81 @@ Building from source or running the CLI from Python requires Python 3.11+; see [
    adb devices
    ```
 
-3. Put the exe in a writable folder and double-click it. No `--serial` is needed once a single headset is paired.
-4. On **Record**, set the duration/options and press **Start recording**. The **Preview headset** button reads battery, thermal, power, Wi-Fi and fan-step values without saving a run.
-5. Open **Run** for the results, or select runs in **Compare** to overlay and compare them.
-6. Use **Export HTML** from Run or Compare to save a self-contained, shareable report with no internet or Python required.
+3. Put both executables in the same writable folder. No `--serial` is needed once a single headset is paired.
 
-`runs/` and `reports/` are created next to the exe. Keep the exe folder writable, and do not share the raw `runs/` folder unless you have checked its contents; exported HTML redacts common network/device identifiers.
+### Record a run
 
-The local UI uses port **8765** by default and automatically moves to the next free port if it is already taken. This lets GXR Profiler and Desktop Profiler run side by side.
+1. Open **GXR Profiler**.
+2. On **Record**, set the duration and options, then press **Start recording**. **Preview headset** reads battery, thermal, power, Wi-Fi and fan-step values without saving a run.
+3. If wireless ADB is still reconnecting, the first Preview/Start waits and retries for up to 30 seconds before reporting an error.
+4. Open **Run** for results, or select runs in **Compare** to overlay them.
+5. Use **Export HTML** to save a self-contained report with no internet or Python required.
 
-CLI users: see [docs/CLI.md](docs/CLI.md).
+### Inspect or change the headset
 
-### Supported device
+1. Open **GXR Manager**.
+2. Use **Diagnostics** after a crash or unexpected restart.
+3. Use **Apps** to inspect, disable, remove, restore or uninstall packages, and to apply Game Mode overrides.
+4. Use **Installer** to stage APK/OBB/XAPK files, review the exact commands, then confirm.
+5. Use **Settings** to change reversible device settings.
 
-**Samsung Galaxy XR (SM-I610) is the only tested and supported target.** Other Android XR devices may start, but Samsung-specific thermal, fan, panel and XR telemetry will largely be missing. Details: [device support](docs/README.md#device-support).
+`runs/` and `reports/` are created next to the profiler executable. Manager logs and staging live
+next to the manager executable; keeping both together also shares the recording lock. Keep the folder
+writable, and do not share the raw `runs/` folder unless you have checked its contents; exported HTML
+redacts common network/device identifiers.
+
+The profiler UI uses port **8765** and the manager uses **8766** by default; each moves to the next
+free port if taken. Both can run at once, but the manager blocks device changes while the profiler is
+recording.
+
+## Supported device
+
+**Samsung Galaxy XR (SM-I610) is the only tested and supported target.** Other Android XR devices may
+start, but Samsung-specific thermal, fan, panel and XR telemetry will largely be missing. Details:
+[device support](docs/PROFILER.md#device-support).
 
 ## Build & releases
 
-Releases contain two one-file Windows executables:
+GXR Tools releases contain four one-file Windows executables:
 
-- `gxr-profiler.exe` - windowed GUI
-- `gxr-profiler-cli.exe` - terminal/CLI build
+- `gxr-profiler.exe` - profiler windowed GUI
+- `gxr-profiler-cli.exe` - profiler terminal/CLI build
+- `gxr-manager.exe` - manager windowed GUI
+- `gxr-manager-cli.exe` - manager terminal/CLI build
 
-The GUI needs `adb` and WebView2. It does not need Python. For source setup, architecture, tests, packaging and the GitHub release workflow, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+The GUIs need `adb` and WebView2. They do not need Python. For source setup, architecture, tests,
+packaging and the GitHub release workflow, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Documentation
 
-- [Detailed guide: capture, output/schema and safety](docs/README.md)
-- [CLI reference](docs/CLI.md)
-- [Development, tests and packaging](docs/DEVELOPMENT.md)
-- [Every headset command and polling cadence](docs/COMMANDS.md)
-- [Personal research notes and measurement findings directory](docs/gxr-findings/)
+### GXR Profiler
 
-Findings pages label their hardware state: **stock/unmodified before 2026-11-01**, **SoC thermal-modded from 2026-11-01 onward** (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit.
+- [Profiler guide: capture, output, schema and safety](docs/PROFILER.md)
+- [CLI reference](docs/CLI.md#gxr-profiler-cli)
+- [Capture commands and polling cadence](docs/COMMANDS.md)
+- [Research & findings hub](docs/gxr-findings/README.md)
+
+### GXR Manager
+
+- [Manager guide](docs/MANAGER.md)
+- [Diagnostics guide](docs/DIAGNOSTICS.md)
+- [Apps, installer & services guide](docs/APPS.md)
+- [Settings guide](docs/SETTINGS.md)
+- [Hidden and experimental ADB settings](docs/HIDDEN_ADB_SETTINGS.md)
+
+### Shared
+
+- [Documentation home](docs/README.md)
+- [Development, tests and packaging](docs/DEVELOPMENT.md)
 
 ## Safety
 
-- Every headset command is read-only; nothing persists on the device.
-- `--root` only performs read-only `su -c` reads and may trigger a root prompt.
-- Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; raw run files keep the original values.
+| App | Device access |
+|---|---|
+| **GXR Profiler** | Read-only. Recording, preview and report export use `cat`, `getprop`, `dumpsys`, `logcat` and `ps`. `--root` adds read-only `su -c` reads and may prompt. |
+| **GXR Manager** | Device-changing, but only after an explicit confirmation in the local UI and with the local API token. Actions are blocked while the profiler records and logged under `reports/apps/` and `reports/settings/`. |
 
-For detailed safety notes and fair-run guidance, see [safety & fair runs](docs/README.md#safety--fair-runs).
+Full details: [profiler safety & fair runs](docs/PROFILER.md#safety--fair-runs) and
+[manager device-change safety](docs/MANAGER.md#device-change-safety).
+
+Exported HTML redacts Wi-Fi SSID/BSSID/IP and serial fields; raw run files keep the original values.

@@ -1,4 +1,4 @@
-from gxr_profiler.core import parsers as P
+from gxr_tools.core import parsers as P
 
 DISKSTATS = """   8       0 sda 100 0 2048 10 50 0 4096 20 0 30 40 0 0 0 0 0 0
    8       1 sda1 100 0 2048 10 50 0 4096 20 0 30 40 0 0 0 0 0 0
@@ -69,7 +69,7 @@ class _SequencedAdb:
 
 
 def test_poller_derives_disk_rates(monkeypatch):
-    from gxr_profiler.capture import poller
+    from gxr_tools.core import poller
 
     first = "###DISK\n   8 0 sda 100 0 2048 10 50 0 4096 20 0 30 40 0 0 0 0 0 0\n"
     second = "###DISK\n   8 0 sda 120 0 4096 10 60 0 6144 20 0 530 1040 0 0 0 0 0 0\n"

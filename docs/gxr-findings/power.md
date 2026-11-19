@@ -1,8 +1,8 @@
 # Power rails & battery drain
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md) | [Thermal](thermal.md) | [Root](root.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md) | [Thermal](thermal.md) | [Root](root.md)
 
-> **Hardware state: MODDED.** These measurements are from the SoC thermal-modded headset (phase-change pads + copper shims), taken from 2026-11-01 onward. There is no stock baseline on this page.
+> **Hardware state: MODDED.** SoC thermal-modded headset; 2026-11-01 onward, no stock baseline.
 
 The headset exposes a two-channel current/voltage/power monitor through Samsung sysfs (Maxim MAX34427 hardware). Only channel 1 produces meaningful measurements; the UI calls it **Power rail 1**. It is shell-readable and adds a real electrical measurement that the battery power-supply nodes do not provide. Channel 2 is effectively dead on this unit.
 
@@ -42,7 +42,7 @@ The values are readable without root. Channel 1 stayed around 15 V and roughly 0
 - The `acc_ch1` / `acc_ch2` registers are non-monotonic across reads; `acc_ch2` is non-zero even while channel 2 power is zero. They are not recorded as energy counters.
 - The sysfs attributes do not identify the measured rail; the channel label is not exposed.
 - Battery power-supply nodes still report voltage/current/power as `0`, so MAX34427 does not replace a real battery or SoC power measurement.
-- gxr-profiler records the active channel as `max_ch1_voltage`, `max_ch1_current` and `max_ch1_power`.
+- GXR Profiler records the active channel as `max_ch1_voltage`, `max_ch1_current` and `max_ch1_power`.
 - Rail power is integrated into `max_ch1_energy_wh` from those samples.
 - Battery level, temperature, AC/USB state and a rolling `batt_drain_pct_h` rate are under the normal **Power & battery** section.
 - The selected PMIC/sub-PMIC regulator rails were constant setpoints, so they are not recorded as time series.

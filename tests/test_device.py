@@ -1,5 +1,7 @@
-from gxr_profiler.core.device import parse_display_info
-from gxr_profiler.core.parsers import parse_audio_policy
+import pytest
+
+from gxr_tools.core.device import parse_display_info
+from gxr_tools.core.parsers import parse_audio_policy
 
 TEXT = (
     'DisplayDeviceInfo{"Built-in Screen": uniqueId="local:1", 7104 x 3840, modeId 2, '
@@ -54,23 +56,105 @@ def test_parse_audio_policy():
 
 
 def test_resolve_serial_collapses_only_same_physical(monkeypatch):
-    from gxr_profiler.core import adb
+    from gxr_tools.core import adb
 
     devices = [
         {"serial": "usb1", "state": "device", "device": "xrvst2", "model": "SM-I610"},
         {"serial": "192.168.0.2:5555", "state": "device", "device": "xrvst2", "model": "SM-I610"},
     ]
-    monkeypatch.setattr(adb, "devices_detailed", lambda: devices)
+    monkeypatch.setattr(adb, "devices_detailed", lambda timeout=25.0: devices)
     monkeypatch.setattr(adb, "_physical_serial", lambda serial: "R3GYC02MM2P")
     assert adb.resolve_serial(None) == "usb1"
 
     monkeypatch.setattr(adb, "_physical_serial", lambda serial: serial)
-    with __import__("pytest").raises(adb.AdbError):
+    with pytest.raises(adb.AdbError):
         adb.resolve_serial(None)
 
 
+class _FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+def _install_clock(monkeypatch, adb):
+    clock = _FakeClock()
+    monkeypatch.setattr(adb.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(adb.time, "sleep", clock.sleep)
+    return clock
+
+
+def test_resolve_serial_retries_until_device_is_ready(monkeypatch):
+    from gxr_tools.core import adb
+
+    clock = _install_clock(monkeypatch, adb)
+    responses = iter(
+        [
+            [{"serial": "192.168.0.2:5555", "state": "offline"}],
+            [{"serial": "192.168.0.2:5555", "state": "unauthorized"}],
+            [{"serial": "192.168.0.2:5555", "state": "device"}],
+        ]
+    )
+    calls = []
+
+    def devices(timeout=25.0):
+        calls.append(timeout)
+        return next(responses)
+
+    monkeypatch.setattr(adb, "devices_detailed", devices)
+    assert adb.resolve_serial(None, wait_seconds=30, poll_seconds=5) == "192.168.0.2:5555"
+    assert clock.now == 10.0
+    assert len(calls) == 3
+
+
+def test_resolve_serial_times_out_with_clear_error(monkeypatch):
+    from gxr_tools.core import adb
+
+    clock = _install_clock(monkeypatch, adb)
+    monkeypatch.setattr(
+        adb,
+        "devices_detailed",
+        lambda timeout=25.0: [{"serial": "192.168.0.2:5555", "state": "offline"}],
+    )
+    with pytest.raises(adb.AdbError, match="after 10s"):
+        adb.resolve_serial(None, wait_seconds=10, poll_seconds=5)
+    assert clock.now == 10.0
+
+
+def test_resolve_serial_fails_fast_for_non_retryable_cases(monkeypatch):
+    from gxr_tools.core import adb
+
+    clock = _install_clock(monkeypatch, adb)
+    monkeypatch.setattr(
+        adb,
+        "devices_detailed",
+        lambda timeout=25.0: [
+            {"serial": "one", "state": "device"},
+            {"serial": "two", "state": "device"},
+        ],
+    )
+    monkeypatch.setattr(adb, "_physical_serial", lambda serial: serial)
+    with pytest.raises(adb.AdbError, match="multiple adb devices"):
+        adb.resolve_serial(None, wait_seconds=30, poll_seconds=5)
+    assert clock.now == 0.0
+
+    monkeypatch.setattr(
+        adb,
+        "devices_detailed",
+        lambda timeout=25.0: (_ for _ in ()).throw(adb.AdbError("adb executable not found (set ADB env var)")),
+    )
+    with pytest.raises(adb.AdbError, match="adb executable not found"):
+        adb.resolve_serial(None, wait_seconds=30, poll_seconds=5)
+    assert clock.now == 0.0
+
+
 def test_calibration_parsers():
-    from gxr_profiler.core.device.calibration import parse_cpm_ipd, parse_ipd_textproto
+    from gxr_tools.core.device.calibration import parse_cpm_ipd, parse_ipd_textproto
 
     ipd = parse_ipd_textproto(
         "created_at {\n  seconds: 1791938387\n}\n"
@@ -85,7 +169,7 @@ def test_calibration_parsers():
 
 
 def test_boundary_settings_parser():
-    from gxr_profiler.core.device.boundary import parse_boundary_settings
+    from gxr_tools.core.device.boundary import parse_boundary_settings
 
     out = parse_boundary_settings(
         [
@@ -107,7 +191,7 @@ def test_boundary_settings_parser():
 
 
 def test_manufacture_date_parser():
-    from gxr_profiler.core.device.manufacture import parse_manufacture_date
+    from gxr_tools.core.device.manufacture import parse_manufacture_date
 
     assert parse_manufacture_date("20251201") == "2025-12-01"
     assert parse_manufacture_date("2025-12-01") == "2025-12-01"
@@ -115,7 +199,7 @@ def test_manufacture_date_parser():
 
 
 def test_region_info():
-    from gxr_profiler.core.device.manufacture import region_info
+    from gxr_tools.core.device.manufacture import region_info
 
     assert region_info(
         {

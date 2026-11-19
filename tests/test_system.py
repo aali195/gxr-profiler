@@ -1,6 +1,6 @@
 import pytest
 
-from gxr_profiler.capture import poller
+from gxr_tools.core import poller
 
 
 class _SequencedAdb:
@@ -59,7 +59,7 @@ def test_poller_accumulates_max_energy(monkeypatch):
 
 
 def test_capture_profiles():
-    from gxr_profiler.core.models import RunConfig, apply_profile
+    from gxr_tools.profiler.core.models import RunConfig, apply_profile
 
     cfg = RunConfig(name="profile")
     apply_profile(cfg, "standard")
@@ -78,7 +78,7 @@ def test_capture_profiles():
 def test_record_request_resolves_profiles_and_overrides(tmp_path):
     import pytest
 
-    from gxr_profiler.server.models import RecordRequest
+    from gxr_tools.profiler.server.models import RecordRequest
 
     cfg = RecordRequest(profile="everything").to_config(str(tmp_path))
     assert cfg.processes is True
@@ -110,8 +110,8 @@ def test_record_request_resolves_profiles_and_overrides(tmp_path):
 
 
 def test_process_io_requires_process_sampling(tmp_path):
-    from gxr_profiler.core.models import RunConfig
-    from gxr_profiler.server.models import RecordRequest
+    from gxr_tools.profiler.core.models import RunConfig
+    from gxr_tools.profiler.server.models import RecordRequest
 
     with pytest.raises(ValueError, match="process sampling"):
         RunConfig(name="io", out_dir=str(tmp_path), root=True, processes=False, process_io=True)
@@ -122,7 +122,7 @@ def test_process_io_requires_process_sampling(tmp_path):
 def test_record_manager_sequences_events(tmp_path):
     from types import SimpleNamespace
 
-    from gxr_profiler.server.recording import RecordManager
+    from gxr_tools.profiler.server.recording import RecordManager
 
     manager = RecordManager(str(tmp_path))
     manager._on_sample(SimpleNamespace(elapsed_s=0.0, row={"x": 1}))

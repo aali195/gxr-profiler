@@ -1,8 +1,8 @@
 import json
 
-from gxr_profiler.capture.columns import REPORT_COLUMNS
-from gxr_profiler.report.static import _clean_pins
-from gxr_profiler.server import export
+from gxr_tools.profiler.capture.columns import REPORT_COLUMNS
+from gxr_tools.profiler.report.static import _clean_pins
+from gxr_tools.profiler.server import export
 
 
 class FakeWindow:

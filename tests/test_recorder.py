@@ -4,9 +4,9 @@ import os
 
 import pytest
 
-from gxr_profiler.capture.recorder import Recorder
-from gxr_profiler.capture.writer import RunWriter
-from gxr_profiler.core.models import RunConfig
+from gxr_tools.profiler.capture.recorder import Recorder
+from gxr_tools.profiler.capture.writer import RunWriter
+from gxr_tools.profiler.core.models import RunConfig
 from tests.fake_adb import FakeAdb
 
 
@@ -55,7 +55,7 @@ def test_cooldown_uses_selected_sensor(tmp_path, monkeypatch):
     rec = Recorder(adb, cfg)
     values = iter([40.0, 34.0])
     monkeypatch.setattr(rec.poller, "poll_thermal", lambda: {"t_CPU5": next(values), "t_AP": 20.0})
-    monkeypatch.setattr("gxr_profiler.capture.recorder.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("gxr_tools.profiler.capture.recorder.time.sleep", lambda _seconds: None)
     messages = []
     rec.on_status = messages.append
 
@@ -77,7 +77,7 @@ def test_cooldown_uses_ddr_sensor(tmp_path, monkeypatch):
     rec = Recorder(adb, cfg)
     values = iter([45.0, 39.0])
     monkeypatch.setattr(rec.poller, "poll_fast", lambda: {"ddr_temp": next(values)})
-    monkeypatch.setattr("gxr_profiler.capture.recorder.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("gxr_tools.profiler.capture.recorder.time.sleep", lambda _seconds: None)
     messages = []
     rec.on_status = messages.append
 
@@ -104,7 +104,7 @@ def test_writer_does_not_warn_for_internal_state_columns(tmp_path, caplog):
     writer = RunWriter(str(tmp_path), "internal")
     writer.open()
     try:
-        with caplog.at_level(logging.WARNING, logger="gxr_profiler.capture.writer"):
+        with caplog.at_level(logging.WARNING, logger="gxr_tools.profiler.capture.writer"):
             writer.write_row({"ts_host": "1.0", "low_power": 1, "sev_AP": 2, "t_SUBBAT": 0})
     finally:
         writer.close()
@@ -115,7 +115,7 @@ def test_writer_warns_for_truly_unknown_columns(tmp_path, caplog):
     writer = RunWriter(str(tmp_path), "unknown")
     writer.open()
     try:
-        with caplog.at_level(logging.WARNING, logger="gxr_profiler.capture.writer"):
+        with caplog.at_level(logging.WARNING, logger="gxr_tools.profiler.capture.writer"):
             writer.write_row({"ts_host": "1.0", "bogus": 1})
     finally:
         writer.close()

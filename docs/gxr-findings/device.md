@@ -1,8 +1,8 @@
 # Device identity, calibration & boundary
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 One-time snapshot written to `meta.json -> device_info` at recording start. Values below are from the current SM-I610. Manufacture date, region, current IPD/calibration status and guardian state do not require root; measured IPD, calibration file dates and the first-setup estimate do.
 

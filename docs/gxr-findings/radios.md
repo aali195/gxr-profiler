@@ -1,8 +1,8 @@
 # Bluetooth & location
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Radio state and capture limits.
 
@@ -36,4 +36,4 @@ Probed 2026-10-20 to 2026-10-21.
 - **A2DP offload is enabled:** `A2dpOffloadEnabled: true`, `MaxConnectedAudioDevices: 1`, `A2DP Source/Sink State: Disabled` while no device is connected. No BT device was paired, so the A2DP codec (SBC/AAC/aptX/LDAC) is not captured.
 - **Location off still has providers registered.** `location_mode=0`, `location_providers_allowed=null`, `cmd location is-location-enabled=false`, yet `dumpsys location` lists `network` and `fused` providers with `ProviderRequest[OFF]` and identities/attribution tags from `com.google.android.gms` (plus a low-power `com.google.android.as` request with a 6 h interval, inactive). Location is off, but the provider plumbing remains.
 - **Modes:** 0=off, 1=device only (sensors), 2=battery saving, 3=high accuracy. Captured as `loc_mode` / `loc_mode_name`, with `loc_providers`. We could not toggle location on (read-only test), so the enabled paths use Android's documented semantics rather than an on-device A/B.
-- **No per-app location requests tracked yet.** `dumpsys location` exposes active/inactive requests (e.g. `ProviderRequest[OFF]`, `(inactive)`), but gxr-profiler records only the master on/off/mode/providers.
+- **No per-app location requests tracked yet.** `dumpsys location` exposes active/inactive requests (e.g. `ProviderRequest[OFF]`, `(inactive)`), but GXR Profiler records only the master on/off/mode/providers.

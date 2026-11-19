@@ -1,14 +1,15 @@
 # Headset commands, sources & polling
 
-Every command in gxr-profiler is **read-only**. The only privileged commands use
-`su -c` to read root-only files; there are no writes, pushes, `setprop`,
-sysfs writes, logcat clears, or thermalservice overrides.
+Recording, preview, diagnostics and report export use **read-only** commands; the only privileged
+reads use `su -c` for root-only files. **GXR Manager > Apps**, **Installer** and **Settings** are
+the only writes, and only after an explicit confirmation. See
+[profiler safety](PROFILER.md#safety--fair-runs) and [device-change safety](MANAGER.md#device-change-safety).
 
 Device: **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2
 (`SXR2230P`), Adreno 740.
 
-Related: [README](../README.md) for columns/usage, [research notes](README.md)
-for findings and device quirks.
+Related: [documentation home](README.md), [profiler guide](PROFILER.md) for columns/usage, and the
+[research & findings hub](gxr-findings/README.md) for results and device quirks.
 
 ## Cadence at a glance
 
@@ -25,7 +26,7 @@ for findings and device quirks.
 
 Rates derived from cumulative counters (disk, CPU) use deltas between polls.
 The first poll seeds the baseline; the first row therefore has no rate. When
-`--cooldown` is set, gxr-profiler polls the thermal HAL once per second until the selected
+`--cooldown` is set, GXR Profiler polls the thermal HAL once per second until the selected
 cooldown sensor is at or below the target; those cooldown polls are not written to the
 run. The sensor defaults to `AP` and is selectable in the UI / via `--sensor`.
 `--cooldown-max-wait` (or the UI advanced field) stops waiting after N seconds;
@@ -34,7 +35,7 @@ run. The sensor defaults to `AP` and is selectable in the UI / via `--sensor`.
 ## 1 Hz poll (`--interval` seconds)
 
 The exact poll script is built in
-[`gxr_profiler/capture/poller.py`](../gxr_profiler/capture/poller.py):
+[`gxr_tools/core/poller.py`](../gxr_tools/core/poller.py):
 
 ```sh
 echo '###FREQ'
@@ -151,7 +152,7 @@ su -c 'cat /sys/class/sec_fan/fan/curr_rpm; cat /sys/class/sec_fan/fan/curr_rpm2
 - `/proc/diskstats` is aggregated over whole devices only (`sd*`, `mmcblk*`,
   `nvme*n*`, `vd*`, `xvd*`); partitions, `dm-*`, `loop*` and `zram*` are
   excluded. Sector counts use 512 B units.
-- `/proc/stat` and `/proc/diskstats` counters are cumulative. gxr-profiler records
+- `/proc/stat` and `/proc/diskstats` counters are cumulative. GXR Profiler records
   deltas between polls for utilisation/throughput/IOPS/busy/latency.
 - `dumpsys thermalservice` is the primary named-temperature source; logcat is
   supplementary/event-driven. DDR/RAM temperature is read separately from the
@@ -186,7 +187,7 @@ Started with (unless `--no-logcat`):
 logcat -v time -T 1
 ```
 
-gxr-profiler filters in Python because `logcat -s` misses colon tags such as
+GXR Profiler filters in Python because `logcat -s` misses colon tags such as
 `SSRM:Temperature` and `-e` matches messages rather than tags.
 
 | Source tag/message | Data |
@@ -196,16 +197,173 @@ gxr-profiler filters in Python because `logcat -s` misses colon tags such as
 | `SSRM:Temperature` / `SSRM:S` | supplementary temperatures |
 | `SSRM:w` | `fan_step` |
 | `ThermalManagerService` | Dcvsh CPU caps (`dcvsh_0/2_limit`, `dcvsh_0/2_max`) |
-| `XrHeartbeat` messages | `cam_eye_fps`, `cam_head_fps`, `cam_hand_fps`, `irled_fps` |
+| `XrHeartbeat` messages | `cam_eye_fps`, `cam_head_fps`, `cam_hand_fps` |
 | `[CIB]` messages | raw camera stream rates (`cib_*_{fps,hz}`) |
-| `IRLedController` tag | IR LED rate |
+| `IRLedController` tag | `irled_fps`, `irled_lux`, `irled_brightness`, `irled_state` |
+| `QVRIRLedWriter` tag | `irled_on` |
 | `SXRC_TSVC` | controller connection, battery, firmware, triggers, grip, sticks |
 | `SXRC_POSE` | per-controller pose status/quality → tracking |
 | `CpmInput` | controller start/stop tracking |
 | `PassthroughStateManager` | passthrough requested mode → `passthrough`, `passthrough_mode` |
 
+### IR illuminator / ambient light
+
+- `IRLedController` logs a status line every 5 s with `fps`,
+  `lastIrLedBrightness`, and `flickerSensorLux` from the STK6D2X rear ALS.
+- `/vendor/etc/sxr/irled_control_config.json`: `lux < 2` -> brightness 60,
+  `lux < 7` -> 50; the bands exit at `>= 6` and `>= 8` for 200 ms. No matching
+  band means brightness 0.
+- `QVRIRLedWriter::start/stop` shows whether the emitters are actually
+  emitting. A worn headset in a bright room can have the controller running
+  with the writer stopped.
+- `IRLedController` suspends about 8-10 s after an off-body screen-off.
+- ALS sysfs (`/sys/class/sensors/als_rear/lux`) is root-only under SELinux and
+  invalid while asleep (`als_enable=0`); logcat is the non-root source.
+
 Logcat is **event-driven**, not a fixed poll. Thermal/fan events are also
 written to `<run>.events.csv`; other values are folded into the next 1 Hz row.
+
+## GXR Manager > Diagnostics (one-click snapshot, separate from runs)
+
+See the [Diagnostics guide](DIAGNOSTICS.md) for the normal-user workflow and how to read the results.
+
+The **GXR Manager > Diagnostics** view collects a read-only snapshot of crash and boot state. It does not create a
+run and does not record continuously. The snapshot is shown in the UI and saved as JSON + Markdown
+under `reports/debug/` next to the exe. Nothing is written, cleared or changed on the headset.
+
+Always collected:
+
+```sh
+getprop
+cat /proc/uptime
+logcat -d -b crash  -v time -t N
+logcat -d -b events -v time -t N
+logcat -d -b system -v time -t N
+logcat -d -b main   -v time -t N
+dumpsys dropbox --print
+dumpsys activity exit-info
+```
+
+`N` is the **Log lines per buffer** option (100-5000, default 1500; `main` is capped lower).
+Thermal context comes from the same lightweight preview used by the Record tab (`dumpsys battery`,
+`dumpsys thermalservice`, fan step, DDR and power rail). Thermal values are shown as context, not as
+proof that heat caused a crash.
+
+Optional root extras (`--root` equivalent; `su -c` may prompt):
+
+```sh
+su -c id
+su -c 'ls -lt /data/tombstones | head -n 10'
+su -c 'ls -lt /data/system/dropbox | head -n 10'
+su -c 'ls -lt /data/anr | head -n 10'
+su -c 'dmesg | tail -n 500'
+su -c 'cat /proc/last_kmsg'
+su -c 'ls -lt /sys/fs/pstore'
+su -c 'cat /metadata/watchdog/mitigation_count.txt'
+su -c 'cat /data/system/package-watchdog.xml'
+```
+
+With **Read tombstone / ANR files** enabled, the newest 20 text tombstones are read (first 30 KB of
+each), plus the newest Dropbox and ANR files. Older tombstones are shown separately from the current
+crash buffer. KernelSU's `u:r:ksu:s0` context may still be denied by SELinux on `/data/tombstones`
+and `/data/system/dropbox`; the snapshot reports the denial instead of failing.
+
+The tab parses native `F DEBUG` blocks, Java `FATAL EXCEPTION` / ANR records, `rescue_note` and
+`boot_progress_*` events, dropbox entries and `exit-info`. It recognizes the SystemUI HWUI
+animation-race signature and explains it as a software issue while keeping thermal/power readings
+separate. See [crash & soft-reboot logs](gxr-findings/crash-logs.md).
+
+## GXR Manager > Apps (package management)
+
+The Apps tool first reads package state, then optionally runs one confirmed action. The list
+read is read-only; actions are explicit user changes and are blocked while a recording is in
+progress. See the [Apps & services guide](APPS.md).
+
+List and metadata reads:
+
+```sh
+pm list packages -U --show-versioncode --user 0
+pm list packages -s -u --user 0
+pm list packages -3 -u --user 0
+pm list packages -d --user 0
+pm list packages -e --user 0
+pm list packages -u --user 0
+pm list packages -f -u --user 0
+pm list packages -i -u --user 0
+dumpsys cpuinfo
+ps -A -o PID,UID,RSS,NAME
+grep -H '' /proc/[0-9]*/stat 2>/dev/null
+grep -H '' /proc/[0-9]*/oom_score_adj 2>/dev/null
+dumpsys gpu | sed -n '/Memory snapshot for GPU/,/driverPackageName/p'
+du -sk <active-install-paths>
+dumpsys package <package>
+pm path <package>
+```
+
+These provide the one-shot process usage shown per package (`CPU 5m`, summed RSS/GPU memory,
+threads and OOM class). The list also runs `du -sk` on active install paths for the **Size**
+column; app data/cache size remains a root-only detail. All values are sampled only when the
+list is fetched; there is no live polling in the Apps tool.
+
+If `--show-versioncode` is not supported by the device, the tool falls back to
+`pm list packages -U --user 0`.
+
+Confirmed actions:
+
+```sh
+pm disable-user --user 0 <package>
+pm enable --user 0 <package>
+pm uninstall --user 0 <package>          # stock/system: remove for user 0 only
+cmd package install-existing --user 0 <package>
+pm uninstall <package>                   # user-installed apps only
+```
+
+Every action requires the local API token and a confirmation flag. Critical packages cannot be
+disabled, removed for user 0 or uninstalled; the backend rejects those actions even if the API
+is called directly. Package IDs are validated and shell-quoted. Actions are appended to
+`reports/apps/app-actions.jsonl`.
+
+Per-app Game Mode performance overrides (only for packages that report custom support):
+
+```sh
+cmd game list-modes <package>
+cmd game list-configs <package>
+cmd game set --fps 90 --downscale 0.8 <package>
+cmd game reset <package>
+```
+
+FPS values are `30`, `45`, `60`, `90` and `disable`; render scale is `0.5`–`0.9` and
+`disable`. The app must be restarted after a downscale. Critical packages are read-only for
+performance overrides.
+
+Optional root detail (read-only, opt-in; may prompt):
+
+```sh
+su -c id
+su -c 'du -sk /data/user/0/<package> /data/user_de/0/<package> /data/user/0/<package>/cache 2>/dev/null'
+```
+
+Root is not required for the actions and does not unlock protected system-APK deletion. The
+system image is never edited.
+
+## GXR Manager > Settings
+
+Settings reads and writes are blocked during a recording. Behaviour, warnings, defaults and the exact
+per-setting commands are in the [Settings guide](SETTINGS.md). Hidden-key provenance and keys that
+are not exposed are in [Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md).
+
+| Group | Keys | Commands |
+|---|---|---|
+| XR controls | `toggle_xr_perf_metrics`, `natural_input_mode`, `input_pointer`, `toggle_hands_breakthrough`, `enable_touch_on_everything`, `toggle_guardian`, `guardian_radius`, `auto_spatialization_settings` | [XR controls](SETTINGS.md#xr-controls) |
+| Privacy indicators | `camera_mic_icons_enabled`, DeviceConfig sync | [Hide recording indicator](SETTINGS.md#hide-recording-indicator-green-dot) |
+| Software updates | `com.wssyncmldm`, `com.sec.android.soagent`, `ota_disable_automatic_update` | [Software updates](SETTINGS.md#software-updates) |
+| Advanced | `settings_enable_monitor_phantom_procs`, `stay_on_while_plugged_in`, `heads_up_notifications_enabled`, `wifi_scan_always_enabled`, `ble_scan_always_enabled` | [Advanced](SETTINGS.md#advanced) |
+| Testing - untested | `enable_dynamic_policy`, animation scales, `accessibility_reduce_transparency`, `disable_window_blurs`, `com.samsung.android.game.gos`, `fixed_hsm_display_rate` | [Testing - untested](SETTINGS.md#testing---untested) |
+
+Only **Disable performance optimization policy** and **Disable fixed Home Space Mode display rate**
+use `su` for a SurfaceFlinger transaction and a persistent property. Every other setting is a normal
+`settings`, `pm` or `cmd device_config` write. Changes require the local API token and are appended
+to `reports/settings/setting-actions.jsonl`.
 
 ## Media/display/audio (every 10 s, always on)
 
@@ -236,7 +394,7 @@ dumpsys media.audio_flinger 2>/dev/null | grep -E '^(Output|Input) thread|^[[:sp
 
 Timeout: 25 s. No root.
 
-## Recording cadence (schema 11)
+## Recording cadence
 
 The recorder uses a **fast 1 Hz** shell containing only cheap sysfs and `/proc`
 reads. Slow sections run separately and are merged into every 1 Hz row:
@@ -305,7 +463,7 @@ so this usually reflects only Android sensor clients (e.g. offbody).
 ## Start/end session state (twice per run)
 
 Commands are in
-[`gxr_profiler/capture/session.py`](../gxr_profiler/capture/session.py):
+[`gxr_tools/profiler/capture/session.py`](../gxr_tools/profiler/capture/session.py):
 
 ```sh
 settings get global low_power
@@ -426,9 +584,11 @@ first-setup date.
 | Active panel / LCD type / EDID | Yes, `--root` |
 | Measured IPD + eye/face calibration file dates | Yes, `--root` |
 | Approximate first setup date (user-settings mtimes) | Yes, `--root` |
+| App data/cache size (GXR Manager > Apps detail) | Yes, opt-in per package |
 | `su -c id` manager confirmation | Yes, `--root` |
 | Manufacture date, region/CSC/locale, boundary, current IPD/cal status | No |
 | All other device/build/panel variants | No |
 
-`su -c` reads may trigger a KernelSU/Magisk prompt once. No command changes
-device state.
+`su -c` reads may trigger a KernelSU/Magisk prompt once. Recording, preview,
+diagnostics and export do not change device state. GXR Manager > Apps and Settings are the
+only exceptions; they require an explicit confirmation in the local UI.

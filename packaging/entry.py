@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from gxr_profiler.cli.app import main
+from gxr_tools.profiler.cli.app import main
 
 
 def _is_ui_launch(argv: list[str], executable: str) -> bool:

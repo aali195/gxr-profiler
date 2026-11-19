@@ -1,9 +1,19 @@
 # CLI reference
 
-The CLI is available as `gxr-profiler-cli.exe` in the release, as `gxr-profiler` after
-`pip install -e .`, or as `python -m gxr_profiler` from a source checkout.
+[Documentation home](README.md) | [Profiler guide](PROFILER.md) | [Manager guide](MANAGER.md) | [Commands](COMMANDS.md)
 
-## Commands
+GXR Tools ships two terminal builds: `gxr-profiler-cli.exe` and `gxr-manager-cli.exe`. After
+`pip install -e .` the commands are `gxr-profiler` and `gxr-manager`.
+
+## GXR Profiler CLI
+
+From a source checkout without installing:
+
+```powershell
+python -m gxr_tools.profiler --help
+```
+
+### Commands
 
 ```powershell
 # packaged app: double-click gxr-profiler.exe, or:
@@ -24,16 +34,7 @@ gxr-profiler runs
 gxr-profiler devices
 ```
 
-With an editable install use `gxr-profiler`; without installing use
-`python -m gxr_profiler ...`.
-
-## Device selection
-
-**No `--serial` is needed** once the headset is paired. The tool auto-selects a single device,
-collapsing duplicate TCP and mDNS transports of the same headset. Pass `--serial <id>` or set
-`ANDROID_SERIAL` only if multiple devices are connected.
-
-## `record` flags
+### `record` flags
 
 | Flag | Meaning |
 |---|---|
@@ -54,11 +55,35 @@ collapsing duplicate TCP and mDNS transports of the same headset. Pass `--serial
 | `--radio-interval` | Bluetooth/location/storage-capacity cadence |
 | `--no-logcat` | Disable the logcat event stream |
 
-Ctrl-C stops a recording cleanly. Media/audio/display is sampled every 30 s by default.
-Run `gxr-profiler <command> --help` for the complete current flag list.
+Ctrl-C stops a recording cleanly. Media/audio/display is sampled every 30 s by default. Run
+`gxr-profiler <command> --help` for the complete current flag list.
 
-## Capture profiles
+### Capture profiles
 
 The UI exposes Standard, Detailed and Everything presets plus per-option overrides. Profile
 defaults, cadence details and measured overhead are documented in
-[capture profiles & overhead](README.md#capture-profiles--overhead).
+[capture profiles & overhead](PROFILER.md#capture-profiles--overhead).
+
+## GXR Manager CLI
+
+The manager has a small CLI for opening the UI and checking the connection state:
+
+```powershell
+gxr-manager-cli.exe ui        # open the manager UI
+gxr-manager-cli.exe status    # devices + whether the profiler is recording
+```
+
+From a source checkout: `python -m gxr_tools.manager.cli.app ui` or
+`python -m gxr_tools.manager.cli.app status`.
+
+The manager UI commands are intentionally not exposed as terminal actions; device changes still
+require the local UI confirmation flow. See [device-change safety](MANAGER.md#device-change-safety).
+
+## Device selection
+
+**No `--serial` is needed** once the headset is paired. Both apps auto-select a single device,
+collapsing duplicate TCP and mDNS transports of the same headset. Pass `--serial <id>` or set
+`ANDROID_SERIAL` only if multiple devices are connected. The adb executable is taken from `ADB`, then
+`adb(.exe)` next to the executable, then `platform-tools/adb(.exe)`, then `PATH`. After a wireless ADB
+reconnect, `record` waits up to 30 seconds for the headset to return to the `device` state (5-second
+polling).

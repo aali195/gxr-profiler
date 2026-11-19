@@ -1,10 +1,10 @@
 # Thermal, throttling & fan
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md) | [Thermal caps & fan steps](thermal-caps-fan.md) | [Thermal mod before/after](thermal-mod.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md) | [Thermal caps & fan steps](thermal-caps-fan.md) | [Thermal mod before/after](thermal-mod.md)
 
-> **Hardware state: MIXED - STOCK BEFORE 2026-11-01, MODDED AFTER.** Runs before 2026-11-01 are from the unmodified headset. Runs from 2026-11-01 onward, including the in-between and after runs, are from the SoC thermal-modded headset (phase-change pads + copper shims). Thermal status 4 was only observed on the stock unit.
+> **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 
-Temperature, thermal-status and fan findings from the 1 Hz poll plus event-driven logcat. `gxr-profiler` treats the HAL poll as authoritative and logcat as supplementary.
+Temperature, thermal-status and fan findings from the 1 Hz poll plus event-driven logcat. GXR Profiler treats the HAL poll as authoritative and logcat as supplementary.
 
 ## In plain terms
 
@@ -57,6 +57,6 @@ Probed 2026-10-20 to 2026-11-07 during idle, OS, controllers, VRChat, HDR and be
 - Battery current/voltage are not exposed (`0`), even with root; `dumpsys battery` gives temp/level/AC.
 - Two CPU clusters: policy0 = cores 0-1, policy2 = cores 2-5 (2.3616 GHz max; `scaling_max_freq` drops when capped).
 - `t_AP`, `t_skin` and `sec_ap` are **the same physical sensor** (the HAL reads `/sys/class/sec/sec-ap-thermistor/temperature` for both AP and skin) - they track identically to 0.1 C.
-- `/sys/class/thermal/thermal_zone15/temp` is the kernel `ddr` zone (millidegrees C). If that path is absent or is no longer type `ddr`, gxr-profiler falls back to the thermal zone whose type is `ddr`. It is shell-readable but does not appear in `dumpsys thermalservice`, so it is polled separately as `ddr_temp`. `LRP` is the power path, not RAM.
+- `/sys/class/thermal/thermal_zone15/temp` is the kernel `ddr` zone (millidegrees C). If that path is absent or is no longer type `ddr`, GXR Profiler falls back to the thermal zone whose type is `ddr`. It is shell-readable but does not appear in `dumpsys thermalservice`, so it is polled separately as `ddr_temp`. `LRP` is the power path, not RAM.
 - The raw-zone poll matches zone `type` names rather than fixed indices: `video`, `camera-0/1`, `aoss-0/1`, `cpuss-0/1`, and `cpu-0-*`/`cpu-1-*`. PMIC zones (`pmxr2230_tz`, `pm8550*`) return no valid temperature, and `sys-therm-*` is not used because several entries are invalid or implausible (for example `sys-therm-2` ~66.8 C at idle). The `ac`, `battery`, `pogo` and `usb` zones duplicate HAL `BAT`/`CHG`/`USB` readings or return invalid values, so they are not recorded separately.
 - The full HAL threshold, status-by-status median and fan-step reference is in [thermal caps & fan steps](thermal-caps-fan.md). Status 4 in the local library only occurred with LRP 65.0-66.3 C and AP 76.9-78.7 C, consistent with the LRP stage-4 trip.

@@ -1,8 +1,8 @@
 # Display, media & passthrough
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Decoder, display/HDR, panel and passthrough findings. Capability is not the same as active state: read the compositor layers and latest codec record, not only advertised flags.
 
@@ -50,9 +50,9 @@ Probed 2026-10-21 during YouTube XR 1080p SDR playback; the 8K HDR result is fro
     android.media.mediacodec.width=1920, android.media.mediacodec.height=1080, android.media.mediacodec.profile=1)}
   ```
 - Naming tells you the path: `c2.qti.*` / `OMX.qcom.*` = Qualcomm hardware, `c2.android.*` / `OMX.google.*` = software. Observed: YouTube AV1 -> `c2.qti.av1.decoder` (hardware), HEVC -> `c2.qti.hevc.decoder`, Vorbis audio -> `c2.android.vorbis.decoder`. Each record also names the decoding process (`media_app`); the YouTube XR app (`com.google.android.apps.youtube.xr`) used `c2.qti.av1.decoder` for 1080p AV1.
-- Records expire, so gxr-profiler tracks the set of decoder names seen during a run **and** the latest video session (component, process, MIME, resolution, profile, HDR format).
+- Records expire, so GXR Profiler tracks the set of decoder names seen during a run **and** the latest video session (component, process, MIME, resolution, profile, HDR format).
 - **Brightness**: `dumpsys display` -> `Display Brightness=1.0`, `Display SdrBrightness=1.0` (normalized 0-1). `settings get system screen_brightness` reads 255 at maximum.
-- **HDR/10-bit**: the panel is HDR-capable (`mSupportedHdrTypes=[2, 3]`, `mMaxLuminance=500`) and 10-bit capable (`ro.surface_flinger.has_HDR_display` / `has_wide_color_display` are `true`), but that is capability, not active state. Active HDR is detected from SurfaceFlinger layer dataspaces (`V0_BT2020_PQ`, `ST2084`, `HLG`); active depth from layer formats (`RGBA_1010102`/`P010` vs `RGBA_8888_UBWC` = 8-bit). On 1080p SDR YouTube the dataspaces were `BT709`/`V0_SRGB`, every layer was `RGBA_8888_UBWC` -> **8-bit active**, `hdr-format=0` -> `hdr_active=0`, with color mode SRGB or DISPLAY_P3 depending on content. gxr-profiler records `disp_bit_depth` (8/10) and `disp_color_mode`.
+- **HDR/10-bit**: the panel is HDR-capable (`mSupportedHdrTypes=[2, 3]`, `mMaxLuminance=500`) and 10-bit capable (`ro.surface_flinger.has_HDR_display` / `has_wide_color_display` are `true`), but that is capability, not active state. Active HDR is detected from SurfaceFlinger layer dataspaces (`V0_BT2020_PQ`, `ST2084`, `HLG`); active depth from layer formats (`RGBA_1010102`/`P010` vs `RGBA_8888_UBWC` = 8-bit). On 1080p SDR YouTube the dataspaces were `BT709`/`V0_SRGB`, every layer was `RGBA_8888_UBWC` -> **8-bit active**, `hdr-format=0` -> `hdr_active=0`, with color mode SRGB or DISPLAY_P3 depending on content. GXR Profiler records `disp_bit_depth` (8/10) and `disp_color_mode`.
 - Stream depth is inferred from the codec profile (`video/hevc` Main10, `video/av01` Main10, `video/x-vnd.on2.vp9` Profile 2/3, `video/avc` High10). YouTube AV1 profile 1 = **8-bit**.
 - Active panel mode while testing: 7104×3840 @ 72 Hz. `device_info.display` records the active mode, HDR types (HDR10 + HLG), 500-nit max luminance, normalized brightness range (0-1, default 0.425), color modes (NATIVE/SRGB/DISPLAY_P3), 10-bit capability, and ALLM / game-content flags.
 
@@ -107,4 +107,4 @@ Caveats:
 
 - `PassthroughStateManager` in XrSystemUI logs the computed requested mode (`Home(requestEnabled=true)`, `Window(requestEnabled=false)`, `SpatialApi`, `Disabled`, `Lockscreen`, `BoundarySetup`) - the best live signal for whether the user sees passthrough. `dumpsys cpm` exposes `XrPassthroughController: passthroughRunning: 1/0`, `passthroughCameraState` and `"Passthrough occlusion %"`.
 - The CPM scene has `Passthrough node (Left/Right)` nodes (`type=PASSTHROUGH`, 1500x1500 buffers) under `Passthrough Root`; these are compositor layers, not a simple mode flag.
-- Live check on 2026-10-21: mode `Home`, `requestEnabled=true`, `passthroughRunning=1`, camera state 4, occlusion around 20-82%. gxr-profiler records `passthrough` (0/1) and `passthrough_mode`, and tags runs with a passthrough badge when active.
+- Live check on 2026-10-21: mode `Home`, `requestEnabled=true`, `passthroughRunning=1`, camera state 4, occlusion around 20-82%. GXR Profiler records `passthrough` (0/1) and `passthrough_mode`, and tags runs with a passthrough badge when active.

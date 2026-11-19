@@ -1,8 +1,8 @@
 # Audio
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Speaker/microphone paths, routing and codec findings. Output is PCM; source codecs can be stale and are reported only when recent.
 
@@ -42,7 +42,7 @@ Probed 2026-10-21 during YouTube XR playback.
 - **Playback**: the `dumpsys audio` focus stack names the app (YouTube XR); `players:` lists one started AudioTrack at 48 kHz stereo; `STREAM_MUSIC` volume was 9/15 (60%), not muted.
 - **Mic**: `dumpsys audio` reports `mic mute FromSwitch/Restrictions/Api/system` (all false when unmuted); `media.audio_flinger` has no input thread while idle. When active, the input thread gives device (`AUDIO_DEVICE_IN_BUILTIN_MIC` / `BACK_MIC`), source (`MIC`, `CAMCORDER`, ...), PCM format, rate and channels.
 - **Capabilities** (`dumpsys media.audio_policy`): Speaker PCM_16_BIT + PCM_8_24_BIT @ 48 kHz stereo; Built-In Mic / Back Mic PCM_16_BIT at 8-48 kHz. No Bluetooth/A2DP device was connected during testing, so Bluetooth codecs (SBC/AAC/aptX/LDAC) are not captured.
-- **Codecs**: `dumpsys media.metrics` audio records (e.g. `c2.android.vorbis.decoder`, `audio/vorbis`, 48 kHz, 2 ch) can be stale; gxr-profiler records the newest record's age and the UI shows a source codec only if it was seen within 5 minutes. Output is always PCM (uncompressed).
+- **Codecs**: `dumpsys media.metrics` audio records (e.g. `c2.android.vorbis.decoder`, `audio/vorbis`, 48 kHz, 2 ch) can be stale; GXR Profiler records the newest record's age and the UI shows a source codec only if it was seen within 5 minutes. Output is always PCM (uncompressed).
 
 ### Audio quirks (unadvertised / surprising)
 
@@ -56,7 +56,7 @@ Probed 2026-10-21 during YouTube XR playback.
 | Speaker 48 kHz only | Speaker supports PCM_16_BIT and PCM_8_24_BIT at 48 kHz stereo; no 44.1 kHz profile. Mic inputs (Built-In + Back) are PCM_16_BIT only at 8-48 kHz - no 24-bit capture path. |
 | XR mic denoiser allowlist | `persist.audio.xrdenoiser.list=com.google.costar_helper, com.google.android.googlequicksearchbox` - an unadvertised per-app denoiser list. |
 | Routing/mute knobs | `audio.sys.mute.latency.factor=2`, `audio.sys.routing.latency=0`, `audio.sys.offload.pstimeout.secs=3`, `audio.sys.noisy.broadcast.delay=500`, and `media.stagefright.audio.deep=false` (despite the active deep_buffer output). |
-| Codec records can be stale | No `media.codec` service on this build (`dumpsys media.codec` is empty); audio/video codec records live in `media.metrics` and are emitted on release/expiry. gxr-profiler stores record age and shows a source codec only if it is <=300 s old. |
+| Codec records can be stale | No `media.codec` service on this build (`dumpsys media.codec` is empty); audio/video codec records live in `media.metrics` and are emitted on release/expiry. GXR Profiler stores record age and shows a source codec only if it is <=300 s old. |
 
 Reproduce:
 

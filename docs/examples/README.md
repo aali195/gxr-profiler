@@ -1,7 +1,7 @@
 # Examples
 
-Small, sanitized snippets and command outputs that illustrate findings in
-[`../README.md`](../README.md).
+Small, sanitized snippets and command outputs that illustrate findings in the
+[research & findings hub](../gxr-findings/README.md).
 
 Guidelines:
 

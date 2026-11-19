@@ -3,10 +3,10 @@ import threading
 
 from fastapi.testclient import TestClient
 
-from gxr_profiler.capture.columns import REPORT_COLUMNS
-from gxr_profiler.server.app import create_app
-from gxr_profiler.server.deps import get_manager
-from gxr_profiler.server.routers import record as record_router
+from gxr_tools.profiler.capture.columns import REPORT_COLUMNS
+from gxr_tools.profiler.server.app import create_app
+from gxr_tools.profiler.server.deps import get_manager
+from gxr_tools.profiler.server.routers import record as record_router
 
 
 def _make_run(tmp_path):
@@ -49,6 +49,10 @@ def test_read_endpoints_and_offline_report(tmp_path):
     assert b"GXR_PROFILER_OFFLINE" in report.content
     assert b"/static/" not in report.content
     assert b"<!-- gxr-profiler:styles:start -->" in report.content
+    assert b'id="tools-tab"' not in report.content
+    assert b'id="tools-separator"' not in report.content
+    assert b'class="sidebar-edge"' in report.content
+    assert b"processFilterBar" in report.content
 
     procs = client.get("/api/runs/before/procs")
     assert procs.status_code == 200
@@ -175,7 +179,7 @@ def test_preview_route_returns_lightweight_metrics(tmp_path, monkeypatch):
 
     monkeypatch.setattr(record_router, "Poller", FakePoller)
     monkeypatch.setattr(record_router, "RealAdb", lambda serial=None: object())
-    monkeypatch.setattr(record_router, "resolve_serial", lambda serial=None: "fake")
+    monkeypatch.setattr(record_router, "resolve_serial", lambda serial=None, **kwargs: "fake")
     response = client.get("/api/preview")
     assert response.status_code == 200
     assert response.json()["thermal_status"] == 2.0

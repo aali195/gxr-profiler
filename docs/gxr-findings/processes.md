@@ -1,8 +1,8 @@
 # Process offenders
 
-[Findings index](../README.md) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
-> **Hardware state: STOCK.** All runs on this page are from the unmodified headset, before 2026-11-01. No thermal mod.
+> **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
 Process analysis across the run library. `cpu_now_pct` is the interval CPU delta; `cpu_pct` is Android's ~5-minute sliding value. Unless stated otherwise, values below are the maximum `cpu_now_pct` seen in a process snapshot, and are **per process, not additive**. GPU memory and RSS are maxima.
 

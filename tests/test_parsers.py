@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from gxr_profiler.capture.poller import FAST_SCRIPT, POLL_SCRIPT, PREVIEW_SCRIPT, parse_poll
-from gxr_profiler.core import parsers as P
+from gxr_tools.core import parsers as P
+from gxr_tools.core.poller import FAST_SCRIPT, POLL_SCRIPT, PREVIEW_SCRIPT, parse_poll
 from tests.fake_adb import POLL_RESPONSE
 
 
@@ -32,6 +32,26 @@ def test_parse_cib_and_netstats():
     net = "uid rxBytes rxPackets txBytes txPackets\n  1000 42562 193 15876 201\n  mStatsMapA:"
     parsed = P.parse_netstats_uid(net)
     assert parsed[1000]["net_rx_bytes"] == 42562.0
+
+
+def test_parse_irled_status_state_and_writer():
+    line = (
+        "loop, fps: 25.6, lastIrLedBrightness=0, "
+        "context={  flickerSensorLux: 24,   comparisonConditionMatchStartTime: {}}"
+    )
+    assert P.parse_irled_fps(line) == 25.6
+    assert P.parse_irled_status(line) == {
+        "irled_fps": 25.6,
+        "irled_brightness": 0.0,
+        "irled_lux": 24.0,
+    }
+    assert P.parse_irled_status("loop, started") is None
+    assert P.parse_irled_writer("QVRIRLedWriter::start") == 1.0
+    assert P.parse_irled_writer("QVRIRLedWriter::stop") == 0.0
+    assert P.parse_irled_state("handleResume, mName: IRLedController") == 1.0
+    assert P.parse_irled_state("handleSuspend, mName: IRLedController") == 0.0
+    assert P.parse_irled_state("loop, ended. running=false") == 0.0
+    assert P.parse_irled_state("unrelated") is None
 
 
 def test_parse_media_video_codec():

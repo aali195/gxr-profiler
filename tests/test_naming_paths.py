@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from gxr_profiler.core import naming, paths
+from gxr_tools.core import naming, paths
 
 
 def test_unicode_names_are_allowed():
@@ -35,7 +35,7 @@ def test_writable_dir_and_readonly_error(tmp_path):
 
 
 def test_frozen_defaults_next_to_exe(monkeypatch, tmp_path):
-    exe = tmp_path / "gxr_profiler.exe"
+    exe = tmp_path / "gxr-profiler.exe"
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(exe))
     assert paths.runtime_dir() == tmp_path
@@ -52,7 +52,7 @@ def test_source_defaults_use_cwd(monkeypatch, tmp_path):
 def test_run_name_rejects_reserved_suffixes():
     import pytest
 
-    from gxr_profiler.core.naming import validate_run_name
+    from gxr_tools.core.naming import validate_run_name
 
     for name in ("foo.csv", "foo.CSV", "foo.events.csv", "foo.json"):
         with pytest.raises(ValueError):
