@@ -1,6 +1,6 @@
 # CPU & memory
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
 > **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
@@ -38,6 +38,6 @@ Probed 2026-10-21.
 
 - `/proc/meminfo` exposes 16,066,684 kB total (16 GB class), with MemAvailable as the best "available" estimate; used is derived as `MemTotal - MemAvailable`. Swap is 4,194,300 kB (~4 GB) backed by zram.
 - `/proc/pressure/memory` reports PSI `some`/`full` avg10; `/sys/block/zram0/mm_stat` gives the original, compressed and resident zram sizes.
-- `/proc/stat` provides cumulative per-core user/nice/system/idle/iowait/irq/softirq/steal ticks; gxr-profiler records per-core utilisation from idle/total deltas and the live `procs_running` count.
+- `/proc/stat` provides cumulative per-core user/nice/system/idle/iowait/irq/softirq/steal ticks; GXR Profiler records per-core utilisation from idle/total deltas and the live `procs_running` count.
 - Live probe: ~50.7% RAM used, 7.9 GB available, 7.6 GB cached, ~698 MB swap used, ~223 MB zram resident, memory PSI 0.00.
 - Per-process RSS and GPU memory are in `.procs.csv`; GPU memory total is not currently summed.

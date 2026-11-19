@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
-from gxr_core.recording_state import clear_state, write_state
-from gxr_manager.server.app import create_manager_app
-from gxr_profiler.server.app import create_app
+from gxr_tools.core.recording_state import clear_state, write_state
+from gxr_tools.manager.server.app import create_manager_app
+from gxr_tools.profiler.server.app import create_app
 
 
 def test_profiler_and_manager_route_surfaces_are_separate(tmp_path):

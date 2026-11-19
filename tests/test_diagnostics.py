@@ -1,12 +1,12 @@
-from gxr_core.parsers.crash import (
+from gxr_tools.core.parsers.crash import (
     parse_crashes,
     parse_dropbox,
     parse_events,
     parse_exit_info,
     parse_tombstone_text,
 )
-from gxr_manager.core.collector import DiagnosticsCollector
-from gxr_manager.core.diagnostics import analyze_report, classify_crash, format_markdown, is_systemui_hwui_race
+from gxr_tools.manager.core.collector import DiagnosticsCollector
+from gxr_tools.manager.core.diagnostics import analyze_report, classify_crash, format_markdown, is_systemui_hwui_race
 from tests.fake_adb import POLL_RESPONSE, FakeAdb
 
 

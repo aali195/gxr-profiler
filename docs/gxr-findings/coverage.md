@@ -1,10 +1,10 @@
 # Measurement coverage
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
 > **Hardware state: REFERENCE.** Coverage/format reference; see each topic page for its label.
 
-What gxr-profiler records, what is opt-in, and what remains unavailable.
+What GXR Profiler records, what is opt-in, and what remains unavailable.
 
 ## In plain terms
 

@@ -1,7 +1,7 @@
 import pytest
 
-from gxr_manager.cli import app as manager_cli
-from gxr_manager.server import app as manager_server
+from gxr_tools.manager.cli import app as manager_cli
+from gxr_tools.manager.server import app as manager_server
 
 
 def test_manager_windowed_entry_accepts_argv(monkeypatch):

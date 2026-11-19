@@ -1,6 +1,6 @@
 # Standby, wake & thermal recovery
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Power modes & battery](modes.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md) | [Power modes & battery](modes.md)
 
 > **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 

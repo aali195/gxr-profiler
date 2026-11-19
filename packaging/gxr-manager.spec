@@ -8,8 +8,8 @@ from PyInstaller.utils.hooks import collect_submodules
 ROOT = Path(SPECPATH).parent  # noqa: F821
 
 datas = [
-    (str(ROOT / "gxr_manager" / "server" / "web"), "gxr_manager/server/web"),
-    (str(ROOT / "gxr_core" / "web_common"), "gxr_core/web_common"),
+    (str(ROOT / "gxr_tools" / "manager" / "server" / "web"), "gxr_tools/manager/server/web"),
+    (str(ROOT / "gxr_tools" / "core" / "web_common"), "gxr_tools/core/web_common"),
 ]
 
 hiddenimports = [
@@ -18,8 +18,8 @@ hiddenimports = [
     "webview.platforms.winforms",
     "webview.platforms.edgechromium",
     *collect_submodules("uvicorn"),
-    *collect_submodules("gxr_core"),
-    *collect_submodules("gxr_manager"),
+    *collect_submodules("gxr_tools.core"),
+    *collect_submodules("gxr_tools.manager"),
 ]
 
 a = Analysis(  # noqa: F821

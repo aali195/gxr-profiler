@@ -1,6 +1,6 @@
 # Research & findings
 
-[Back to capture guide](../README.md) | [Commands](../COMMANDS.md) | [Exported reports](reports/README.md)
+[Documentation home](../README.md) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md) | [Exported reports](reports/README.md)
 
 Measurement findings for the **Samsung Galaxy XR (SM-I610)**, collected with the read-only
 recorder. Each topic page is self-contained: a plain-language summary, the tests and results, the
@@ -55,6 +55,7 @@ Thermal status 4 was only observed on the stock unit. See
 | [Cross-run analysis](cross-run.md) | 35-run correlations: thermal stages, fan curve, HDR, Wi-Fi, passthrough, process load |
 | [Process offenders](processes.md) | idle/active CPU, camera/perception cost, WiFi test client, YouTube/Chronolink, profiler overhead |
 | [Background processes & debloat](debloat.md) | controller HAL, hand tracking, profiler overhead, package cleanup |
+| [Black level floor](root-research/black-level-floor.md) | panel black level, compositor/QDCM checks, B4/D1 gamma tests, ELVSS, MTP read limits |
 
 ## Key findings
 
@@ -105,6 +106,10 @@ Thermal status 4 was only observed on the stock unit. See
   [2026-11-17 report](reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md)).
 - **Disabling hand tracking is a suspend, not a teardown**, so the thermal benefit is small
   ([Power modes & battery](modes.md)).
+- **The micro-OLED black floor is not in the exposed gamma tables.** The compositor outputs
+  true black, QDCM maps 0 to 0, and `B4` only dims the whole image; `D1` `BB` is per-panel
+  calibration. The remaining floor is panel/optical; the only safe software lever is brightness
+  ([black level floor](root-research/black-level-floor.md)).
 
 ## Exported reports
 

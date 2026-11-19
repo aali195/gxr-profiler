@@ -1,5 +1,5 @@
-from gxr_profiler.capture.logcat import LogcatStream
-from gxr_profiler.capture.state import MetricState
+from gxr_tools.profiler.capture.logcat import LogcatStream
+from gxr_tools.profiler.capture.state import MetricState
 from tests.fake_adb import FakeAdb
 
 
@@ -74,7 +74,7 @@ def test_logcat_passthrough_updates_state():
 
 
 def test_dev_seconds_month_boundary():
-    from gxr_profiler.capture.logcat import dev_seconds
+    from gxr_tools.profiler.capture.logcat import dev_seconds
 
     october = dev_seconds("10-31 23:59:59.000")
     november = dev_seconds("11-01 00:00:00.000")

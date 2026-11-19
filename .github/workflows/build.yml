@@ -1,4 +1,4 @@
-name: build
+name: GXR Tools build
 
 on:
   push:
@@ -33,18 +33,18 @@ jobs:
       - run: python -m ruff check .
       - name: Check browser JavaScript syntax
         run: |
-          node --check gxr_core/web_common/common.js
-          node --check gxr_profiler/server/web/app.core.js
-          node --check gxr_profiler/server/web/app.compare.js
-          node --check gxr_profiler/server/web/app.record.js
-          node --check gxr_profiler/server/web/app.find.js
-          node --check gxr_profiler/server/web/app.js
-          node --check gxr_manager/server/web/app.core.js
-          node --check gxr_manager/server/web/diagnostics.js
-          node --check gxr_manager/server/web/apps.js
-          node --check gxr_manager/server/web/installer.js
-          node --check gxr_manager/server/web/settings.js
-          node --check gxr_manager/server/web/app.js
+          node --check gxr_tools/core/web_common/common.js
+          node --check gxr_tools/profiler/server/web/app.core.js
+          node --check gxr_tools/profiler/server/web/app.compare.js
+          node --check gxr_tools/profiler/server/web/app.record.js
+          node --check gxr_tools/profiler/server/web/app.find.js
+          node --check gxr_tools/profiler/server/web/app.js
+          node --check gxr_tools/manager/server/web/app.core.js
+          node --check gxr_tools/manager/server/web/diagnostics.js
+          node --check gxr_tools/manager/server/web/apps.js
+          node --check gxr_tools/manager/server/web/installer.js
+          node --check gxr_tools/manager/server/web/settings.js
+          node --check gxr_tools/manager/server/web/app.js
       - run: python -m pytest -q
 
   release:
@@ -94,7 +94,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: gxr-profiler-windows
+          name: gxr-tools-windows
           path: |
             dist/gxr-profiler.exe
             dist/gxr-profiler-cli.exe
@@ -107,7 +107,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: GXR Suite ${{ github.ref_name }}
+          name: GXR Tools ${{ github.ref_name }}
           generate_release_notes: true
           files: |
             dist/gxr-profiler.exe

@@ -1,7 +1,7 @@
 import pytest
 
-from gxr_core.device import parse_display_info
-from gxr_core.parsers import parse_audio_policy
+from gxr_tools.core.device import parse_display_info
+from gxr_tools.core.parsers import parse_audio_policy
 
 TEXT = (
     'DisplayDeviceInfo{"Built-in Screen": uniqueId="local:1", 7104 x 3840, modeId 2, '
@@ -56,7 +56,7 @@ def test_parse_audio_policy():
 
 
 def test_resolve_serial_collapses_only_same_physical(monkeypatch):
-    from gxr_core import adb
+    from gxr_tools.core import adb
 
     devices = [
         {"serial": "usb1", "state": "device", "device": "xrvst2", "model": "SM-I610"},
@@ -90,7 +90,7 @@ def _install_clock(monkeypatch, adb):
 
 
 def test_resolve_serial_retries_until_device_is_ready(monkeypatch):
-    from gxr_core import adb
+    from gxr_tools.core import adb
 
     clock = _install_clock(monkeypatch, adb)
     responses = iter(
@@ -113,7 +113,7 @@ def test_resolve_serial_retries_until_device_is_ready(monkeypatch):
 
 
 def test_resolve_serial_times_out_with_clear_error(monkeypatch):
-    from gxr_core import adb
+    from gxr_tools.core import adb
 
     clock = _install_clock(monkeypatch, adb)
     monkeypatch.setattr(
@@ -127,7 +127,7 @@ def test_resolve_serial_times_out_with_clear_error(monkeypatch):
 
 
 def test_resolve_serial_fails_fast_for_non_retryable_cases(monkeypatch):
-    from gxr_core import adb
+    from gxr_tools.core import adb
 
     clock = _install_clock(monkeypatch, adb)
     monkeypatch.setattr(
@@ -154,7 +154,7 @@ def test_resolve_serial_fails_fast_for_non_retryable_cases(monkeypatch):
 
 
 def test_calibration_parsers():
-    from gxr_core.device.calibration import parse_cpm_ipd, parse_ipd_textproto
+    from gxr_tools.core.device.calibration import parse_cpm_ipd, parse_ipd_textproto
 
     ipd = parse_ipd_textproto(
         "created_at {\n  seconds: 1791938387\n}\n"
@@ -169,7 +169,7 @@ def test_calibration_parsers():
 
 
 def test_boundary_settings_parser():
-    from gxr_core.device.boundary import parse_boundary_settings
+    from gxr_tools.core.device.boundary import parse_boundary_settings
 
     out = parse_boundary_settings(
         [
@@ -191,7 +191,7 @@ def test_boundary_settings_parser():
 
 
 def test_manufacture_date_parser():
-    from gxr_core.device.manufacture import parse_manufacture_date
+    from gxr_tools.core.device.manufacture import parse_manufacture_date
 
     assert parse_manufacture_date("20251201") == "2025-12-01"
     assert parse_manufacture_date("2025-12-01") == "2025-12-01"
@@ -199,7 +199,7 @@ def test_manufacture_date_parser():
 
 
 def test_region_info():
-    from gxr_core.device.manufacture import region_info
+    from gxr_tools.core.device.manufacture import region_info
 
     assert region_info(
         {

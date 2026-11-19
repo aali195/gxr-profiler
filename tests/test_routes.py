@@ -3,10 +3,10 @@ import threading
 
 from fastapi.testclient import TestClient
 
-from gxr_profiler.capture.columns import REPORT_COLUMNS
-from gxr_profiler.server.app import create_app
-from gxr_profiler.server.deps import get_manager
-from gxr_profiler.server.routers import record as record_router
+from gxr_tools.profiler.capture.columns import REPORT_COLUMNS
+from gxr_tools.profiler.server.app import create_app
+from gxr_tools.profiler.server.deps import get_manager
+from gxr_tools.profiler.server.routers import record as record_router
 
 
 def _make_run(tmp_path):

@@ -1,6 +1,6 @@
 # Cameras, perception & controllers
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
 > **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
@@ -67,4 +67,4 @@ Attribution is by **named stream / service**, never by physical sensor ID:
     `XRControllerDevice: stop tracking ...`.
 - `SXRC_SVC`: `OnControllerDeviceStatusChange` with `2(CONNECTED)` / `3(SUSPENDED)`.
 - Live check on 2026-10-21: both controllers connected, battery 100%, pose status 2 / quality 1, with trigger, squeeze, grip, and thumbstick input events. A suspended controller still reports `connected`; use tracking/pose state for "in use".
-- gxr-profiler records `ctrl_left/right_connected`, `ctrl_left/right_track`, `ctrl_left/right_battery`, and `ctrl_active`, and tags runs with a controllers/no-controllers badge from start/end state when active.
+- GXR Profiler records `ctrl_left/right_connected`, `ctrl_left/right_track`, `ctrl_left/right_battery`, and `ctrl_active`, and tags runs with a controllers/no-controllers badge from start/end state when active.

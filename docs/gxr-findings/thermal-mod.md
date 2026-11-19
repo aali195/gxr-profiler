@@ -1,6 +1,6 @@
 # Thermal mod: phase-change pads + copper shims (SoC only)
 
-[Findings index](README.md#findings-index) | [Thermal, throttling & fan](thermal.md) | [Thermal caps & fan steps](thermal-caps-fan.md) | [Wi-Fi & standby](wifi.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Thermal, throttling & fan](thermal.md) | [Thermal caps & fan steps](thermal-caps-fan.md) | [Wi-Fi & standby](wifi.md)
 
 > **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 
@@ -41,20 +41,20 @@ The in-between runs are not used in the before/after tables. For test 6 the tabl
 
 ### Exported reports
 
-Each test has a self-contained `gxr-profiler` HTML report with both runs embedded. GitHub shows the
+Each test has a self-contained GXR Profiler HTML report with both runs embedded. GitHub shows the
 HTML source in its file viewer rather than rendering it; use **Preview** for a rendered view or
 **HTML** to download/open locally. The report index and labels are in
 [reports/thermal-mod/README.md](reports/thermal-mod/README.md).
 
 | Test | Scenario | Report |
 |---:|---|---|
-| 1 | idle + passthrough + hands | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) |
-| 2 | idle on desk | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) |
-| 3 | idle + hands, VR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) |
-| 4 | YouTube 4K SDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) |
-| 5 | YouTube 8K HDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) |
-| 6 | Virtual Desktop H.264, ~500 Mbps | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) |
-| 7 | Chronolink/SteamVR ASTC | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) |
+| 1 | idle + passthrough + hands | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html) |
+| 2 | idle on desk | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html) |
+| 3 | idle + hands, VR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html) |
+| 4 | YouTube 4K SDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html) |
+| 5 | YouTube 8K HDR | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html) |
+| 6 | Virtual Desktop H.264, ~500 Mbps | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html) |
+| 7 | Chronolink/SteamVR ASTC | [Preview](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) / [HTML](reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html) |
 
 ### Test 1 - idle + passthrough + hands
 
@@ -78,7 +78,7 @@ Both 120 s, 72 Hz, unplugged, hands and passthrough active.
 | Wi-Fi retry mean; drops/errors             | 5.33%; 0           | 5.86%; 0           | 0 drops/errors      |
 | Battery / AC                               | 96% / off          | 94% / off          | -                   |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-1-idle-passthrough-hands-stock-vs-mod.html)
 
 The after run was slightly busier on the GPU but the CPU was 7.8 C and the GPU 5.3 C cooler, and it stayed at fan step 3 instead of touching step 4.
 
@@ -104,7 +104,7 @@ Both 120 s, 72 Hz, unplugged, device on the desk. This is the ambient/cold basel
 | Wi-Fi retry mean; drops/errors | 9.11%; 0 | 14.91%; 0 | 0 drops/errors |
 | Battery / AC | 94% / off | 92% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-2-idle-on-desk-stock-vs-mod.html)
 
 The before run carried a `passthrough=1` event while on the desk, but GPU stayed at 0% and no camera streams were active, so it is treated as the same no-load baseline. CPU/GPU barely moved, which is the useful result: the mod does not lower the cold/idle floor.
 
@@ -130,7 +130,7 @@ Both 120 s, 72 Hz, unplugged, hands on, no passthrough.
 | Wi-Fi retry mean; drops/errors | 6.72%; 0 | 5.31%; 0 | 0 drops/errors |
 | Battery / AC | 89% / off | 91% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-3-idle-hands-vr-stock-vs-mod.html)
 
 The before run started warmer (AP 56.7 vs 49.0 C), so the size of the delta is not a controlled measurement, but the after run stayed at status 0 and fan step 1 for the whole run. The CPU mean was still 11.2 C lower and the GPU 8.9 C lower.
 
@@ -156,7 +156,7 @@ Both 120 s, unplugged, 4K AV1 8-bit YouTube. The before run was 72 Hz; the after
 | Wi-Fi retry mean; drops/errors | 4.22%; 0 | 5.01%; 0 | 0 drops/errors |
 | Battery / AC | 80% / off | 82% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-4-youtube-4k-sdr-stock-vs-mod.html)
 
 This is a clean media comparison (same 4K AV1 8-bit stream) except for refresh rate. The after run did ~9 GPU-busy points more work at 90 Hz and still ran 9.1 C cooler on CPU and 7.1 C cooler on GPU. The before run crossed to status 2 and fan step 5; the after run stayed at status 1 and fan step 4, so both limits were avoided.
 
@@ -182,7 +182,7 @@ Both 120 s, unplugged. **This is not a clean content comparison.** The before ru
 | Wi-Fi retry mean; drops/errors             | 4.17%; 0                  | 4.66%; 0                    | 0 drops/errors           |
 | Battery / AC                               | 71% / off                 | 78% / off                   | -                        |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-5-youtube-8k-hdr-stock-vs-mod.html)
 
 The mod moved HDR from status 4 to status 3 and cut CPU mean by 9.7 C and GPU mean by 8.6 C, but HDR still sits at status 3, fan 7, ~99% GPU busy and 73 fps against 90. The fan remained pinned at step 7 and the camera remained halved at 30 fps, so this is only a partial cap reduction. The media format difference means the delta should not be read as a pure mod effect.
 
@@ -208,7 +208,7 @@ The after column uses the final clean night run at a locked 500 Mbps. Virtual De
 | Wi-Fi retry mean; drops/errors | 1.72%; 0 | 2.04%; 0 | 0 drops/errors |
 | Battery / AC | 53% / off | 87% / on | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-6-virtual-desktop-500mbps-stock-vs-mod.html)
 
 The head camera staying at 60 fps is the clearest functional win: the before run was already status 4 with the camera halved, while the after run stayed at status 2 and full camera rate. The CPU mean was 14.9 C lower and the GPU 10.1 C lower. The fan still reached step 7. The XR target row is the system-recorded target, not the Virtual Desktop setting: VD was set to 90 Hz in both runs, but the before run recorded 72 Hz under status 4. The after run was plugged, so the battery/charging difference is not attributable to the mod. An unplugged after run at the default 600 Mbps also gave status 2 and AP 71.1 C, so the result is not a plugged-run artifact. Wi-Fi throughput and the labelled latency issue are covered in [Virtual Desktop and day/night runs](#virtual-desktop-and-daynight-runs).
 
@@ -234,7 +234,7 @@ Both 120 s, 90 Hz, unplugged, no active media, identical VRChat/Chronolink workl
 | Wi-Fi retry mean; drops/errors | 7.46%; 0 | 5.25%; 0 | 0 drops/errors |
 | Battery / AC | 92% / off | 90% / off | - |
 
-[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-profiler/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html)
+[Preview this test's before/after report](https://htmlpreview.github.io/?https://github.com/aali195/gxr-tools/blob/main/docs/gxr-findings/reports/thermal-mod/test-7-chronolink-astc-stock-vs-mod.html)
 
 The after run is 10.6 C cooler on CPU and 7.7 C cooler on GPU, two fan steps lower, holds the 90 fps target instead of 87.6, and keeps the head camera at 60 fps. Wi-Fi was also stable: 1,139 -> 1,217 Mbps mean, retry 7.46 -> 5.25%, zero drops/errors. This is the strongest evidence that the mod changed the sustained thermal/performance state rather than just moving a number.
 

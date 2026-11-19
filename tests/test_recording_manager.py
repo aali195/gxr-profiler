@@ -1,8 +1,8 @@
 import threading
 
-from gxr_core.recording_state import read_state
-from gxr_profiler.core.models import RunConfig
-from gxr_profiler.server import recording
+from gxr_tools.core.recording_state import read_state
+from gxr_tools.profiler.core.models import RunConfig
+from gxr_tools.profiler.server import recording
 
 
 class _FakeRecorder:

@@ -1,6 +1,6 @@
 # Diagnostics guide
 
-[Back to README](../README.md) | [Commands](COMMANDS.md) | [Crash & soft-reboot log reference](gxr-findings/crash-logs.md)
+[Documentation home](README.md) | [Manager guide](MANAGER.md) | [Profiler](PROFILER.md) | [Commands](COMMANDS.md) | [Crash & soft-reboot log reference](gxr-findings/crash-logs.md)
 
 The **GXR Manager > Diagnostics** tab is a one-click, read-only health snapshot for the headset. Use it after
 an unexpected restart, a crash, a hang, or any time the headset behaves strangely and you want to know

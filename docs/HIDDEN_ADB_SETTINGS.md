@@ -1,6 +1,6 @@
 # Hidden and experimental ADB settings
 
-[Back to README](../README.md) | [Settings guide](SETTINGS.md) | [Commands](COMMANDS.md)
+[Documentation home](README.md) | [Manager guide](MANAGER.md) | [Profiler](PROFILER.md) | [Settings guide](SETTINGS.md) | [Commands](COMMANDS.md)
 
 This page records hidden Android XR settings found on the **Samsung Galaxy XR (SM-I610)**, including
 settings exposed in **GXR Manager > Settings** and candidates that are deliberately not exposed. It is a

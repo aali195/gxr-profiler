@@ -1,4 +1,4 @@
-from gxr_manager.core.settings import (
+from gxr_tools.manager.core.settings import (
     SETTING_DEFINITIONS,
     SETTING_SECTIONS,
     get_setting_definition,

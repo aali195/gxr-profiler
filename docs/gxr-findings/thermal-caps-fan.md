@@ -1,6 +1,6 @@
 # Thermal caps, fan steps & throttle conditions
 
-[Findings index](README.md#findings-index) | [Thermal, throttling & fan](thermal.md) | [Thermal mod before/after](thermal-mod.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Thermal, throttling & fan](thermal.md) | [Thermal mod before/after](thermal-mod.md)
 
 > **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 

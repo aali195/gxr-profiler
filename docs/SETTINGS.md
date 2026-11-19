@@ -1,6 +1,6 @@
 # Settings guide
 
-[Back to README](../README.md) | [Commands](COMMANDS.md) | [Hidden/experimental research](HIDDEN_ADB_SETTINGS.md) | [Apps & services](APPS.md) | [Diagnostics](DIAGNOSTICS.md)
+[Documentation home](README.md) | [Manager guide](MANAGER.md) | [Profiler](PROFILER.md) | [Commands](COMMANDS.md) | [Hidden/experimental research](HIDDEN_ADB_SETTINGS.md) | [Apps & services](APPS.md) | [Diagnostics](DIAGNOSTICS.md)
 
 The **GXR Manager > Settings** tab contains grouped, reversible device settings that are not tied to a run.
 Every row shows its current status, default label, persistence and any warning. Advanced and testing
@@ -420,7 +420,7 @@ These local KernelSU modules are not suitable replacements for Settings toggles:
 
 - Changes are blocked while a recording runs, require the local API token, and are appended to
   `reports/settings/setting-actions.jsonl`. Settings are not available in offline HTML reports.
-  See [safety & fair runs](README.md#safety--fair-runs).
+  See [device-change safety](MANAGER.md#device-change-safety).
 - Settings use normal shell commands; only the performance-policy and fixed Home Space Mode rate
   toggles require root, through `su -c`.
 - Setting IDs are validated against built-in definitions; there are no free-form commands.

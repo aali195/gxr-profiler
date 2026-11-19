@@ -1,12 +1,12 @@
 import csv
 from pathlib import Path
 
-from gxr_core.parsers.media import parse_media_resources, visible_sf_lines
-from gxr_profiler.capture.media import MediaSampler
-from gxr_profiler.capture.meta import build_meta
-from gxr_profiler.capture.processes import ProcessSampler
-from gxr_profiler.capture.writer import RunWriter
-from gxr_profiler.core.models import RunConfig
+from gxr_tools.core.parsers.media import parse_media_resources, visible_sf_lines
+from gxr_tools.profiler.capture.media import MediaSampler
+from gxr_tools.profiler.capture.meta import build_meta
+from gxr_tools.profiler.capture.processes import ProcessSampler
+from gxr_tools.profiler.capture.writer import RunWriter
+from gxr_tools.profiler.core.models import RunConfig
 from tests.fake_adb import FakeAdb
 
 MEDIA_RESPONSE = """###MEDIA
@@ -170,8 +170,8 @@ def test_process_sampler_root_disk_io(tmp_path):
 
 
 def test_procs_for_includes_disk_rates(tmp_path):
-    from gxr_profiler.report.data import procs_for
-    from gxr_profiler.runs.store import RunStore
+    from gxr_tools.profiler.report.data import procs_for
+    from gxr_tools.profiler.runs.store import RunStore
 
     runs = tmp_path / "runs"
     runs.mkdir()
@@ -189,7 +189,7 @@ def test_procs_for_includes_disk_rates(tmp_path):
 
 
 def test_hdr_active_resets_after_hdr_source_disappears():
-    from gxr_profiler.capture.media import MediaSampler
+    from gxr_tools.profiler.capture.media import MediaSampler
 
     class SeqAdb:
         def __init__(self):

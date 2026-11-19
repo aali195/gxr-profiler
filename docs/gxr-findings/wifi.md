@@ -1,6 +1,6 @@
 # Wi-Fi performance & standby
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Standby & wake](standby.md) | [Thermal mod before/after](thermal-mod.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md) | [Standby & wake](standby.md) | [Thermal mod before/after](thermal-mod.md)
 
 > **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 

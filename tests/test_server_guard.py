@@ -1,6 +1,6 @@
 import pytest
 
-from gxr_core.server import is_local_origin
+from gxr_tools.core.server import is_local_origin
 
 
 @pytest.mark.parametrize(

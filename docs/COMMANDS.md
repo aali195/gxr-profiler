@@ -3,12 +3,12 @@
 Recording, preview, diagnostics and report export use **read-only** commands; the only privileged
 reads use `su -c` for root-only files. **GXR Manager > Apps**, **Installer** and **Settings** are
 the only writes, and only after an explicit confirmation. See
-[safety & fair runs](README.md#safety--fair-runs).
+[profiler safety](PROFILER.md#safety--fair-runs) and [device-change safety](MANAGER.md#device-change-safety).
 
 Device: **Samsung Galaxy XR (SM-I610)**, Android 14, Snapdragon XR2+ Gen 2
 (`SXR2230P`), Adreno 740.
 
-Related: [capture & schema guide](README.md) for columns/usage, and the
+Related: [documentation home](README.md), [profiler guide](PROFILER.md) for columns/usage, and the
 [research & findings hub](gxr-findings/README.md) for results and device quirks.
 
 ## Cadence at a glance
@@ -26,7 +26,7 @@ Related: [capture & schema guide](README.md) for columns/usage, and the
 
 Rates derived from cumulative counters (disk, CPU) use deltas between polls.
 The first poll seeds the baseline; the first row therefore has no rate. When
-`--cooldown` is set, gxr-profiler polls the thermal HAL once per second until the selected
+`--cooldown` is set, GXR Profiler polls the thermal HAL once per second until the selected
 cooldown sensor is at or below the target; those cooldown polls are not written to the
 run. The sensor defaults to `AP` and is selectable in the UI / via `--sensor`.
 `--cooldown-max-wait` (or the UI advanced field) stops waiting after N seconds;
@@ -35,7 +35,7 @@ run. The sensor defaults to `AP` and is selectable in the UI / via `--sensor`.
 ## 1 Hz poll (`--interval` seconds)
 
 The exact poll script is built in
-[`gxr_core/poller.py`](../gxr_core/poller.py):
+[`gxr_tools/core/poller.py`](../gxr_tools/core/poller.py):
 
 ```sh
 echo '###FREQ'
@@ -152,7 +152,7 @@ su -c 'cat /sys/class/sec_fan/fan/curr_rpm; cat /sys/class/sec_fan/fan/curr_rpm2
 - `/proc/diskstats` is aggregated over whole devices only (`sd*`, `mmcblk*`,
   `nvme*n*`, `vd*`, `xvd*`); partitions, `dm-*`, `loop*` and `zram*` are
   excluded. Sector counts use 512 B units.
-- `/proc/stat` and `/proc/diskstats` counters are cumulative. gxr-profiler records
+- `/proc/stat` and `/proc/diskstats` counters are cumulative. GXR Profiler records
   deltas between polls for utilisation/throughput/IOPS/busy/latency.
 - `dumpsys thermalservice` is the primary named-temperature source; logcat is
   supplementary/event-driven. DDR/RAM temperature is read separately from the
@@ -187,7 +187,7 @@ Started with (unless `--no-logcat`):
 logcat -v time -T 1
 ```
 
-gxr-profiler filters in Python because `logcat -s` misses colon tags such as
+GXR Profiler filters in Python because `logcat -s` misses colon tags such as
 `SSRM:Temperature` and `-e` matches messages rather than tags.
 
 | Source tag/message | Data |
@@ -463,7 +463,7 @@ so this usually reflects only Android sensor clients (e.g. offbody).
 ## Start/end session state (twice per run)
 
 Commands are in
-[`gxr_profiler/capture/session.py`](../gxr_profiler/capture/session.py):
+[`gxr_tools/profiler/capture/session.py`](../gxr_tools/profiler/capture/session.py):
 
 ```sh
 settings get global low_power

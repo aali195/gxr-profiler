@@ -2,10 +2,10 @@ import re
 
 from fastapi.testclient import TestClient
 
-from gxr_core.recording_state import write_state
-from gxr_manager.server.app import create_manager_app
-from gxr_manager.server.apps import AppsService
-from gxr_manager.server.deps import get_apps_service
+from gxr_tools.core.recording_state import write_state
+from gxr_tools.manager.server.app import create_manager_app
+from gxr_tools.manager.server.apps import AppsService
+from gxr_tools.manager.server.deps import get_apps_service
 
 from .install_fixtures import FakeInstallAdb, build_apk
 

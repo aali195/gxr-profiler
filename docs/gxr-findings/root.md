@@ -1,6 +1,6 @@
 # Root
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
 > **Hardware state: MIXED.** Stock before 2026-11-01; SoC thermal-modded after.
 

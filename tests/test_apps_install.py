@@ -6,8 +6,8 @@ import zipfile
 
 import pytest
 
-from gxr_manager.core.apps import format_adb_command
-from gxr_manager.server.app_install import InstallManager
+from gxr_tools.manager.core.apps import format_adb_command
+from gxr_tools.manager.server.app_install import InstallManager
 
 from .install_fixtures import FakeInstallAdb, build_apk, build_xapk
 

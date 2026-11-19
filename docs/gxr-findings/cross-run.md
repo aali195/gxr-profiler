@@ -1,6 +1,6 @@
 # Cross-run analysis
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md)
 
 > **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 

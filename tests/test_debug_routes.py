@@ -3,8 +3,8 @@ import threading
 
 from fastapi.testclient import TestClient
 
-from gxr_manager.server.app import create_manager_app
-from gxr_manager.server.deps import get_debug_manager
+from gxr_tools.manager.server.app import create_manager_app
+from gxr_tools.manager.server.deps import get_debug_manager
 
 
 class FakeDebugManager:

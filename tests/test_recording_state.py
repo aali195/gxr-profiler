@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
-from gxr_core.recording_state import (
+from gxr_tools.core.recording_state import (
     RecordingMarker,
     is_recording,
     read_state,

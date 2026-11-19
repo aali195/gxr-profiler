@@ -1,6 +1,6 @@
 import os
 
-from gxr_core.adb import resolve_adb_executable
+from gxr_tools.core.adb import resolve_adb_executable
 
 
 def _name() -> str:

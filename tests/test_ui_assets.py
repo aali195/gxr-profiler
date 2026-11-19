@@ -1,15 +1,15 @@
 import inspect
 from pathlib import Path
 
-from gxr_manager.server.app import run_ui as run_manager_ui
-from gxr_manager.server.web_modules import MANAGER_JS_FILES
-from gxr_profiler.server.app import run_ui as run_profiler_ui
-from gxr_profiler.server.web_modules import PROFILER_JS_FILES
+from gxr_tools.manager.server.app import run_ui as run_manager_ui
+from gxr_tools.manager.server.web_modules import MANAGER_JS_FILES
+from gxr_tools.profiler.server.app import run_ui as run_profiler_ui
+from gxr_tools.profiler.server.web_modules import PROFILER_JS_FILES
 
 ROOT = Path(__file__).parents[1]
-PROFILER_WEB = ROOT / "gxr_profiler" / "server" / "web"
-MANAGER_WEB = ROOT / "gxr_manager" / "server" / "web"
-COMMON_WEB = ROOT / "gxr_core" / "web_common"
+PROFILER_WEB = ROOT / "gxr_tools" / "profiler" / "server" / "web"
+MANAGER_WEB = ROOT / "gxr_tools" / "manager" / "server" / "web"
+COMMON_WEB = ROOT / "gxr_tools" / "core" / "web_common"
 
 
 def _read(path: Path) -> str:

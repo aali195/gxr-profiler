@@ -2,7 +2,7 @@
 
 [Findings index](../README.md#findings-index) | [Thermal mod before/after](../thermal-mod.md)
 
-Self-contained `gxr-profiler` HTML reports for the findings pages, plus dated Markdown
+Self-contained GXR Profiler HTML reports for the findings pages, plus dated Markdown
 investigations that are not run comparisons.
 
 - [Thermal mod before/after reports](thermal-mod/README.md) - seven stock-vs-modded comparison

@@ -1,7 +1,7 @@
 import json
 import zipfile
 
-from gxr_manager.core.apk import read_apk_metadata, read_xapk_manifest
+from gxr_tools.manager.core.apk import read_apk_metadata, read_xapk_manifest
 
 from .install_fixtures import build_apk, build_xapk
 

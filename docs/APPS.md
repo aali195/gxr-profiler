@@ -1,11 +1,11 @@
 # Apps, installer & services guide
 
-[Back to README](../README.md) | [Commands](COMMANDS.md) | [Diagnostics](DIAGNOSTICS.md) | [Background processes & debloat](gxr-findings/debloat.md)
+[Documentation home](README.md) | [Manager guide](MANAGER.md) | [Profiler](PROFILER.md) | [Commands](COMMANDS.md) | [Diagnostics](DIAGNOSTICS.md) | [Background processes & debloat](gxr-findings/debloat.md)
 
 The **GXR Manager > Apps** tab lists the packages installed on the headset and lets you disable or
-remove them after an explicit confirmation. The separate **GXR Manager > Installer** tab stages and
-installs APK/OBB/XAPK files. GXR Manager also provides Diagnostics and Settings. GXR Profiler itself
-remains read-only for recording, preview and report export.
+remove them after an explicit confirmation. The **Installer** tab stages and installs APK/OBB/XAPK
+files. GXR Manager also provides Diagnostics and Settings. GXR Profiler, the recorder app in
+GXR Tools, remains read-only for recording, preview and report export.
 
 > The tool uses Android's package manager (`pm`) through ADB. It does **not** delete files
 > from the system image. Stock/system packages are removed for user 0 only and can normally
@@ -244,7 +244,7 @@ the XR launcher, network stack, Wi-Fi overlays, `com.qualcomm.*` and `vendor.*` 
 
 The core actions use normal shell `pm`; root is **not** required.
 
-When **Root details** is enabled in a package detail view, gxr-profiler uses read-only `su -c`
+When **Root details** is enabled in a package detail view, GXR Profiler uses read-only `su -c`
 to show app data and cache size:
 
 ```sh
@@ -259,7 +259,7 @@ or modify the system image.
 ## Safety
 
 - Recording, live preview, diagnostics and exported reports remain read-only. See
-  [safety & fair runs](README.md#safety--fair-runs).
+  [device-change safety](MANAGER.md#device-change-safety).
 - Apps and Installer actions only run after a local UI action with the local API token and a
   confirmation flag in the request. Critical packages cannot be installed over, disabled, removed
   for user 0 or uninstalled.

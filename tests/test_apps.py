@@ -1,7 +1,7 @@
 import pytest
 
-from gxr_core.parsers.util import split_sections
-from gxr_manager.core.apps import (
+from gxr_tools.core.parsers.util import split_sections
+from gxr_tools.manager.core.apps import (
     APP_ACTION_SPECS,
     APP_ACTIONS,
     GAME_DOWNSCALE_VALUES,

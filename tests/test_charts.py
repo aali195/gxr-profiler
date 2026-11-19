@@ -1,4 +1,4 @@
-from gxr_profiler.report.charts import GROUPS
+from gxr_tools.profiler.report.charts import GROUPS
 
 
 def test_thermal_charts_mirror_into_cpu_gpu_tabs():

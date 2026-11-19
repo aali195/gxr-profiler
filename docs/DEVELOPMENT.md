@@ -1,9 +1,10 @@
 # Development, testing & packaging
 
-[Back to README](../README.md) | [CLI](CLI.md) | [Commands](COMMANDS.md)
+[Documentation home](README.md) | [Profiler guide](PROFILER.md) | [Manager guide](MANAGER.md) | [CLI](CLI.md) | [Commands](COMMANDS.md)
 
-Quick use of the packaged UI is covered in the root [README](../README.md). This page is for
-running from source, understanding the layout, testing changes and building executables.
+Quick use of the packaged apps is covered in the root [README](../README.md). This page is for
+running the **GXR Tools** suite from source, understanding the layout, testing changes and building
+the four executables.
 
 ## Source setup
 
@@ -16,27 +17,32 @@ Requirements:
 ```powershell
 pip install -e ".[dev]"
 gxr-profiler ui
+gxr-manager ui
 ```
 
-Without installing, run `python -m gxr_profiler ...`.
+Without installing, run `python -m gxr_tools.profiler ...` or
+`python -m gxr_tools.manager.cli.app ...`.
 
 ## Architecture
 
 ```text
-gxr_core/      shared ADB, device/parsers, paths/fs/schema, recording-state marker, server/web primitives
-gxr_profiler/
-  cli/         Typer commands (record, runs, report, ui, devices)
-  core/        run models
-  capture/     Recorder lifecycle, logcat stream, media/process samplers, meta/writer
-  runs/        RunStore: list/load/rename/delete runs
-  report/      chart spec, series shaping, self-contained offline app export
-  server/      profiler app factory, recording manager, export service, routers/, ECharts SPA modules
-gxr_manager/
-  cli/         manager UI/status commands
-  core/        package/APK/settings/diagnostics helpers
-  server/      manager app factory, apps/installer/settings/diagnostics services, routers, manager SPA modules
-packaging/     PyInstaller specs + entry points for both apps
-tests/         pytest suite with FakeAdb
+gxr_tools/
+  __init__.py    suite version and identity
+  core/          shared ADB, device/parsers, paths/fs/schema, recording-state marker, server/web primitives
+  profiler/
+    cli/         Typer commands (record, runs, report, ui, devices)
+    __main__.py  python -m gxr_tools.profiler
+    core/        run models
+    capture/     Recorder lifecycle, logcat stream, media/process samplers, meta/writer
+    runs/        RunStore: list/load/rename/delete runs
+    report/      chart spec, series shaping, self-contained offline app export
+    server/      profiler app factory, recording manager, export service, routers/, ECharts SPA modules
+  manager/
+    cli/         manager UI/status commands
+    core/        package/APK/settings/diagnostics helpers
+    server/      manager app factory, apps/installer/settings/diagnostics services, routers, manager SPA modules
+packaging/       PyInstaller specs + entry points for both apps
+tests/           pytest suite with FakeAdb
 ```
 
 ## Tests and linting
@@ -95,7 +101,7 @@ The `release` job runs only for `v*` tags after tests pass. It:
 1. Builds both profiler executables and both manager executables.
 2. Verifies all four files and runs both CLI help commands as a smoke test.
 3. Writes `dist/SHA256SUMS.txt`.
-4. Uploads a workflow artifact.
-5. Creates or updates the GitHub release using the tag name.
+4. Uploads a `gxr-tools-windows` workflow artifact.
+5. Creates or updates the **GXR Tools** GitHub release using the tag name.
 
 Create a release by pushing a tag such as `v2.0.0`.

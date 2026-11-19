@@ -1,6 +1,6 @@
 # Crash, soft-reboot & error logs
 
-[Findings index](README.md#findings-index) | [Diagnostics guide](../DIAGNOSTICS.md) | [Commands](../COMMANDS.md) | [Thermal, throttling & fan](thermal.md) | [Soft-reboot report](reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Diagnostics guide](../DIAGNOSTICS.md) | [Commands](../COMMANDS.md) | [Thermal, throttling & fan](thermal.md) | [Soft-reboot report](reports/soft-reboots/2026-11-17-systemui-hwui-beatsaber.md)
 
 > **Hardware state: MIXED.** Log format is device-wide. The first recorded crash investigation
 > (2026-11-17) was on the SoC thermal-modded headset; it was not a thermal event.

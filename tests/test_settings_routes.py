@@ -2,10 +2,10 @@ import re
 
 from fastapi.testclient import TestClient
 
-from gxr_core.adb import AdbError
-from gxr_core.recording_state import write_state
-from gxr_manager.server.app import create_manager_app
-from gxr_manager.server.deps import get_settings_service
+from gxr_tools.core.adb import AdbError
+from gxr_tools.core.recording_state import write_state
+from gxr_tools.manager.server.app import create_manager_app
+from gxr_tools.manager.server.deps import get_settings_service
 
 
 def _token(client):

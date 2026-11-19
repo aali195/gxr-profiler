@@ -1,6 +1,6 @@
 # Background processes & debloat
 
-[Findings index](README.md#findings-index) | [Commands](../COMMANDS.md) | [Process offenders](processes.md) | [Power modes](modes.md)
+[Findings index](README.md#findings-index) | [Profiler guide](../PROFILER.md) | [Commands](../COMMANDS.md) | [Process offenders](processes.md) | [Power modes](modes.md)
 
 > **Hardware state: STOCK.** Unmodified headset; all runs on this page are before 2026-11-01.
 
