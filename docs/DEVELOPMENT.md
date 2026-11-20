@@ -104,4 +104,4 @@ The `release` job runs only for `v*` tags after tests pass. It:
 4. Uploads a `gxr-tools-windows` workflow artifact.
 5. Creates or updates the **GXR Tools** GitHub release using the tag name.
 
-Create a release by pushing a tag such as `v2.0.0`.
+Create a release by pushing a tag such as `v2.1.0`.
