@@ -305,3 +305,40 @@ main { padding-top: 18px; }
   font-size: var(--fs-sm); line-height: 1.4;
 }
 .recording-banner[hidden] { display: none; }
+
+/* Files tool */
+.files-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.files-toolbar .toolbtn { flex: none; }
+.files-pathrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.files-crumbs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; min-width: 0; }
+.files-crumb { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 3px 6px; border-radius: 6px; font: inherit; }
+.files-crumb:hover { background: var(--panel2); }
+.files-crumb:disabled { opacity: .5; cursor: default; }
+.files-pathform { display: flex; gap: 8px; margin-top: 10px; }
+.files-pathinput { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--fg); font: inherit; }
+.files-field { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.files-root-banner { border-left: 4px solid #d29922; }
+.files-root-banner strong { color: #ffcf70; }
+.filestable { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.filestable th { text-align: left; color: var(--dim); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.filestable td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.filestable tr:last-child td { border-bottom: 0; }
+.filestable tr.selected td { background: rgba(79, 157, 255, .08); }
+.files-namebtn { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; color: var(--fg); font: inherit; cursor: pointer; padding: 2px 0; text-align: left; max-width: 100%; }
+.files-namebtn:hover .files-entryname { color: var(--accent); }
+.files-namebtn.is-dir .files-entryname { color: #b8d4ff; }
+.files-namebtn.is-dir .files-kindtag { color: #7fb2ff; border-color: #2b4a73; }
+.files-kindtag { font-size: 10px; letter-spacing: .04em; color: var(--dim); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; flex: none; }
+.files-entryname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-size, .files-modified { white-space: nowrap; color: var(--dim); }
+.filestable .toolbtn { padding: 4px 8px; font-size: var(--fs-xs); }
+.files-modal-card { max-width: 560px; width: min(560px, calc(100vw - 32px)); }
+.files-modal-card p { white-space: pre-line; }
+.files-modalactions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.files-uploadrow, .files-downloadrow { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr auto; gap: 10px; align-items: center; padding: 6px 0; }
+.files-uploadname, .files-downloadname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-progress { height: 6px; border-radius: 4px; background: var(--panel2); overflow: hidden; }
+.files-progress i { display: block; height: 100%; background: var(--accent); transition: width .15s linear; }
+.files-progress.indeterminate i { width: 35%; animation: files-indeterminate 1.1s linear infinite; }
+@keyframes files-indeterminate { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
+.files-uploadstatus, .files-downloadstatus { white-space: nowrap; font-size: var(--fs-xs); }

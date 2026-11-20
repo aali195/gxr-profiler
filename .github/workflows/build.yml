@@ -43,6 +43,7 @@ jobs:
           node --check gxr_tools/manager/server/web/diagnostics.js
           node --check gxr_tools/manager/server/web/apps.js
           node --check gxr_tools/manager/server/web/installer.js
+          node --check gxr_tools/manager/server/web/files.js
           node --check gxr_tools/manager/server/web/settings.js
           node --check gxr_tools/manager/server/web/app.js
       - run: python -m pytest -q

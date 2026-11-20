@@ -5,6 +5,7 @@ MANAGER_JS_FILES = (
     "diagnostics.js",
     "apps.js",
     "installer.js",
+    "files.js",
     "settings.js",
     "app.js",
 )

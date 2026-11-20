@@ -55,6 +55,8 @@ class AdbClient(Protocol):
 
     def popen(self, args: list[str]): ...
 
+    def exec_out(self, args: list[str]) -> subprocess.Popen: ...
+
 
 @dataclass
 class RealAdb:
@@ -101,6 +103,25 @@ class RealAdb:
             encoding="utf-8",
             errors="replace",
             bufsize=1,
+            creationflags=_NO_WINDOW,
+        )
+
+    def exec_out(self, args: list[str]) -> subprocess.Popen:
+        """Run a remote command with binary stdout.
+
+        Used for file downloads where text decoding would corrupt the data.
+        Stderr is discarded; callers preflight with ``stat`` so a failed
+        command is reported before any bytes are sent.
+        """
+        cmd = [self.exe]
+        if self.serial:
+            cmd += ["-s", self.serial]
+        cmd += args
+        return subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             creationflags=_NO_WINDOW,
         )
 

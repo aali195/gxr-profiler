@@ -9,7 +9,7 @@ import webbrowser
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import gxr_tools.core
@@ -17,9 +17,11 @@ from gxr_tools.core.paths import default_reports_dir
 from gxr_tools.core.recording_state import is_recording
 from gxr_tools.core.server import asset_version, install_local_guard, resolve_port, start_uvicorn, wait_for_server
 
+from ..core.file_errors import FileOperationError
 from .apps import AppsService
 from .debug import DebugManager
-from .routers import apps, debug, recording, settings
+from .files import FilesService
+from .routers import apps, debug, files, recording, settings
 from .settings import SettingsService
 from .web_modules import MANAGER_JS_FILES
 
@@ -31,9 +33,11 @@ def create_manager_app(serial: str | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         application.state.apps.install.cleanup()
+        application.state.files.cleanup()
         yield
         application.state.debug.shutdown()
         application.state.apps.install.cleanup()
+        application.state.files.cleanup()
 
     app = FastAPI(title="GXR Manager", lifespan=lifespan)
     app.state.token = secrets.token_urlsafe(24)
@@ -43,14 +47,20 @@ def create_manager_app(serial: str | None = None) -> FastAPI:
     )
     app.state.settings = SettingsService(serial, busy_check=is_recording)
     app.state.debug = DebugManager(serial, os.path.join(default_reports_dir(), "debug"))
+    app.state.files = FilesService(serial, busy_check=is_recording)
 
     app.include_router(apps.router)
     app.include_router(settings.router)
     app.include_router(debug.router)
+    app.include_router(files.router)
     app.include_router(recording.router)
     app.mount("/common", StaticFiles(directory=COMMON_DIR), name="common")
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
     install_local_guard(app)
+
+    @app.exception_handler(FileOperationError)
+    async def file_error_handler(_request, exc: FileOperationError):
+        return JSONResponse({"detail": str(exc)}, status_code=exc.status)
 
     @app.get("/")
     def index():
@@ -80,6 +90,7 @@ def run_ui(port: int = 8766, browser: bool = False, serial: str | None = None) -
         try:
             import webview as _wv
 
+            _wv.settings["ALLOW_DOWNLOADS"] = True
             webview = _wv
         except Exception:
             webview = None
@@ -107,3 +118,4 @@ def run_ui(port: int = 8766, browser: bool = False, serial: str | None = None) -
     finally:
         # The pywebview path does not run the uvicorn shutdown handler.
         app.state.apps.install.cleanup()
+        app.state.files.cleanup()

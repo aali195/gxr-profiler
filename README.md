@@ -31,6 +31,7 @@ GXR Manager blocks every device-changing action.
 - **Diagnostics** - one-click crash, boot/rescue, Dropbox, exit-info and thermal snapshot; saves JSON + Markdown under `reports/debug/`.
 - **Apps** - list installed apps/system packages with sortable one-shot process CPU/RSS/GPU/threads, OOM and install-size columns; inspect metadata; disable, enable, remove for user 0, restore or fully uninstall after confirmation; apply Game Mode FPS/render-scale overrides on supported titles. Critical system packages are protected.
 - **Installer** - stage and install APK, OBB and XAPK files after a command review and confirmation. Groups split APKs by package, infers OBB targets, verifies installed packages and pushed files, and logs each install with file hashes.
+- **Files** - browse the headset, download and upload files, create folders, rename, move and delete. Optional root access covers system paths; critical paths stay protected and root deletes require typed confirmation.
 - **Settings** - grouped, reversible device settings: XR performance metrics, hands breakthrough, touch input, guardian/boundary controls, auto-spatialization, animation/transparency tweaks, testing-only performance policy, child-process, stay-awake and heads-up controls, plus Game Optimizing Service. Each row labels persistence and warns about burn-in, safety or untested behavior.
 
 ## Screenshots
@@ -74,6 +75,10 @@ GXR Manager blocks every device-changing action.
 **Installer**
 
 ![Installer](docs/screenshots/manager/installer.png)
+
+**Files**
+
+![Files](docs/screenshots/manager/files.png)
 
 **Settings**
 
@@ -161,6 +166,7 @@ packaging and the GitHub release workflow, see [docs/DEVELOPMENT.md](docs/DEVELO
 - [Manager guide](docs/MANAGER.md)
 - [Diagnostics guide](docs/DIAGNOSTICS.md)
 - [Apps, installer & services guide](docs/APPS.md)
+- [Files guide](docs/FILES.md)
 - [Settings guide](docs/SETTINGS.md)
 - [Hidden and experimental ADB settings](docs/HIDDEN_ADB_SETTINGS.md)
 
