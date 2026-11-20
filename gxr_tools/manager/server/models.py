@@ -71,3 +71,33 @@ class SettingUpdate(BaseModel):
         if (self.enabled is None) == (self.value is None):
             raise ValueError("provide exactly one of enabled or value")
         return self
+
+
+class FileRootRequest(BaseModel):
+    enabled: bool
+
+
+class FileMkdirRequest(BaseModel):
+    path: str
+    name: str
+
+
+class FileRenameRequest(BaseModel):
+    path: str
+    name: str
+
+
+class FileMoveRequest(BaseModel):
+    paths: list[str] = Field(min_length=1)
+    destination: str
+    overwrite: bool = False
+
+
+class FileDeleteRequest(BaseModel):
+    paths: list[str] = Field(min_length=1)
+    recursive: bool = False
+    confirm: str = ""
+
+
+class FileDownloadTicketRequest(BaseModel):
+    path: str

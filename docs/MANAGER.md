@@ -13,6 +13,7 @@ focused on recording, runs, comparison and reports.
 | [Diagnostics](DIAGNOSTICS.md) | Crash, boot/rescue, Dropbox, thermal and exit-info snapshots. | No |
 | [Apps](APPS.md) | List packages, inspect details, run confirmed package actions and Game Mode overrides. | Yes, after confirmation |
 | [Installer](APPS.md#installing-apks-and-obb-data) | Stage and install APK, OBB and XAPK files after command review. | Yes, after confirmation |
+| [Files](FILES.md) | Browse, download, upload, create, rename, move and delete files. | Yes, after confirmation; root for system paths |
 | [Settings](SETTINGS.md) | Reversible device settings, including advanced and testing-only keys. | Yes, after confirmation |
 
 ## When to use the manager
@@ -21,6 +22,7 @@ focused on recording, runs, comparison and reports.
 - To inspect, disable, remove, restore or uninstall a package: **Apps**.
 - To apply a per-app FPS cap or render scale on a supported title: **Apps > package detail > Performance overrides**.
 - To install or update an app: **Installer**.
+- To pull logs, screenshots or configs, or push files: **Files**.
 - To change XR, display, update or testing settings: **Settings**.
 
 Use **GXR Profiler** instead when you want a timed recording, a before/after comparison or a shareable
@@ -48,9 +50,10 @@ the recording lock still works.
   Stock packages are removed for user 0 only; the system image is never edited.
 - Package IDs and setting IDs are validated against built-in definitions. There are no free-form
   shell commands in the UI or API.
-- Actions are appended to `reports/apps/app-actions.jsonl`; setting changes to
-  `reports/settings/setting-actions.jsonl`. Neither file is included in exported HTML reports, and
-  manager tools are not available in offline reports.
+- Actions are appended to `reports/apps/app-actions.jsonl`, setting changes to
+  `reports/settings/setting-actions.jsonl`, and file changes to `reports/files/file-actions.jsonl`.
+  None are included in exported HTML reports, and manager tools are not available in offline
+  reports.
 - Diagnostics is read-only. Root extras use `su -c` reads and may prompt.
 
 See [Apps safety](APPS.md#safety), [Settings safety](SETTINGS.md#safety) and
@@ -70,6 +73,7 @@ commands. See the [CLI reference](CLI.md#gxr-manager-cli).
 
 - [Diagnostics](DIAGNOSTICS.md)
 - [Apps, installer & services](APPS.md)
+- [Files](FILES.md)
 - [Settings](SETTINGS.md)
 - [Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md)
 - [Background processes & debloat](gxr-findings/debloat.md)

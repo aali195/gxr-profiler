@@ -76,6 +76,7 @@ def test_manager_ui_contains_device_tools():
     assert 'id: "diagnostics"' in js
     assert 'id: "apps"' in js
     assert 'id: "installer"' in js
+    assert 'id: "files"' in js
     assert 'id: "settings"' in js
     assert "renderDiagnosticsTool" in js
     assert "debugTombstonesCard" in js
@@ -93,6 +94,20 @@ def test_manager_ui_contains_device_tools():
     assert "FPS cap" in js
     assert "Load apps" in js
     assert "Load settings" in js
+    assert "renderFilesTool" in js
+    assert "/api/files" in js
+    assert "/api/files/download" in js
+    assert "Root: off" in js
+    assert "Delete files?" in js
+    assert "filesToolbar" in js
+    assert "Go to /sdcard" in js
+    assert "popstate" in js
+    assert "gxrFilesPath" in js
+    assert "pendingHistoryPath" in js
+    assert "/api/files/download-ticket" in js
+    assert "filesDownloadsCard" in js
+    assert "Writing to headset..." in js
+    assert "In progress" in js
     assert "renderInstallerTool" in js
     assert "installerHeaderCard" in js
     assert "appsInstallFilesView" in js
@@ -153,6 +168,9 @@ def test_manager_styles_contain_installer_styles():
     css = _read(MANAGER_WEB / "styles.css")
     assert ".install-drop" in css
     assert ".install-body" in css
+    assert ".filestable" in css
+    assert ".files-toolbar" in css
+    assert ".files-namebtn.is-dir" in css
     assert ".install-step" in css
     assert ".install-progress-fill" in css
 

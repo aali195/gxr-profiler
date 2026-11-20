@@ -24,6 +24,7 @@ GXR Tools is two apps over one shared core. Start with the app you need.
 - [Manager guide](MANAGER.md) - tabs, recording lock and device-change safety.
 - [Diagnostics](DIAGNOSTICS.md) - crash, soft-reboot, boot/rescue and thermal snapshots.
 - [Apps, installer & services](APPS.md) - package actions, Game Mode overrides, APK/OBB/XAPK installs.
+- [Files](FILES.md) - browse, download, upload, rename, move and delete; optional root access.
 - [Settings](SETTINGS.md) - reversible device settings exposed in the app.
 - [Hidden and experimental ADB settings](HIDDEN_ADB_SETTINGS.md) - research notes and unexposed keys.
 - [CLI: manager](CLI.md#gxr-manager-cli) - `ui` and `status`.
@@ -41,5 +42,5 @@ GXR Tools is two apps over one shared core. Start with the app you need.
   `logcat` and `ps`. `--root` adds read-only `su -c` reads. See
   [profiler safety](PROFILER.md#safety--fair-runs).
 - **GXR Manager** only changes the headset after an explicit confirmation in the local UI and with the
-  local API token. Actions are blocked while the profiler records. See
+  local API token. Actions, including file operations, are blocked while the profiler records. See
   [device-change safety](MANAGER.md#device-change-safety).

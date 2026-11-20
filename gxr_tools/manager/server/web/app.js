@@ -5,6 +5,7 @@ function toolDefinitions() {
     { id: "diagnostics", label: "Diagnostics", render: renderDiagnosticsTool },
     { id: "apps", label: "Apps", render: renderAppsTool },
     { id: "installer", label: "Installer", render: renderInstallerTool },
+    { id: "files", label: "Files", render: renderFilesTool },
     { id: "settings", label: "Settings", render: renderSettingsTool },
   ];
 }

@@ -9,6 +9,7 @@ __pycache__/
 /runs/
 /reports/
 /apps-staging/
+/files-staging/
 docs/raw/
 docs/dumps/
 docs/**/*.7z

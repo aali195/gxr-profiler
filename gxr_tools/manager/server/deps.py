@@ -10,6 +10,7 @@ from gxr_tools.core.recording_state import read_state
 
 from .apps import AppsService
 from .debug import DebugManager
+from .files import FilesService
 from .settings import SettingsService
 
 
@@ -25,6 +26,15 @@ def get_debug_manager(request: Request) -> DebugManager:
     return request.app.state.debug
 
 
+def get_files_service(request: Request) -> FilesService:
+    return request.app.state.files
+
+
+def require_token(request: Request) -> None:
+    if request.headers.get("x-gxr-profiler-token") != request.app.state.token:
+        raise HTTPException(status_code=403, detail="missing local API token")
+
+
 def require_idle() -> None:
     state = read_state()
     if state.get("active"):
@@ -38,4 +48,6 @@ def require_idle() -> None:
 AppsDep = Annotated[AppsService, Depends(get_apps_service)]
 SettingsDep = Annotated[SettingsService, Depends(get_settings_service)]
 DebugDep = Annotated[DebugManager, Depends(get_debug_manager)]
+FilesDep = Annotated[FilesService, Depends(get_files_service)]
+TokenDep = Annotated[None, Depends(require_token)]
 IdleDep = Annotated[None, Depends(require_idle)]

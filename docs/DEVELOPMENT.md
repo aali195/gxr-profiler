@@ -28,7 +28,7 @@ Without installing, run `python -m gxr_tools.profiler ...` or
 ```text
 gxr_tools/
   __init__.py    suite version and identity
-  core/          shared ADB, device/parsers, paths/fs/schema, recording-state marker, server/web primitives
+  core/          shared ADB, device/parsers, paths/fs/schema, recording state, server/web primitives
   profiler/
     cli/         Typer commands (record, runs, report, ui, devices)
     __main__.py  python -m gxr_tools.profiler
@@ -39,8 +39,8 @@ gxr_tools/
     server/      profiler app factory, recording manager, export service, routers/, ECharts SPA modules
   manager/
     cli/         manager UI/status commands
-    core/        package/APK/settings/diagnostics helpers
-    server/      manager app factory, apps/installer/settings/diagnostics services, routers, manager SPA modules
+    core/        package/APK/settings/diagnostics helpers, file path/entry/stream rules
+    server/      manager app factory, apps/installer/settings/diagnostics/files services, routers, SPA modules
 packaging/       PyInstaller specs + entry points for both apps
 tests/           pytest suite with FakeAdb
 ```
@@ -104,4 +104,4 @@ The `release` job runs only for `v*` tags after tests pass. It:
 4. Uploads a `gxr-tools-windows` workflow artifact.
 5. Creates or updates the **GXR Tools** GitHub release using the tag name.
 
-Create a release by pushing a tag such as `v2.0.0`.
+Create a release by pushing a tag such as `v2.1.0`.
